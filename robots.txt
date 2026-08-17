@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://safeplate-intelligence.netlify.app/sitemap.xml
