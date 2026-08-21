@@ -1,6 +1,6 @@
 {
-  "name": "safeplate-live-v35-12-attribution-fixed",
-  "version": "0.35.12",
+  "name": "safeplate-live-v35-13-production-candidate",
+  "version": "0.35.13",
   "private": true,
   "type": "module",
   "dependencies": {
