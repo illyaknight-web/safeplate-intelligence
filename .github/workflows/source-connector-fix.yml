@@ -1,0 +1,52 @@
+name: SAFEPLATE source connector repair
+
+on:
+  push:
+    branches:
+      - safeplate-command-center-staging
+    paths:
+      - .github/workflows/source-connector-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: safeplate-command-center-staging
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Patch FDA and FSIS connectors
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('netlify/functions/surveillance.mjs')
+          s=p.read_text()
+          old='''const timeoutFetch=async(url,{ms=MAX_SOURCE_MS,accept="application/json"}={})=>{\n const c=new AbortController();const t=setTimeout(()=>c.abort(),ms);\n try{\n   return await fetch(url,{\n     signal:c.signal,\n     headers:{\n       "accept":accept,\n       "user-agent":"SAFEPLATE/0.35.6 (+food-risk-intelligence; Function Media LLC)"\n     }\n   });\n } finally { clearTimeout(t) }\n};'''
+          new='''const timeoutFetch=async(url,{ms=MAX_SOURCE_MS,accept="application/json",headers={}}={})=>{\n const c=new AbortController();const t=setTimeout(()=>c.abort(),ms);\n try{\n   return await fetch(url,{\n     signal:c.signal,redirect:"follow",\n     headers:{\n       "accept":accept,\n       "accept-language":"en-US,en;q=0.9",\n       "cache-control":"no-cache",\n       "pragma":"no-cache",\n       "user-agent":"Mozilla/5.0 (compatible; SAFEPLATE/0.35.13; +https://safeplate-intelligence.netlify.app)",\n       ...headers\n     }\n   });\n } finally { clearTimeout(t) }\n};\n\nasync function firstSuccessfulFetch(urls,options={}){\n let lastStatus=null,lastUrl=null;\n for(const url of urls){\n   lastUrl=url;\n   const r=await timeoutFetch(url,options);\n   if(r.ok)return {response:r,url};\n   lastStatus=r.status;\n }\n throw new Error(`Official source unavailable ${lastStatus||"unknown"} at ${lastUrl||"unknown URL"}`);\n}'''
+          if old not in s: raise SystemExit('timeout block not found')
+          s=s.replace(old,new)
+          old='''async function pullFSIS(){\n const r=await timeoutFetch("https://www.fsis.usda.gov/fsis/api/recall/v/1",{accept:"application/json"});\n if(!r.ok)throw new Error(`FSIS ${r.status}`);\n const j=await r.json();\n const rows=Array.isArray(j)?j:(j.results||j.data||j.rows||[]);\n return rows.slice(0,200).map(normalizeFSIS);\n}'''
+          new='''async function pullFSIS(){\n const apiUrl="https://www.fsis.usda.gov/fsis/api/recall/v/1";\n const api=await timeoutFetch(apiUrl,{accept:"application/json,text/plain;q=0.9,*/*;q=0.8",headers:{referer:"https://www.fsis.usda.gov/science-data/developer-resources/recall-api"}});\n if(api.ok){\n   const j=await api.json();\n   const rows=Array.isArray(j)?j:(j.results||j.data||j.rows||[]);\n   const normalized=rows.slice(0,200).map(normalizeFSIS);\n   return {rows:normalized,note:`${normalized.length} records retrieved from official FSIS Recall API`};\n }\n const {response:r,url}=await firstSuccessfulFetch([\n   "https://www.fsis.usda.gov/recalls",\n   "https://www.fsis.usda.gov/food-safety/alerts"\n ],{accept:"text/html,application/xhtml+xml",headers:{referer:"https://www.fsis.usda.gov/"}});\n const html=await r.text(),$=cheerio.load(html),seen=new Set(),rows=[];\n $("a[href*='/recalls-alerts/']").each((_,a)=>{\n   const title=cleanText($(a).text());\n   const href=$(a).attr("href")||"";\n   if(title.length<20||!href)return;\n   const full=new URL(href,url).toString();\n   if(seen.has(full))return;seen.add(full);\n   const block=$(a).closest("article,.views-row,.node,.usa-card,.view-content>div").first();\n   const text=cleanText(block.length?block.text():$(a).parent().parent().text());\n   const rid=(text.match(/\\b(?:PHA-\\d{8}-\\d+|\\d{3}-\\d{4})\\b/i)||[])[0]||fingerprint([title,full]);\n   const classification=(text.match(/Class\\s+(?:I{1,3})\\b/i)||[])[0]||"";\n   const stateText=/\\bNationwide\\b/i.test(text)?"Nationwide":"";\n   rows.push(normalizeFSIS({\n     field_recall_number:rid,field_title:title,field_reason_for_recall:text.slice(0,1200),\n     field_recall_classification:classification,field_states:stateText,field_recall_url:full,\n     field_recall_date:(text.match(/(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\\s+[A-Z][a-z]{2}\\s+\\d{1,2},\\s+\\d{4}/)||[])[0]||null\n   }));\n });\n if(!rows.length)throw new Error(`FSIS API ${api.status}; official web fallback returned 0 recall rows`);\n return {rows:rows.slice(0,100),note:`${rows.slice(0,100).length} records retrieved from official FSIS web fallback after API ${api.status}`};\n}'''
+          if old not in s: raise SystemExit('FSIS block not found')
+          s=s.replace(old,new)
+          old='''async function pullFDAOutbreaks(){\n const url="https://www.fda.gov/food/outbreaks-foodborne-illness/investigations-foodborne-illness-outbreaks";\n const r=await timeoutFetch(url,{accept:"text/html,application/xhtml+xml"});\n if(!r.ok)throw new Error(`FDA outbreaks ${r.status}`);\n const html=await r.text(),$=cheerio.load(html),rows=[];'''
+          new='''async function pullFDAOutbreaks(){\n const canonical="https://www.fda.gov/food/outbreaks-foodborne-illness/investigations-foodborne-illness-outbreaks";\n const {response:r,url}=await firstSuccessfulFetch([\n   canonical,\n   `${canonical}?utm_source=safeplate`,\n   `${canonical}/`\n ],{accept:"text/html,application/xhtml+xml,*/*;q=0.8",headers:{referer:"https://www.fda.gov/food/outbreaks-foodborne-illness"}});\n const html=await r.text(),$=cheerio.load(html),rows=[];'''
+          if old not in s: raise SystemExit('FDA outbreak block not found')
+          s=s.replace(old,new)
+          s=s.replace(''' if(!rows.length)throw new Error("FDA outbreaks parser returned 0 active rows; page structure may have changed");\n return rows;\n}\n\nasync function pullNOAAENSO(){''',''' if(!rows.length)throw new Error("FDA outbreaks parser returned 0 active rows; page structure may have changed");\n return {rows,note:`${rows.length} active investigations retrieved from official FDA outbreak table`};\n}\n\nasync function pullNOAAENSO(){''',1)
+          s=s.replace(''' if(source.id==="usda_fsis")return {source,rows:await pullFSIS()};\n if(source.id==="fda_outbreaks")return {source,rows:await pullFDAOutbreaks()};''',''' if(source.id==="usda_fsis"){const x=await pullFSIS();return {source,...x}};\n if(source.id==="fda_outbreaks"){const x=await pullFDAOutbreaks();return {source,...x}};''')
+          s=s.replace('''       const rows=result.value.rows||[];\n       incoming.push(...rows);h.status="ONLINE";h.note=`${rows.length} records retrieved`;\n       events.push({time:now,title:`${source.name} checked`,detail:`${rows.length} records retrieved successfully.`});''','''       const rows=result.value.rows||[];\n       incoming.push(...rows);h.status="ONLINE";h.note=result.value.note||`${rows.length} records retrieved`;\n       events.push({time:now,title:`${source.name} checked`,detail:h.note});''')
+          p.write_text(s)
+          PY
+          node --check netlify/functions/surveillance.mjs
+          git config user.name "safeplate-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add netlify/functions/surveillance.mjs
+          git commit -m "Repair FDA and FSIS source connectors [source-fix]"
+          git push origin HEAD:safeplate-command-center-staging
