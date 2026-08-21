@@ -1,0 +1,86 @@
+{
+  "generated_at": "2026-08-20",
+  "purpose": "SAFEPLATE retrospective early-warning validation corpus",
+  "cases": [
+    {
+      "id": "FDA-1389",
+      "name": "E. coli O145:H28 \u2014 Frozen Blueberries",
+      "status": "ONGOING",
+      "product": "GreenWise Organic Frozen Whole Blueberries / Whole Mixed Berries",
+      "pathogen": "E. coli O145:H28",
+      "supplier": "Frutas y Hortalizas del Sur S.A., San Carlos, Chile",
+      "retailer": "Publix",
+      "illnesses": 12,
+      "hospitalizations": 4,
+      "deaths": 0,
+      "case_states": [
+        "FL",
+        "GA"
+      ],
+      "distribution_states": [
+        "AL",
+        "FL",
+        "GA",
+        "KY",
+        "NC",
+        "SC",
+        "TN",
+        "VA"
+      ],
+      "timeline": [
+        [
+          "2026-05-11",
+          "Earliest illness onset in current FDA summary"
+        ],
+        [
+          "2026-06-05",
+          "Last illness onset in current FDA summary"
+        ],
+        [
+          "2026-07-01",
+          "Florida health officials notified CDC partners; interviews identified frozen GreenWise organic blueberries as leading food item of interest"
+        ],
+        [
+          "2026-07-03",
+          "Supplier recall of one 10-oz lot, code 60401"
+        ],
+        [
+          "2026-07-29",
+          "Publix expanded recall to all listed lots of GreenWise blueberries and mixed berries"
+        ],
+        [
+          "2026-07-30",
+          "FDA current update included remote regulatory assessment and Import Alert 99-35"
+        ]
+      ],
+      "source_url": "https://www.fda.gov/food/outbreaks-foodborne-illness/outbreak-investigation-e-coli-o145h28-frozen-blueberries-july-2026"
+    },
+    {
+      "id": "FDA-1402",
+      "name": "Salmonella I 4,[5],12:i:- \u2014 Product Not Yet Identified",
+      "status": "ONGOING",
+      "product": "Not Yet Identified",
+      "pathogen": "Salmonella I 4,[5],12:i:-",
+      "illnesses": 30,
+      "source_url": "https://www.fda.gov/food/outbreaks-foodborne-illness/investigations-foodborne-illness-outbreaks"
+    },
+    {
+      "id": "FDA-1398",
+      "name": "Cyclospora \u2014 Product Not Yet Identified",
+      "status": "ONGOING",
+      "product": "Not Yet Identified",
+      "pathogen": "Cyclospora",
+      "illnesses": 11,
+      "source_url": "https://www.fda.gov/food/outbreaks-foodborne-illness/investigations-foodborne-illness-outbreaks"
+    },
+    {
+      "id": "FDA-1387",
+      "name": "Salmonella Oranienburg \u2014 Product Not Yet Identified",
+      "status": "ONGOING",
+      "product": "Not Yet Identified",
+      "pathogen": "Salmonella Oranienburg",
+      "illnesses": 97,
+      "source_url": "https://www.fda.gov/food/outbreaks-foodborne-illness/investigations-foodborne-illness-outbreaks"
+    }
+  ]
+}
