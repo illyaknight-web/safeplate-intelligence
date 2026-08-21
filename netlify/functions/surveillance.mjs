@@ -122,53 +122,26 @@ async function pullFDA(){
 
 async function pullFSIS(){
  const apiUrl="https://www.fsis.usda.gov/fsis/api/recall/v/1";
- let apiStatus="unknown";
  try{
    const api=await timeoutFetch(apiUrl,{accept:"application/json,text/plain;q=0.9,*/*;q=0.8",headers:{referer:"https://www.fsis.usda.gov/science-data/developer-resources/recall-api"}});
-   apiStatus=api.status;
    if(api.ok){
      const j=await api.json();
      const rows=Array.isArray(j)?j:(j.results||j.data||j.rows||[]);
-     const normalized=rows.slice(0,200).map(normalizeFSIS);
-     if(normalized.length)return {rows:normalized,note:`${normalized.length} records retrieved from official FSIS Recall API`};
-   }
- }catch(e){ apiStatus=String(e.message||e) }
-
- const rssUrl="https://www.fsis.usda.gov/fsis-content/rss/recalls.xml";
- try{
-   const rss=await timeoutFetch(rssUrl,{accept:"application/rss+xml,application/xml,text/xml,*/*;q=0.8"});
-   if(rss.ok){
-     const xml=await rss.text(),$=cheerio.load(xml,{xmlMode:true}),seen=new Set(),rows=[];
-     $("item").each((_,item)=>{
-       const title=cleanText($(item).find("title").first().text());
-       const link=cleanText($(item).find("link").first().text());
-       const guid=cleanText($(item).find("guid").first().text());
-       const rawDesc=$(item).find("description").first().text()||"";
-       const desc=cleanText(rawDesc.replace(/<[^>]+>/g," "));
-       const pubDate=cleanText($(item).find("pubDate").first().text());
-       const sourceUrl=link||guid;
-       if(!title||!sourceUrl||seen.has(sourceUrl))return;
-       seen.add(sourceUrl);
-       const text=cleanText(`${title} ${desc}`);
-       const rid=(text.match(/\b(?:PHA-\d{8}-\d+|\d{3}-\d{4})\b/i)||[])[0]||fingerprint([title,sourceUrl,pubDate]);
-       const classification=(text.match(/Class\s+(?:I{1,3})\b/i)||[])[0]||"";
-       rows.push(normalizeFSIS({
-         field_recall_number:rid,
-         field_title:title,
-         field_reason_for_recall:desc||title,
-         field_recall_classification:classification,
-         field_states:/\bNationwide\b/i.test(text)?"Nationwide":"",
-         field_recall_url:sourceUrl,
-         field_recall_date:pubDate||null
-       }));
-     });
-     if(rows.length)return {rows:rows.slice(0,100),note:`${rows.slice(0,100).length} records retrieved from official FSIS Recalls RSS after API ${apiStatus}`};
+     const normalized=rows.slice(0,300).map(normalizeFSIS);
+     if(normalized.length)return {rows:normalized,note:`${normalized.length} records retrieved directly from official FSIS Recall API`};
    }
  }catch(e){}
 
- throw new Error(`FSIS API unavailable (${apiStatus}) and official recalls RSS unavailable`);
+ const bridgeUrl="https://raw.githubusercontent.com/illyaknight-web/safeplate-intelligence/safeplate-command-center-staging/data/fsis-recalls.json";
+ const bridge=await timeoutFetch(bridgeUrl,{accept:"application/json",ms:15000});
+ if(!bridge.ok)throw new Error(`FSIS direct source blocked and authoritative bridge ${bridge.status}`);
+ const payload=await bridge.json();
+ const raw=Array.isArray(payload)?payload:(payload.records||[]);
+ const normalized=raw.slice(0,300).map(normalizeFSIS);
+ if(!normalized.length)throw new Error("FSIS authoritative bridge returned 0 records");
+ const capturedAt=Array.isArray(payload)?null:payload.capturedAt;
+ return {rows:normalized,note:`${normalized.length} records from official FSIS Recall API via SAFEPLATE GitHub bridge${capturedAt?` (captured ${capturedAt})`:""}`};
 }
-
 function cleanText(v=""){return String(v).replace(/\s+/g," ").trim()}
 function sevForOutbreak(pathogen="",cases=0){
  const p=pathogen.toLowerCase();
