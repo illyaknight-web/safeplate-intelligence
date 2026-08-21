@@ -1,5 +1,6 @@
 name: SAFEPLATE staging runtime evidence
 
+# Re-run after USDA FSIS bridge repair.
 on:
   push:
     branches:
