@@ -137,10 +137,14 @@ async function pullFSIS(){
  if(!bridge.ok)throw new Error(`FSIS direct source blocked and authoritative bridge ${bridge.status}`);
  const payload=await bridge.json();
  const raw=Array.isArray(payload)?payload:(payload.records||[]);
- const normalized=raw.slice(0,300).map(normalizeFSIS);
- if(!normalized.length)throw new Error("FSIS authoritative bridge returned 0 records");
+ // GovDelivery's broad FSIS news feed can include non-recall press releases.
+ // Only treat actual recalls/public-health alerts as FSIS incident records.
+ const recallRows=raw.filter(x=>/\b(?:recall|public health alert)\b/i.test(`${x?.field_title||x?.title||""} ${x?.field_reason_for_recall||x?.description||""}`));
+ const normalized=recallRows.slice(0,300).map(normalizeFSIS);
+ if(!normalized.length)throw new Error("FSIS authoritative bridge returned 0 recall/public-health-alert records");
  const capturedAt=Array.isArray(payload)?null:payload.capturedAt;
- return {rows:normalized,note:`${normalized.length} records from official FSIS Recall API via SAFEPLATE GitHub bridge${capturedAt?` (captured ${capturedAt})`:""}`};
+ const sourceType=Array.isArray(payload)?"USDA/FSIS bridge":(payload.sourceType||"USDA/FSIS authoritative publication bridge");
+ return {rows:normalized,note:`${normalized.length} recall/public-health-alert records from ${sourceType}${capturedAt?` (captured ${capturedAt})`:""}`};
 }
 function cleanText(v=""){return String(v).replace(/\s+/g," ").trim()}
 function sevForOutbreak(pathogen="",cases=0){
