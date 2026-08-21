@@ -1,8 +1,0 @@
-{
-  "netlify_toml": "PASS",
-  "server_js": "PASS",
-  "browser_js": "PASS",
-  "duplicate_ids": "PASS",
-  "api_routes": "PASS",
-  "schedule": "PASS"
-}
