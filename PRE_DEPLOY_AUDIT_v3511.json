@@ -1,0 +1,24 @@
+{
+  "netlify_toml": "PASS",
+  "browser_js": "PASS",
+  "server_js": "PASS",
+  "external_scripts": [
+    {
+      "url": "https://unpkg.com/maplibre-gl@5.7.3/dist/maplibre-gl.js",
+      "has_integrity": true,
+      "attrs": "integrity=\"sha512-4qLefPK7TDle+A82wrHOa/B75+B8HH0w6Zwu6YaoXxwBrLl8tQ7UmoyS0PCWOobcq3fFe51G+AN+jVZpwN5qOw==\" crossorigin=\"anonymous\""
+    },
+    {
+      "url": "https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js",
+      "has_integrity": true,
+      "attrs": "integrity=\"sha512-vc58qvvBdrDR4etbxMdlTt4GBQk1qjvyORR2nrsPsFPyrs+/u5c3+1Ct6upOgdZoIl7eq6k3a1UPDSNAQi/32A==\" crossorigin=\"anonymous\""
+    }
+  ],
+  "external_stylesheets": [],
+  "leaflet_removed": true,
+  "maplibre_bridge_removed": true,
+  "maplibre_direct_present": true,
+  "schedule_30min": true,
+  "external_stylesheets_zero": true,
+  "google_fonts_removed": true
+}

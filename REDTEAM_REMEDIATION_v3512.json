@@ -1,0 +1,16 @@
+{
+  "version": "0.35.12",
+  "status": "PRODUCTION CODE CANDIDATE \u2014 runtime gates A-1/A-2/A-5 still open",
+  "change": "Map attribution compliance fix",
+  "evidence": [
+    "Removed CSS that hid `.maplibregl-control-container`.",
+    "Added visible attribution styling.",
+    "Map constructor now includes explicit custom attribution for OpenFreeMap and OpenStreetMap contributors.",
+    "No backend files changed."
+  ],
+  "remaining_runtime_only": [
+    "A-1 exact Netlify runtime deploy verification",
+    "A-2 deployed source/audit file 404 verification",
+    "A-5 SAFEPLATE_ADMIN_TOKEN configured in Netlify"
+  ]
+}

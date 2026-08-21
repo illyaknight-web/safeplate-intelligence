@@ -1,0 +1,34 @@
+{
+  "package_dependencies": {
+    "@netlify/blobs": "10.7.13",
+    "@netlify/functions": "5.3.0",
+    "cheerio": "1.2.0"
+  },
+  "netlify_toml_parse": "PASS",
+  "server_js_syntax": {
+    "netlify/functions/analyst-intake.mjs": "PASS",
+    "netlify/functions/climate-watch.mjs": "PASS",
+    "netlify/functions/incidents.mjs": "PASS",
+    "netlify/functions/lib/auth.mjs": "PASS",
+    "netlify/functions/lib/normalize.mjs": "PASS",
+    "netlify/functions/lib/sources.mjs": "PASS",
+    "netlify/functions/lib/store.mjs": "PASS",
+    "netlify/functions/manual-sync.mjs": "PASS",
+    "netlify/functions/noaa-cdo.mjs": "PASS",
+    "netlify/functions/source-health.mjs": "PASS",
+    "netlify/functions/surveillance.mjs": "PASS",
+    "netlify/functions/system-status.mjs": "PASS",
+    "netlify/functions/validation-corpus.mjs": "PASS"
+  },
+  "browser_inline_js_syntax": "PASS",
+  "script_tags": [
+    "<script src=\"https://unpkg.com/leaflet@1.9.4/dist/leaflet.js\" integrity=\"sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=\" crossorigin=\"anonymous\"></script>",
+    "<script src=\"https://unpkg.com/maplibre-gl@5.7.3/dist/maplibre-gl.js\" integrity=\"sha512-4qLefPK7TDle+A82wrHOa/B75+B8HH0w6Zwu6YaoXxwBrLl8tQ7UmoyS0PCWOobcq3fFe51G+AN+jVZpwN5qOw==\" crossorigin=\"anonymous\"></script>",
+    "<script src=\"https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.1.0/leaflet-maplibre-gl.js\" crossorigin=\"anonymous\"></script>",
+    "<script src=\"https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js\" integrity=\"sha512-vc58qvvBdrDR4etbxMdlTt4GBQk1qjvyORR2nrsPsFPyrs+/u5c3+1Ct6upOgdZoIl7eq6k3a1UPDSNAQi/32A==\" crossorigin=\"anonymous\"></script>"
+  ],
+  "cdc_content_registry": "{id:\"cdc_content\",name:\"CDC Content Services \u2014 Public Foodborne Content\",family:\"Federal\",kind:\"api\",active:false,authority:true,url:\"https://tools.cdc.gov/api/v2/resources/media?q=foodborne%20outbreak\"}",
+  "trader_joes_recalls_registry": "{id:\"trader_joes_recalls\",name:\"Trader Joe\u2019s Food Safety & Product Recalls\",family:\"Retailer\",kind:\"web\",active:false,authority:false,url:\"https://www.traderjoes.com/home/announcements?category=recalls\"}",
+  "uk_fsa_alerts_registry": "{id:\"uk_fsa_alerts\",name:\"UK Food Standards Agency Alerts\",family:\"International\",kind:\"web\",active:false,authority:true,url:\"https://alerts.food.gov.uk/\"}",
+  "surveillance_schedule": "*/30 * * * *"
+}
