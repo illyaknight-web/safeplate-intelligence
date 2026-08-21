@@ -166,3 +166,4 @@ Still not allowed to claim production LIVE until:
 - No backend code changed in this pass.
 
 Runtime gates A-1, A-2, and A-5 remain open until the exact package is deployed and verified on Netlify.
+Staging deployment trigger — August 20, 2026
