@@ -2,10 +2,8 @@ name: SAFEPLATE source connector repair
 
 on:
   push:
-    branches:
-      - safeplate-command-center-staging
-    paths:
-      - .github/workflows/source-connector-fix.yml
+    branches: [safeplate-command-center-staging]
+    paths: [.github/workflows/source-connector-fix.yml]
   workflow_dispatch:
 
 permissions:
@@ -18,102 +16,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: safeplate-command-center-staging
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-      - name: Add authoritative FSIS fallback
+      - name: Patch FSIS connector with official RSS fallback
         shell: bash
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          import re
-          p=Path('netlify/functions/surveillance.mjs')
-          s=p.read_text()
-          pattern=r'async function pullFSIS\(\)\{.*?\n\}\n\nfunction cleanText'
-          replacement=r'''async function pullFSIS(){
- const apiUrl="https://www.fsis.usda.gov/fsis/api/recall/v/1";
- const api=await timeoutFetch(apiUrl,{accept:"application/json,text/plain;q=0.9,*/*;q=0.8",headers:{referer:"https://www.fsis.usda.gov/science-data/developer-resources/recall-api"}});
- if(api.ok){
-   const j=await api.json();
-   const rows=Array.isArray(j)?j:(j.results||j.data||j.rows||[]);
-   const normalized=rows.slice(0,200).map(normalizeFSIS);
-   return {rows:normalized,note:`${normalized.length} records retrieved from official FSIS Recall API`};
- }
-
- let webError=null;
- try{
-   const {response:r,url}=await firstSuccessfulFetch([
-     "https://www.fsis.usda.gov/recalls",
-     "https://www.fsis.usda.gov/food-safety/alerts"
-   ],{accept:"text/html,application/xhtml+xml",headers:{referer:"https://www.fsis.usda.gov/"}});
-   const html=await r.text(),$=cheerio.load(html),seen=new Set(),rows=[];
-   $("a[href*='/recalls-alerts/']").each((_,a)=>{
-     const title=cleanText($(a).text());
-     const href=$(a).attr("href")||"";
-     if(title.length<20||!href)return;
-     const full=new URL(href,url).toString();
-     if(seen.has(full))return;seen.add(full);
-     const block=$(a).closest("article,.views-row,.node,.usa-card,.view-content>div").first();
-     const text=cleanText(block.length?block.text():$(a).parent().parent().text());
-     const rid=(text.match(/\b(?:PHA-\d{8}-\d+|\d{3}-\d{4})\b/i)||[])[0]||fingerprint([title,full]);
-     const classification=(text.match(/Class\s+(?:I{1,3})\b/i)||[])[0]||"";
-     rows.push(normalizeFSIS({
-       field_recall_number:rid,field_title:title,field_reason_for_recall:text.slice(0,1200),
-       field_recall_classification:classification,field_states:/\bNationwide\b/i.test(text)?"Nationwide":"",
-       field_recall_url:full,
-       field_recall_date:(text.match(/(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s+[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}/)||[])[0]||null
-     }));
-   });
-   if(rows.length)return {rows:rows.slice(0,100),note:`${rows.slice(0,100).length} records retrieved from official FSIS web fallback after API ${api.status}`};
- }catch(e){webError=String(e.message||e)}
-
- const cdcUrl="https://www2c.cdc.gov/podcasts/createrss.asp?c=146";
- const cdc=await timeoutFetch(cdcUrl,{accept:"application/rss+xml,application/xml,text/xml,*/*;q=0.8",headers:{referer:"https://catalog.data.gov/dataset/food-safety-information-rss-feed"}});
- if(cdc.ok){
-   const xml=await cdc.text(),$=cheerio.load(xml,{xmlMode:true}),seen=new Set(),rows=[];
-   $("item").each((_,item)=>{
-     const title=cleanText($(item).find("title").first().text());
-     const link=cleanText($(item).find("link").first().text());
-     const guid=cleanText($(item).find("guid").first().text());
-     const rawDesc=$(item).find("description").first().text()||"";
-     const desc=cleanText(rawDesc.replace(/<[^>]+>/g," "));
-     const pubDate=cleanText($(item).find("pubDate").first().text());
-     const marker=`${link} ${guid} ${title} ${desc}`;
-     if(!/(fsis\.usda\.gov|Food Safety and Inspection Service|\bFSIS\b|\bUSDA\b)/i.test(marker))return;
-     const sourceUrl=link||guid;
-     if(sourceUrl&&seen.has(sourceUrl))return;
-     if(sourceUrl)seen.add(sourceUrl);
-     const text=cleanText(`${title} ${desc}`);
-     const rid=(text.match(/\b(?:PHA-\d{8}-\d+|\d{3}-\d{4})\b/i)||[])[0]||fingerprint([title,sourceUrl,pubDate]);
-     const classification=(text.match(/Class\s+(?:I{1,3})\b/i)||[])[0]||"";
-     rows.push(normalizeFSIS({
-       field_recall_number:rid,
-       field_title:title||"USDA FSIS recall / public health alert",
-       field_reason_for_recall:desc||title,
-       field_recall_classification:classification,
-       field_states:/\bNationwide\b/i.test(text)?"Nationwide":"",
-       field_recall_url:sourceUrl||"https://www.foodsafety.gov/recalls-and-outbreaks",
-       field_recall_date:pubDate||null
-     }));
-   });
-   if(rows.length)return {rows:rows.slice(0,100),note:`${rows.slice(0,100).length} USDA/FSIS notices retrieved through CDC/HHS federal Food Safety RSS after direct FSIS ${api.status}`};
- }
- throw new Error(`FSIS direct access ${api.status}; web fallback ${webError||"no rows"}; CDC/HHS federal RSS ${cdc.status}`);
-}
-
-function cleanText'''
-          ns,n=re.subn(pattern,lambda _m: replacement,s,count=1,flags=re.S)
-          if n!=1: raise SystemExit(f'FSIS function replacement count={n}')
-          p.write_text(ns)
-          PY
-          node --check netlify/functions/surveillance.mjs
-          git config user.name "safeplate-bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add netlify/functions/surveillance.mjs
-          if git diff --cached --quiet; then
-            echo "FSIS fallback already present; nothing to commit."
-            exit 0
-          fi
-          git commit -m "Add federal FSIS fallback via CDC HHS feed"
-          git pull --rebase origin safeplate-command-center-staging
-          git push origin HEAD:safeplate-command-center-staging
+          echo 'ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCnA9UGF0aCgibmV0bGlmeS9mdW5jdGlvbnMvc3VydmVpbGxhbmNlLm1qcyIpCnM9cC5yZWFkX3RleHQoKQpzdGFydD1zLmluZGV4KCJhc3luYyBmdW5jdGlvbiBwdWxsRlNJUygpeyIpCmVuZD1zLmluZGV4KCJcbmZ1bmN0aW9uIGNsZWFuVGV4dCIsIHN0YXJ0KQpuZXc9J2FzeW5jIGZ1bmN0aW9uIHB1bGxGU0lTKCl7XG4gY29uc3QgYXBpVXJsPSJodHRwczovL3d3dy5mc2lzLnVzZGEuZ292L2ZzaXMvYXBpL3JlY2FsbC92LzEiO1xuIGxldCBhcGlTdGF0dXM9InVua25vd24iO1xuIHRyeXtcbiAgIGNvbnN0IGFwaT1hd2FpdCB0aW1lb3V0RmV0Y2goYXBpVXJsLHthY2NlcHQ6ImFwcGxpY2F0aW9uL2pzb24sdGV4dC9wbGFpbjtxPTAuOSwqLyo7cT0wLjgiLGhlYWRlcnM6e3JlZmVyZXI6Imh0dHBzOi8vd3d3LmZzaXMudXNkYS5nb3Yvc2NpZW5jZS1kYXRhL2RldmVsb3Blci1yZXNvdXJjZXMvcmVjYWxsLWFwaSJ9fSk7XG4gICBhcGlTdGF0dXM9YXBpLnN0YXR1cztcbiAgIGlmKGFwaS5vayl7XG4gICAgIGNvbnN0IGo9YXdhaXQgYXBpLmpzb24oKTtcbiAgICAgY29uc3Qgcm93cz1BcnJheS5pc0FycmF5KGopP2o6KGoucmVzdWx0c3x8ai5kYXRhfHxqLnJvd3N8fFtdKTtcbiAgICAgY29uc3Qgbm9ybWFsaXplZD1yb3dzLnNsaWNlKDAsMjAwKS5tYXAobm9ybWFsaXplRlNJUyk7XG4gICAgIGlmKG5vcm1hbGl6ZWQubGVuZ3RoKXJldHVybiB7cm93czpub3JtYWxpemVkLG5vdGU6YCR7bm9ybWFsaXplZC5sZW5ndGh9IHJlY29yZHMgcmV0cmlldmVkIGZyb20gb2ZmaWNpYWwgRlNJUyBSZWNhbGwgQVBJYH07XG4gICB9XG4gfWNhdGNoKGUpeyBhcGlTdGF0dXM9U3RyaW5nKGUubWVzc2FnZXx8ZSk7IH1cblxuIGNvbnN0IHJzc1VybD0iaHR0cHM6Ly93d3cuZnNpcy51c2RhLmdvdi9mc2lzLWNvbnRlbnQvcnNzL3JlY2FsbHMueG1sIjtcb'
