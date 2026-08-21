@@ -6,6 +6,7 @@ on:
       - safeplate-command-center-staging
     paths:
       - .github/workflows/source-connector-fix.yml
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -66,8 +67,6 @@ jobs:
    if(rows.length)return {rows:rows.slice(0,100),note:`${rows.slice(0,100).length} records retrieved from official FSIS web fallback after API ${api.status}`};
  }catch(e){webError=String(e.message||e)}
 
- // Federal fallback documented by Data.gov/HHS: CDC's real-time Food Safety RSS
- // integrates the USDA FSIS and FDA food-safety feeds. We retain only USDA/FSIS items.
  const cdcUrl="https://www2c.cdc.gov/podcasts/createrss.asp?c=146";
  const cdc=await timeoutFetch(cdcUrl,{accept:"application/rss+xml,application/xml,text/xml,*/*;q=0.8",headers:{referer:"https://catalog.data.gov/dataset/food-safety-information-rss-feed"}});
  if(cdc.ok){
@@ -103,7 +102,7 @@ jobs:
 }
 
 function cleanText'''
-          ns,n=re.subn(pattern,replacement,s,count=1,flags=re.S)
+          ns,n=re.subn(pattern,lambda _m: replacement,s,count=1,flags=re.S)
           if n!=1: raise SystemExit(f'FSIS function replacement count={n}')
           p.write_text(ns)
           PY
@@ -111,6 +110,10 @@ function cleanText'''
           git config user.name "safeplate-bot"
           git config user.email "actions@users.noreply.github.com"
           git add netlify/functions/surveillance.mjs
+          if git diff --cached --quiet; then
+            echo "FSIS fallback already present; nothing to commit."
+            exit 0
+          fi
           git commit -m "Add federal FSIS fallback via CDC HHS feed"
           git pull --rebase origin safeplate-command-center-staging
           git push origin HEAD:safeplate-command-center-staging
