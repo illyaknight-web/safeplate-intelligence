@@ -1,4 +1,4 @@
-name: SAFEPLATE source connector repair
+name: SAFEPLATE source connector diagnostic
 
 on:
   push:
@@ -10,25 +10,27 @@ permissions:
   contents: write
 
 jobs:
-  repair:
+  diagnostic:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: safeplate-command-center-staging
-      - name: Patch FSIS connector with official RSS fallback
+      - name: Capture federal FoodSafety RSS sample
         shell: bash
         run: |
-          echo 'ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCnA9UGF0aCgibmV0bGlmeS9mdW5jdGlvbnMvc3VydmVpbGxhbmNlLm1qcyIpCnM9cC5yZWFkX3RleHQoKQpzdGFydD1zLmluZGV4KCJhc3luYyBmdW5jdGlvbiBwdWxsRlNJUygpeyIpCmVuZD1zLmluZGV4KCJcbmZ1bmN0aW9uIGNsZWFuVGV4dCIsIHN0YXJ0KQpuZXc9J2FzeW5jIGZ1bmN0aW9uIHB1bGxGU0lTKCl7XG4gY29uc3QgYXBpVXJsPSJodHRwczovL3d3dy5mc2lzLnVzZGEuZ292L2ZzaXMvYXBpL3JlY2FsbC92LzEiO1xuIGxldCBhcGlTdGF0dXM9InVua25vd24iO1xuIHRyeXtcbiAgIGNvbnN0IGFwaT1hd2FpdCB0aW1lb3V0RmV0Y2goYXBpVXJsLHthY2NlcHQ6ImFwcGxpY2F0aW9uL2pzb24sdGV4dC9wbGFpbjtxPTAuOSwqLyo7cT0wLjgiLGhlYWRlcnM6e3JlZmVyZXI6Imh0dHBzOi8vd3d3LmZzaXMudXNkYS5nb3Yvc2NpZW5jZS1kYXRhL2RldmVsb3Blci1yZXNvdXJjZXMvcmVjYWxsLWFwaSJ9fSk7XG4gICBhcGlTdGF0dXM9YXBpLnN0YXR1cztcbiAgIGlmKGFwaS5vayl7XG4gICAgIGNvbnN0IGo9YXdhaXQgYXBpLmpzb24oKTtcbiAgICAgY29uc3Qgcm93cz1BcnJheS5pc0FycmF5KGopP2o6KGoucmVzdWx0c3x8ai5kYXRhfHxqLnJvd3N8fFtdKTtcbiAgICAgY29uc3Qgbm9ybWFsaXplZD1yb3dzLnNsaWNlKDAsMjAwKS5tYXAobm9ybWFsaXplRlNJUyk7XG4gICAgIGlmKG5vcm1hbGl6ZWQubGVuZ3RoKXJldHVybiB7cm93czpub3JtYWxpemVkLG5vdGU6YCR7bm9ybWFsaXplZC5sZW5ndGh9IHJlY29yZHMgcmV0cmlldmVkIGZyb20gb2ZmaWNpYWwgRlNJUyBSZWNhbGwgQVBJYH07XG4gICB9XG4gfWNhdGNoKGUpeyBhcGlTdGF0dXM9U3RyaW5nKGUubWVzc2FnZXx8ZSkgfVxuXG4gY29uc3QgcnNzVXJsPSJodHRwczovL3d3dy5mc2lzLnVzZGEuZ292L2ZzaXMtY29udGVudC9yc3MvcmVjYWxscy54bWwiO1xuIHRyeXtcbiAgIGNvbnN0IHJzcz1hd2FpdCB0aW1lb3V0RmV0Y2gocnNzVXJsLHthY2NlcHQ6ImFwcGxpY2F0aW9uL3Jzcyt4bWwsYXBwbGljYXRpb24veG1sLHRleHQveG1sLCovKjtxPTAuOCJ9KTtcbiAgIGlmKHJzcy5vayl7XG4gICAgIGNvbnN0IHhtbD1hd2FpdCByc3MudGV4dCgpLCQ9Y2hlZXJpby5sb2FkKHhtbCx7eG1sTW9kZTp0cnVlfSksc2Vlbj1uZXcgU2V0KCkscm93cz1bXTtcbiAgICAgJCgiaXRlbSIpLmVhY2goKF8saXRlbSk9PntcbiAgICAgICBjb25zdCB0aXRsZT1jbGVhblRleHQoJChpdGVtKS5maW5kKCJ0aXRsZSIpLmZpcnN0KCkudGV4dCgpKTtcbiAgICAgICBjb25zdCBsaW5rPWNsZWFuVGV4dCgkKGl0ZW0pLmZpbmQoImxpbmsiKS5maXJzdCgpLnRleHQoKSk7XG4gICAgICAgY29uc3QgZ3VpZD1jbGVhblRleHQoJChpdGVtKS5maW5kKCJndWlkIikuZmlyc3QoKS50ZXh0KCkpO1xuICAgICAgIGNvbnN0IHJhd0Rlc2M9JChpdGVtKS5maW5kKCJkZXNjcmlwdGlvbiIpLmZpcnN0KCkudGV4dCgpfHwiIjtcbiAgICAgICBjb25zdCBkZXNjPWNsZWFuVGV4dChyYXdEZXNjLnJlcGxhY2UoLzxbXj5dKz4vZywiICIpKTtcbiAgICAgICBjb25zdCBwdWJEYXRlPWNsZWFuVGV4dCgkKGl0ZW0pLmZpbmQoInB1YkRhdGUiKS5maXJzdCgpLnRleHQoKSk7XG4gICAgICAgY29uc3Qgc291cmNlVXJsPWxpbmt8fGd1aWQ7XG4gICAgICAgaWYoIXRpdGxlfHwhc291cmNlVXJsfHxzZWVuLmhhcyhzb3VyY2VVcmwpKXJldHVybjtcbiAgICAgICBzZWVuLmFkZChzb3VyY2VVcmwpO1xuICAgICAgIGNvbnN0IHRleHQ9Y2xlYW5UZXh0KGAke3RpdGxlfSAke2Rlc2N9YCk7XG4gICAgICAgY29uc3QgcmlkPSh0ZXh0Lm1hdGNoKC9cXGIoPzpQSEEtXFxkezh9LVxcZCt8XFxkezN9LVxcZHs0fSlcXGIvaSl8fFtdKVswXXx8ZmluZ2VycHJpbnQoW3RpdGxlLHNvdXJjZVVybCxwdWJEYXRlXSk7XG4gICAgICAgY29uc3QgY2xhc3NpZmljYXRpb249KHRleHQubWF0Y2goL0NsYXNzXFxzKyg/Okl7MSwzfSlcXGIvaSl8fFtdKVswXXx8IiI7XG4gICAgICAgcm93cy5wdXNoKG5vcm1hbGl6ZUZTSVMoe1xuICAgICAgICAgZmllbGRfcmVjYWxsX251bWJlcjpyaWQsXG4gICAgICAgICBmaWVsZF90aXRsZTp0aXRsZSxcbiAgICAgICAgIGZpZWxkX3JlYXNvbl9mb3JfcmVjYWxsOmRlc2N8fHRpdGxlLFxuICAgICAgICAgZmllbGRfcmVjYWxsX2NsYXNzaWZpY2F0aW9uOmNsYXNzaWZpY2F0aW9uLFxuICAgICAgICAgZmllbGRfc3RhdGVzOi9cXGJOYXRpb253aWRlXFxiL2kudGVzdCh0ZXh0KT8iTmF0aW9ud2lkZSI6IiIsXG4gICAgICAgICBmaWVsZF9yZWNhbGxfdXJsOnNvdXJjZVVybCxcbiAgICAgICAgIGZpZWxkX3JlY2FsbF9kYXRlOnB1YkRhdGV8fG51bGxcbiAgICAgICB9KSk7XG4gICAgIH0pO1xuICAgICBpZihyb3dzLmxlbmd0aClyZXR1cm4ge3Jvd3M6cm93cy5zbGljZSgwLDEwMCksbm90ZTpgJHtyb3dzLnNsaWNlKDAsMTAwKS5sZW5ndGh9IHJlY29yZHMgcmV0cmlldmVkIGZyb20gb2ZmaWNpYWwgRlNJUyBSZWNhbGxzIFJTUyBhZnRlciBBUEkgJHthcGlTdGF0dXN9YH07XG4gICB9XG4gfWNhdGNoKGUpe31cblxuIHRocm93IG5ldyBFcnJvcihgRlNJUyBBUEkgdW5hdmFpbGFibGUgKCR7YXBpU3RhdHVzfSkgYW5kIG9mZmljaWFsIHJlY2FsbHMgUlNTIHVuYXZhaWxhYmxlYCk7XG59XG4nCnAud3JpdGVfdGV4dChzWzpzdGFydF0rbmV3K3NbZW5kOl0pCg==' | base64 -d > /tmp/patch_fsis.py
-          python /tmp/patch_fsis.py
-          node --check netlify/functions/surveillance.mjs
+          python - <<'PY'
+          import urllib.request
+          u='https://www2c.cdc.gov/podcasts/createrss.asp?c=146'
+          req=urllib.request.Request(u,headers={'User-Agent':'SAFEPLATE-diagnostic/1.0','Accept':'application/rss+xml,application/xml,text/xml,*/*'})
+          with urllib.request.urlopen(req,timeout=40) as r:
+              data=r.read().decode('utf-8','replace')
+          open('CDC_FEED_SAMPLE.txt','w').write(data[:30000])
+          print(data[:5000])
+          PY
           git config user.name "safeplate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add netlify/functions/surveillance.mjs
-          if git diff --cached --quiet; then
-            echo "FSIS connector already patched."
-          else
-            git commit -m "Use official FSIS Recalls RSS fallback"
-            git pull --rebase origin safeplate-command-center-staging
-            git push origin HEAD:safeplate-command-center-staging
-          fi
+          git add CDC_FEED_SAMPLE.txt
+          git commit -m "Capture FoodSafety federal RSS diagnostic sample" || true
+          git pull --rebase origin safeplate-command-center-staging
+          git push origin HEAD:safeplate-command-center-staging
