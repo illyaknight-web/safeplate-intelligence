@@ -1,0 +1,91 @@
+name: SAFEPLATE final readiness evidence
+
+on:
+  push:
+    branches:
+      - safeplate-command-center-staging
+    paths:
+      - .github/workflows/final-readiness.yml
+      - netlify/functions/manual-sync.mjs
+      - package.json
+      - README.md
+
+permissions:
+  contents: write
+
+jobs:
+  readiness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: safeplate-command-center-staging
+      - name: Wait for Netlify branch deploy
+        run: sleep 90
+      - name: Capture final post-cleanup runtime evidence
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, urllib.request, urllib.error, time
+          base='https://safeplate-command-center-staging--safeplate-intelligence.netlify.app'
+
+          def fetch(path, retries=6):
+              last=''
+              for _ in range(retries):
+                  try:
+                      req=urllib.request.Request(base+path,headers={'User-Agent':'SAFEPLATE-final-readiness/1.0','Accept':'application/json,text/plain,*/*'})
+                      with urllib.request.urlopen(req,timeout=40) as r:
+                          return {'http':r.status,'body':r.read().decode('utf-8','replace')}
+                  except urllib.error.HTTPError as e:
+                      body=e.read().decode('utf-8','replace') if getattr(e,'fp',None) else ''
+                      return {'http':e.code,'body':body,'error':str(e)}
+                  except Exception as e:
+                      last=repr(e); time.sleep(10)
+              return {'http':None,'body':'','error':last}
+
+          def parse(x):
+              try:return json.loads(x.get('body') or '{}')
+              except Exception:return {'raw':x.get('body'),'error':x.get('error')}
+
+          status=fetch('/api/system-status')
+          health=fetch('/api/source-health')
+          manual=fetch('/api/manual-sync')
+          protected={}
+          for p in ['/netlify/functions/surveillance.mjs','/netlify/functions/lib/auth.mjs','/netlify/functions/lib/sources.mjs','/README.md','/.env.example','/REDTEAM_REMEDIATION_v3512.json']:
+              protected[p]=fetch(p,2).get('http')
+
+          s,h,m=parse(status),parse(health),parse(manual)
+          src={x.get('id'):x for x in h.get('sources',[]) if isinstance(x,dict)}
+          active=['fda_openfda','fda_outbreaks','fda_food_events','usda_fsis','noaa_enso','nws_hazards']
+          checks={
+              'systemStatusHttp200': status.get('http')==200,
+              'sourceHealthHttp200': health.get('http')==200,
+              'systemLive': s.get('live') is True,
+              'systemNotStale': s.get('stale') is False,
+              'activeSourcesSixOnline': all(src.get(k,{}).get('status')=='ONLINE' for k in active),
+              'sourceIssuesZero': (s.get('sourceIssues') or 0)==0,
+              'manualSyncGetBlocked': manual.get('http') in (401,403,405),
+              'protectedFiles404': all(v==404 for v in protected.values())
+          }
+          result={
+              'capturedAt':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),
+              'systemStatus':{'http':status.get('http'),'json':s},
+              'sourceHealth':{'http':health.get('http'),'json':h},
+              'manualSyncUnauthenticatedGet':{'http':manual.get('http'),'json':m},
+              'publicFileChecks':protected,
+              'checks':checks,
+              'allPass':all(checks.values())
+          }
+          open('FINAL_PRODUCTION_READINESS.json','w').write(json.dumps(result,indent=2))
+          print(json.dumps(result,indent=2))
+          PY
+      - name: Commit final evidence
+        if: always()
+        shell: bash
+        run: |
+          git config user.name "safeplate-final-audit"
+          git config user.email "actions@users.noreply.github.com"
+          git add FINAL_PRODUCTION_READINESS.json
+          git commit -m "Record SAFEPLATE final production-readiness evidence [skip netlify]" || true
+          git pull --rebase origin safeplate-command-center-staging
+          git push origin HEAD:safeplate-command-center-staging || true
