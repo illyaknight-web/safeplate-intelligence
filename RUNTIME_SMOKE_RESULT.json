@@ -1,11 +1,11 @@
 {
-  "capturedAt": "2026-08-21T10:57:19Z",
+  "capturedAt": "2026-08-21T11:01:50Z",
   "manualSync": {
     "http": 200,
     "json": {
       "ok": true,
-      "lastSync": "2026-08-21T10:57:14.777Z",
-      "count": 248,
+      "lastSync": "2026-08-21T11:01:48.163Z",
+      "count": 267,
       "stagingBootstrap": true
     }
   },
@@ -14,12 +14,12 @@
     "json": {
       "live": true,
       "stale": false,
-      "lastSync": "2026-08-21T10:57:14.777Z",
+      "lastSync": "2026-08-21T11:01:48.163Z",
       "ageMinutes": 0,
       "cycleMinutes": 30,
-      "incidents": 248,
-      "sourcesOnline": 4,
-      "sourceIssues": 2,
+      "incidents": 267,
+      "sourcesOnline": 5,
+      "sourceIssues": 1,
       "sourcesChecked": 6
     }
   },
@@ -27,30 +27,30 @@
     "http": 200,
     "json": {
       "overall": "degraded",
-      "lastSync": "2026-08-21T10:57:14.777Z",
+      "lastSync": "2026-08-21T11:01:48.163Z",
       "sources": [
         {
           "id": "fda_openfda",
           "name": "FDA openFDA Food Enforcement",
           "family": "Federal",
           "status": "ONLINE",
-          "lastChecked": "2026-08-21T10:57:14.777Z",
+          "lastChecked": "2026-08-21T11:01:48.163Z",
           "note": "100 records retrieved"
         },
         {
           "id": "fda_outbreaks",
           "name": "FDA Active Foodborne Outbreak Investigations",
           "family": "Federal",
-          "status": "DEGRADED",
-          "lastChecked": "2026-08-21T10:57:14.777Z",
-          "note": "FDA outbreaks 404"
+          "status": "ONLINE",
+          "lastChecked": "2026-08-21T11:01:48.163Z",
+          "note": "19 active investigations retrieved from official FDA outbreak table"
         },
         {
           "id": "fda_food_events",
           "name": "FDA Food Adverse Events",
           "family": "Federal",
           "status": "ONLINE",
-          "lastChecked": "2026-08-21T10:57:14.777Z",
+          "lastChecked": "2026-08-21T11:01:48.163Z",
           "note": "100 records retrieved"
         },
         {
@@ -58,8 +58,8 @@
           "name": "USDA FSIS Recall API",
           "family": "Federal",
           "status": "DEGRADED",
-          "lastChecked": "2026-08-21T10:57:14.777Z",
-          "note": "FSIS 403"
+          "lastChecked": "2026-08-21T11:01:48.163Z",
+          "note": "Official source unavailable 403 at https://www.fsis.usda.gov/food-safety/alerts"
         },
         {
           "id": "cdc_content",
@@ -154,7 +154,7 @@
           "name": "NOAA/CPC ENSO + El Ni\u00f1o",
           "family": "Climate",
           "status": "ONLINE",
-          "lastChecked": "2026-08-21T10:57:14.777Z",
+          "lastChecked": "2026-08-21T11:01:48.163Z",
           "note": "NOAA/CPC checked; no active El Ni\u00f1o Advisory phrase detected."
         },
         {
@@ -162,7 +162,7 @@
           "name": "NWS Flood + Heat + Tropical Hazards",
           "family": "Climate",
           "status": "ONLINE",
-          "lastChecked": "2026-08-21T10:57:14.777Z",
+          "lastChecked": "2026-08-21T11:01:48.163Z",
           "note": "45 records retrieved"
         },
         {
@@ -212,7 +212,7 @@
     "manualSyncOk": true,
     "systemLive": true,
     "sourcesCheckedAtLeast6": true,
-    "fdaOutbreaksOnline": false,
+    "fdaOutbreaksOnline": true,
     "fsisOnline": false,
     "protectedFiles404": true
   },
