@@ -1,8 +1,0 @@
-{
-  "hidden_control_rule_removed": true,
-  "attribution_text_present": true,
-  "maplibre_control_visible_rule": true,
-  "browser_js": "PASS",
-  "server_js": "PASS",
-  "netlify_toml": "PASS"
-}
