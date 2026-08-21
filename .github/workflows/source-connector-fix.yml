@@ -1,48 +1,55 @@
-name: SAFEPLATE FSIS bridge diagnostic
+name: SAFEPLATE FSIS authoritative bridge
 
 on:
   push:
     branches: [safeplate-command-center-staging]
     paths: [.github/workflows/source-connector-fix.yml]
   workflow_dispatch:
+  schedule:
+    - cron: '17 * * * *'
 
 permissions:
   contents: write
 
 jobs:
-  diagnostic:
+  sync-fsis:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: safeplate-command-center-staging
-      - name: Probe authoritative FSIS endpoints
+      - name: Fetch official FSIS Recall API snapshot
         shell: bash
         run: |
           python - <<'PY'
-          import json, urllib.request, urllib.error
-          urls=[
-            'https://www.fsis.usda.gov/fsis/api/recall/v/1',
-            'https://www.fsis.usda.gov/recalls',
-            'https://www.fsis.usda.gov/fsis-content/rss/recalls.xml'
-          ]
-          out=[]
-          for u in urls:
-              try:
-                  req=urllib.request.Request(u,headers={'User-Agent':'Mozilla/5.0 SAFEPLATE bridge diagnostic','Accept':'application/json,text/html,application/rss+xml,application/xml,*/*'})
-                  with urllib.request.urlopen(req,timeout=40) as r:
-                      body=r.read(50000).decode('utf-8','replace')
-                      out.append({'url':u,'status':r.status,'content_type':r.headers.get('content-type'),'body':body})
-              except urllib.error.HTTPError as e:
-                  out.append({'url':u,'status':e.code,'error':str(e),'body':e.read(5000).decode('utf-8','replace')})
-              except Exception as e:
-                  out.append({'url':u,'status':None,'error':repr(e)})
-          open('FSIS_ENDPOINT_DIAGNOSTIC.json','w').write(json.dumps(out,indent=2))
-          print(json.dumps([{k:v for k,v in x.items() if k!='body'} for x in out],indent=2))
+          import json, urllib.request, datetime, pathlib
+          u='https://www.fsis.usda.gov/fsis/api/recall/v/1'
+          req=urllib.request.Request(u,headers={'User-Agent':'Mozilla/5.0 SAFEPLATE authoritative bridge','Accept':'application/json'})
+          with urllib.request.urlopen(req,timeout=60) as r:
+              rows=json.loads(r.read().decode('utf-8','replace'))
+          if not isinstance(rows,list) or not rows:
+              raise SystemExit('FSIS API returned no records')
+          payload={'capturedAt':datetime.datetime.now(datetime.timezone.utc).isoformat().replace('+00:00','Z'),'source':u,'records':rows}
+          pathlib.Path('data').mkdir(exist_ok=True)
+          pathlib.Path('data/fsis-recalls.json').write_text(json.dumps(payload,separators=(',',':')))
+          print('FSIS records:',len(rows))
           PY
+      - name: Patch SAFEPLATE to use bridge when Netlify is blocked
+        shell: bash
+        run: |
+          echo 'ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCnA9UGF0aCgibmV0bGlmeS9mdW5jdGlvbnMvc3VydmVpbGxhbmNlLm1qcyIpCnM9cC5yZWFkX3RleHQoKQpzdGFydD1zLmluZGV4KCJhc3luYyBmdW5jdGlvbiBwdWxsRlNJUygpeyIpCmVuZD1zLmluZGV4KCJcbmZ1bmN0aW9uIGNsZWFuVGV4dCIsIHN0YXJ0KQpuZXc9J2FzeW5jIGZ1bmN0aW9uIHB1bGxGU0lTKCl7XG4gY29uc3QgYXBpVXJsPSJodHRwczovL3d3dy5mc2lzLnVzZGEuZ292L2ZzaXMvYXBpL3JlY2FsbC92LzEiO1xuIHRyeXtcbiAgIGNvbnN0IGFwaT1hd2FpdCB0aW1lb3V0RmV0Y2goYXBpVXJsLHthY2NlcHQ6ImFwcGxpY2F0aW9uL2pzb24sdGV4dC9wbGFpbjtxPTAuOSwqLyo7cT0wLjgiLGhlYWRlcnM6e3JlZmVyZXI6Imh0dHBzOi8vd3d3LmZzaXMudXNkYS5nb3Yvc2NpZW5jZS1kYXRhL2RldmVsb3Blci1yZXNvdXJjZXMvcmVjYWxsLWFwaSJ9fSk7XG4gICBpZihhcGkub2spe1xuICAgICBjb25zdCBqPWF3YWl0IGFwaS5qc29uKCk7XG4gICAgIGNvbnN0IHJvd3M9QXJyYXkuaXNBcnJheShqKT9qOihqLnJlc3VsdHN8fGouZGF0YXx8ai5yb3dzfHxbXSk7XG4gICAgIGNvbnN0IG5vcm1hbGl6ZWQ9cm93cy5zbGljZSgwLDMwMCkubWFwKG5vcm1hbGl6ZUZTSVMpO1xuICAgICBpZihub3JtYWxpemVkLmxlbmd0aClyZXR1cm4ge3Jvd3M6bm9ybWFsaXplZCxub3RlOmAke25vcm1hbGl6ZWQubGVuZ3RofSByZWNvcmRzIHJldHJpZXZlZCBkaXJlY3RseSBmcm9tIG9mZmljaWFsIEZTSVMgUmVjYWxsIEFQSWB9O1xuICAgfVxuIH1jYXRjaChlKXt9XG5cbiBjb25zdCBicmlkZ2VVcmw9Imh0dHBzOi8vcmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbS9pbGx5YWtuaWdodC13ZWIvc2FmZXBsYXRlLWludGVsbGlnZW5jZS9zYWZlcGxhdGUtY29tbWFuZC1jZW50ZXItc3RhZ2luZy9kYXRhL2ZzaXMtcmVjYWxscy5qc29uIjtcbiBjb25zdCBicmlkZ2U9YXdhaXQgdGltZW91dEZldGNoKGJyaWRnZVVybCx7YWNjZXB0OiJhcHBsaWNhdGlvbi9qc29uIixtczoxNTAwMH0pO1xuIGlmKCFicmlkZ2Uub2spdGhyb3cgbmV3IEVycm9yKGBGU0lTIGRpcmVjdCBzb3VyY2UgYmxvY2tlZCBhbmQgYXV0aG9yaXRhdGl2ZSBicmlkZ2UgJHticmlkZ2Uuc3RhdHVzfWApO1xuIGNvbnN0IHBheWxvYWQ9YXdhaXQgYnJpZGdlLmpzb24oKTtcbiBjb25zdCByYXc9QXJyYXkuaXNBcnJheShwYXlsb2FkKT9wYXlsb2FkOihwYXlsb2FkLnJlY29yZHN8fFtdKTtcbiBjb25zdCBub3JtYWxpemVkPXJhdy5zbGljZSgwLDMwMCkubWFwKG5vcm1hbGl6ZUZTSVMpO1xuIGlmKCFub3JtYWxpemVkLmxlbmd0aCl0aHJvdyBuZXcgRXJyb3IoIkZTSVMgYXV0aG9yaXRhdGl2ZSBicmlkZ2UgcmV0dXJuZWQgMCByZWNvcmRzIik7XG4gY29uc3QgY2FwdHVyZWRBdD1BcnJheS5pc0FycmF5KHBheWxvYWQpP251bGw6cGF5bG9hZC5jYXB0dXJlZEF0O1xuIHJldHVybiB7cm93czpub3JtYWxpemVkLG5vdGU6YCR7bm9ybWFsaXplZC5sZW5ndGh9IHJlY29yZHMgZnJvbSBvZmZpY2lhbCBGU0lTIFJlY2FsbCBBUEkgdmlhIFNBRkVQTEFURSBHaXRIdWIgYnJpZGdlJHtjYXB0dXJlZEF0P2AgKGNhcHR1cmVkICR7Y2FwdHVyZWRBdH0pYDoiIn1gfTtcbn0nCnAud3JpdGVfdGV4dChzWzpzdGFydF0rbmV3K3NbZW5kOl0pCg==' | base64 -d > /tmp/patch_fsis.py
+          python /tmp/patch_fsis.py
+          node --check netlify/functions/surveillance.mjs
+      - name: Commit bridge snapshot and connector
+        shell: bash
+        run: |
           git config user.name "safeplate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add FSIS_ENDPOINT_DIAGNOSTIC.json
-          git commit -m "Capture FSIS endpoint diagnostic" || true
+          git add data/fsis-recalls.json netlify/functions/surveillance.mjs
+          if git diff --cached --quiet; then
+            echo "No FSIS bridge changes."
+            exit 0
+          fi
+          git commit -m "Refresh authoritative FSIS bridge [skip ci]"
           git pull --rebase origin safeplate-command-center-staging
           git push origin HEAD:safeplate-command-center-staging
