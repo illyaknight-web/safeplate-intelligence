@@ -1,4 +1,4 @@
-name: SAFEPLATE source connector diagnostic
+name: SAFEPLATE FSIS bridge diagnostic
 
 on:
   push:
@@ -16,21 +16,33 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: safeplate-command-center-staging
-      - name: Capture federal FoodSafety RSS sample
+      - name: Probe authoritative FSIS endpoints
         shell: bash
         run: |
           python - <<'PY'
-          import urllib.request
-          u='https://www2c.cdc.gov/podcasts/createrss.asp?c=146'
-          req=urllib.request.Request(u,headers={'User-Agent':'SAFEPLATE-diagnostic/1.0','Accept':'application/rss+xml,application/xml,text/xml,*/*'})
-          with urllib.request.urlopen(req,timeout=40) as r:
-              data=r.read().decode('utf-8','replace')
-          open('CDC_FEED_SAMPLE.txt','w').write(data[:30000])
-          print(data[:5000])
+          import json, urllib.request, urllib.error
+          urls=[
+            'https://www.fsis.usda.gov/fsis/api/recall/v/1',
+            'https://www.fsis.usda.gov/recalls',
+            'https://www.fsis.usda.gov/fsis-content/rss/recalls.xml'
+          ]
+          out=[]
+          for u in urls:
+              try:
+                  req=urllib.request.Request(u,headers={'User-Agent':'Mozilla/5.0 SAFEPLATE bridge diagnostic','Accept':'application/json,text/html,application/rss+xml,application/xml,*/*'})
+                  with urllib.request.urlopen(req,timeout=40) as r:
+                      body=r.read(50000).decode('utf-8','replace')
+                      out.append({'url':u,'status':r.status,'content_type':r.headers.get('content-type'),'body':body})
+              except urllib.error.HTTPError as e:
+                  out.append({'url':u,'status':e.code,'error':str(e),'body':e.read(5000).decode('utf-8','replace')})
+              except Exception as e:
+                  out.append({'url':u,'status':None,'error':repr(e)})
+          open('FSIS_ENDPOINT_DIAGNOSTIC.json','w').write(json.dumps(out,indent=2))
+          print(json.dumps([{k:v for k,v in x.items() if k!='body'} for x in out],indent=2))
           PY
           git config user.name "safeplate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add CDC_FEED_SAMPLE.txt
-          git commit -m "Capture FoodSafety federal RSS diagnostic sample" || true
+          git add FSIS_ENDPOINT_DIAGNOSTIC.json
+          git commit -m "Capture FSIS endpoint diagnostic" || true
           git pull --rebase origin safeplate-command-center-staging
           git push origin HEAD:safeplate-command-center-staging
