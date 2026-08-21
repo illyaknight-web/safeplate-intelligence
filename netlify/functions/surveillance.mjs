@@ -122,37 +122,51 @@ async function pullFDA(){
 
 async function pullFSIS(){
  const apiUrl="https://www.fsis.usda.gov/fsis/api/recall/v/1";
- const api=await timeoutFetch(apiUrl,{accept:"application/json,text/plain;q=0.9,*/*;q=0.8",headers:{referer:"https://www.fsis.usda.gov/science-data/developer-resources/recall-api"}});
- if(api.ok){
-   const j=await api.json();
-   const rows=Array.isArray(j)?j:(j.results||j.data||j.rows||[]);
-   const normalized=rows.slice(0,200).map(normalizeFSIS);
-   return {rows:normalized,note:`${normalized.length} records retrieved from official FSIS Recall API`};
- }
- const {response:r,url}=await firstSuccessfulFetch([
-   "https://www.fsis.usda.gov/recalls",
-   "https://www.fsis.usda.gov/food-safety/alerts"
- ],{accept:"text/html,application/xhtml+xml",headers:{referer:"https://www.fsis.usda.gov/"}});
- const html=await r.text(),$=cheerio.load(html),seen=new Set(),rows=[];
- $("a[href*='/recalls-alerts/']").each((_,a)=>{
-   const title=cleanText($(a).text());
-   const href=$(a).attr("href")||"";
-   if(title.length<20||!href)return;
-   const full=new URL(href,url).toString();
-   if(seen.has(full))return;seen.add(full);
-   const block=$(a).closest("article,.views-row,.node,.usa-card,.view-content>div").first();
-   const text=cleanText(block.length?block.text():$(a).parent().parent().text());
-   const rid=(text.match(/\b(?:PHA-\d{8}-\d+|\d{3}-\d{4})\b/i)||[])[0]||fingerprint([title,full]);
-   const classification=(text.match(/Class\s+(?:I{1,3})\b/i)||[])[0]||"";
-   const stateText=/\bNationwide\b/i.test(text)?"Nationwide":"";
-   rows.push(normalizeFSIS({
-     field_recall_number:rid,field_title:title,field_reason_for_recall:text.slice(0,1200),
-     field_recall_classification:classification,field_states:stateText,field_recall_url:full,
-     field_recall_date:(text.match(/(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s+[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}/)||[])[0]||null
-   }));
- });
- if(!rows.length)throw new Error(`FSIS API ${api.status}; official web fallback returned 0 recall rows`);
- return {rows:rows.slice(0,100),note:`${rows.slice(0,100).length} records retrieved from official FSIS web fallback after API ${api.status}`};
+ let apiStatus="unknown";
+ try{
+   const api=await timeoutFetch(apiUrl,{accept:"application/json,text/plain;q=0.9,*/*;q=0.8",headers:{referer:"https://www.fsis.usda.gov/science-data/developer-resources/recall-api"}});
+   apiStatus=api.status;
+   if(api.ok){
+     const j=await api.json();
+     const rows=Array.isArray(j)?j:(j.results||j.data||j.rows||[]);
+     const normalized=rows.slice(0,200).map(normalizeFSIS);
+     if(normalized.length)return {rows:normalized,note:`${normalized.length} records retrieved from official FSIS Recall API`};
+   }
+ }catch(e){ apiStatus=String(e.message||e) }
+
+ const rssUrl="https://www.fsis.usda.gov/fsis-content/rss/recalls.xml";
+ try{
+   const rss=await timeoutFetch(rssUrl,{accept:"application/rss+xml,application/xml,text/xml,*/*;q=0.8"});
+   if(rss.ok){
+     const xml=await rss.text(),$=cheerio.load(xml,{xmlMode:true}),seen=new Set(),rows=[];
+     $("item").each((_,item)=>{
+       const title=cleanText($(item).find("title").first().text());
+       const link=cleanText($(item).find("link").first().text());
+       const guid=cleanText($(item).find("guid").first().text());
+       const rawDesc=$(item).find("description").first().text()||"";
+       const desc=cleanText(rawDesc.replace(/<[^>]+>/g," "));
+       const pubDate=cleanText($(item).find("pubDate").first().text());
+       const sourceUrl=link||guid;
+       if(!title||!sourceUrl||seen.has(sourceUrl))return;
+       seen.add(sourceUrl);
+       const text=cleanText(`${title} ${desc}`);
+       const rid=(text.match(/\b(?:PHA-\d{8}-\d+|\d{3}-\d{4})\b/i)||[])[0]||fingerprint([title,sourceUrl,pubDate]);
+       const classification=(text.match(/Class\s+(?:I{1,3})\b/i)||[])[0]||"";
+       rows.push(normalizeFSIS({
+         field_recall_number:rid,
+         field_title:title,
+         field_reason_for_recall:desc||title,
+         field_recall_classification:classification,
+         field_states:/\bNationwide\b/i.test(text)?"Nationwide":"",
+         field_recall_url:sourceUrl,
+         field_recall_date:pubDate||null
+       }));
+     });
+     if(rows.length)return {rows:rows.slice(0,100),note:`${rows.slice(0,100).length} records retrieved from official FSIS Recalls RSS after API ${apiStatus}`};
+   }
+ }catch(e){}
+
+ throw new Error(`FSIS API unavailable (${apiStatus}) and official recalls RSS unavailable`);
 }
 
 function cleanText(v=""){return String(v).replace(/\s+/g," ").trim()}
