@@ -1,2 +1,0 @@
-SAFEPLATE FSIS authoritative bridge deployment trigger.
-Official FSIS data is fetched by GitHub Actions and consumed by the Netlify staging runtime when direct USDA access is blocked.
