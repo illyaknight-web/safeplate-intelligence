@@ -1,0 +1,79 @@
+name: SAFEPLATE staging runtime audit
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/safeplate-staging-audit.yml
+
+permissions:
+  contents: write
+
+jobs:
+  audit-staging:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: safeplate-command-center-staging
+      - name: Wait for Netlify staging deploy
+        run: sleep 90
+      - name: Run and record staging runtime audit
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, urllib.request, urllib.error, time
+          base='https://safeplate-command-center-staging--safeplate-intelligence.netlify.app'
+          def fetch(path, retries=6):
+              last=''
+              for _ in range(retries):
+                  try:
+                      req=urllib.request.Request(base+path,headers={'User-Agent':'SAFEPLATE-runtime-audit/1.0'})
+                      with urllib.request.urlopen(req,timeout=40) as r:
+                          return {'http':r.status,'body':r.read().decode('utf-8','replace')}
+                  except urllib.error.HTTPError as e:
+                      body=e.read().decode('utf-8','replace') if getattr(e,'fp',None) else ''
+                      return {'http':e.code,'body':body,'error':str(e)}
+                  except Exception as e:
+                      last=repr(e); time.sleep(10)
+              return {'http':None,'body':'','error':last}
+          manual=fetch('/api/manual-sync')
+          time.sleep(3)
+          status=fetch('/api/system-status')
+          health=fetch('/api/source-health')
+          protected={}
+          for p in ['/netlify/functions/surveillance.mjs','/netlify/functions/lib/auth.mjs','/netlify/functions/lib/sources.mjs','/README.md','/.env.example','/REDTEAM_REMEDIATION_v3512.json']:
+              protected[p]=fetch(p,2).get('http')
+          def parse(x):
+              try:return json.loads(x.get('body') or '{}')
+              except Exception:return {'raw':x.get('body'),'error':x.get('error')}
+          m,s,h=parse(manual),parse(status),parse(health)
+          src={x.get('id'):x for x in h.get('sources',[]) if isinstance(x,dict)}
+          result={
+              'capturedAt':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),
+              'manualSync':{'http':manual.get('http'),'json':m},
+              'systemStatus':{'http':status.get('http'),'json':s},
+              'sourceHealth':{'http':health.get('http'),'json':h},
+              'publicFileChecks':protected,
+              'checks':{
+                  'manualSyncOk':m.get('ok') is True,
+                  'systemLive':s.get('live') is True,
+                  'sourcesCheckedAtLeast6':(s.get('sourcesChecked') or 0)>=6,
+                  'fdaOutbreaksOnline':src.get('fda_outbreaks',{}).get('status')=='ONLINE',
+                  'fsisOnline':src.get('usda_fsis',{}).get('status')=='ONLINE',
+                  'protectedFiles404':all(v==404 for v in protected.values())
+              }
+          }
+          result['allPass']=all(result['checks'].values())
+          open('RUNTIME_SMOKE_RESULT.json','w').write(json.dumps(result,indent=2))
+          print(json.dumps(result,indent=2))
+          PY
+      - name: Commit runtime evidence to staging branch
+        if: always()
+        shell: bash
+        run: |
+          git config user.name "safeplate-runtime-audit"
+          git config user.email "actions@users.noreply.github.com"
+          git add RUNTIME_SMOKE_RESULT.json
+          git commit -m "Record SAFEPLATE staging runtime evidence [skip netlify]" || true
+          git push origin HEAD:safeplate-command-center-staging
