@@ -1,0 +1,72 @@
+name: SAFEPLATE staging runtime smoke
+
+on:
+  push:
+    branches:
+      - safeplate-command-center-staging
+    paths:
+      - netlify/functions/surveillance.mjs
+      - .github/workflows/staging-runtime-smoke.yml
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for Netlify branch deploy
+        run: sleep 45
+      - name: Trigger staging surveillance sync
+        run: |
+          set -e
+          curl -fsS --retry 8 --retry-delay 10 --retry-all-errors \
+            https://safeplate-command-center-staging--safeplate-intelligence.netlify.app/api/manual-sync \
+            | tee manual-sync.json
+          python - <<'PY'
+          import json
+          j=json.load(open('manual-sync.json'))
+          assert j.get('ok') is True, j
+          print('manual sync ok', j)
+          PY
+      - name: Check system status
+        run: |
+          curl -fsS --retry 5 --retry-delay 5 \
+            https://safeplate-command-center-staging--safeplate-intelligence.netlify.app/api/system-status \
+            | tee system-status.json
+          python - <<'PY'
+          import json
+          j=json.load(open('system-status.json'))
+          print('system-status', json.dumps(j,indent=2))
+          assert j.get('live') is True, j
+          assert (j.get('sourcesChecked') or 0) >= 6, j
+          PY
+      - name: Check source health
+        run: |
+          curl -fsS --retry 5 --retry-delay 5 \
+            https://safeplate-command-center-staging--safeplate-intelligence.netlify.app/api/source-health \
+            | tee source-health.json
+          python - <<'PY'
+          import json
+          j=json.load(open('source-health.json'))
+          print('source-health', json.dumps(j,indent=2))
+          sources={x.get('id'):x for x in j.get('sources',[])}
+          for sid in ('fda_outbreaks','usda_fsis'):
+              assert sid in sources, (sid,j)
+              assert sources[sid].get('status') == 'ONLINE', sources[sid]
+          PY
+      - name: Check protected source files are not public
+        run: |
+          set -e
+          base=https://safeplate-command-center-staging--safeplate-intelligence.netlify.app
+          for p in \
+            /netlify/functions/surveillance.mjs \
+            /netlify/functions/lib/auth.mjs \
+            /netlify/functions/lib/sources.mjs \
+            /README.md \
+            /.env.example \
+            /REDTEAM_REMEDIATION_v3512.json; do
+              code=$(curl -sS -o /dev/null -w '%{http_code}' "$base$p")
+              echo "$p -> $code"
+              test "$code" = "404"
+          done
