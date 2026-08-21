@@ -7,18 +7,33 @@ import crypto from "node:crypto";
 
 const MAX_SOURCE_MS = 10000;
 
-const timeoutFetch=async(url,{ms=MAX_SOURCE_MS,accept="application/json"}={})=>{
+const timeoutFetch=async(url,{ms=MAX_SOURCE_MS,accept="application/json",headers={}}={})=>{
  const c=new AbortController();const t=setTimeout(()=>c.abort(),ms);
  try{
    return await fetch(url,{
-     signal:c.signal,
+     signal:c.signal,redirect:"follow",
      headers:{
        "accept":accept,
-       "user-agent":"SAFEPLATE/0.35.6 (+food-risk-intelligence; Function Media LLC)"
+       "accept-language":"en-US,en;q=0.9",
+       "cache-control":"no-cache",
+       "pragma":"no-cache",
+       "user-agent":"Mozilla/5.0 (compatible; SAFEPLATE/0.35.13; +https://safeplate-intelligence.netlify.app)",
+       ...headers
      }
    });
  } finally { clearTimeout(t) }
 };
+
+async function firstSuccessfulFetch(urls,options={}){
+ let lastStatus=null,lastUrl=null;
+ for(const url of urls){
+   lastUrl=url;
+   const r=await timeoutFetch(url,options);
+   if(r.ok)return {response:r,url};
+   lastStatus=r.status;
+ }
+ throw new Error(`Official source unavailable ${lastStatus||"unknown"} at ${lastUrl||"unknown URL"}`);
+}
 
 const newest=(a,b)=>new Date(b.lastObservedAt||b.updatedAt||0)-new Date(a.lastObservedAt||a.updatedAt||0);
 const stableHash=(obj)=>crypto.createHash("sha256").update(JSON.stringify(obj)).digest("hex").slice(0,24);
@@ -106,11 +121,38 @@ async function pullFDA(){
 }
 
 async function pullFSIS(){
- const r=await timeoutFetch("https://www.fsis.usda.gov/fsis/api/recall/v/1",{accept:"application/json"});
- if(!r.ok)throw new Error(`FSIS ${r.status}`);
- const j=await r.json();
- const rows=Array.isArray(j)?j:(j.results||j.data||j.rows||[]);
- return rows.slice(0,200).map(normalizeFSIS);
+ const apiUrl="https://www.fsis.usda.gov/fsis/api/recall/v/1";
+ const api=await timeoutFetch(apiUrl,{accept:"application/json,text/plain;q=0.9,*/*;q=0.8",headers:{referer:"https://www.fsis.usda.gov/science-data/developer-resources/recall-api"}});
+ if(api.ok){
+   const j=await api.json();
+   const rows=Array.isArray(j)?j:(j.results||j.data||j.rows||[]);
+   const normalized=rows.slice(0,200).map(normalizeFSIS);
+   return {rows:normalized,note:`${normalized.length} records retrieved from official FSIS Recall API`};
+ }
+ const {response:r,url}=await firstSuccessfulFetch([
+   "https://www.fsis.usda.gov/recalls",
+   "https://www.fsis.usda.gov/food-safety/alerts"
+ ],{accept:"text/html,application/xhtml+xml",headers:{referer:"https://www.fsis.usda.gov/"}});
+ const html=await r.text(),$=cheerio.load(html),seen=new Set(),rows=[];
+ $("a[href*='/recalls-alerts/']").each((_,a)=>{
+   const title=cleanText($(a).text());
+   const href=$(a).attr("href")||"";
+   if(title.length<20||!href)return;
+   const full=new URL(href,url).toString();
+   if(seen.has(full))return;seen.add(full);
+   const block=$(a).closest("article,.views-row,.node,.usa-card,.view-content>div").first();
+   const text=cleanText(block.length?block.text():$(a).parent().parent().text());
+   const rid=(text.match(/\b(?:PHA-\d{8}-\d+|\d{3}-\d{4})\b/i)||[])[0]||fingerprint([title,full]);
+   const classification=(text.match(/Class\s+(?:I{1,3})\b/i)||[])[0]||"";
+   const stateText=/\bNationwide\b/i.test(text)?"Nationwide":"";
+   rows.push(normalizeFSIS({
+     field_recall_number:rid,field_title:title,field_reason_for_recall:text.slice(0,1200),
+     field_recall_classification:classification,field_states:stateText,field_recall_url:full,
+     field_recall_date:(text.match(/(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s+[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}/)||[])[0]||null
+   }));
+ });
+ if(!rows.length)throw new Error(`FSIS API ${api.status}; official web fallback returned 0 recall rows`);
+ return {rows:rows.slice(0,100),note:`${rows.slice(0,100).length} records retrieved from official FSIS web fallback after API ${api.status}`};
 }
 
 function cleanText(v=""){return String(v).replace(/\s+/g," ").trim()}
@@ -122,9 +164,12 @@ function sevForOutbreak(pathogen="",cases=0){
 }
 
 async function pullFDAOutbreaks(){
- const url="https://www.fda.gov/food/outbreaks-foodborne-illness/investigations-foodborne-illness-outbreaks";
- const r=await timeoutFetch(url,{accept:"text/html,application/xhtml+xml"});
- if(!r.ok)throw new Error(`FDA outbreaks ${r.status}`);
+ const canonical="https://www.fda.gov/food/outbreaks-foodborne-illness/investigations-foodborne-illness-outbreaks";
+ const {response:r,url}=await firstSuccessfulFetch([
+   canonical,
+   `${canonical}?utm_source=safeplate`,
+   `${canonical}/`
+ ],{accept:"text/html,application/xhtml+xml,*/*;q=0.8",headers:{referer:"https://www.fda.gov/food/outbreaks-foodborne-illness"}});
  const html=await r.text(),$=cheerio.load(html),rows=[];
 
  $("table tbody tr").each((_,tr)=>{
@@ -161,7 +206,7 @@ async function pullFDAOutbreaks(){
    });
  });
  if(!rows.length)throw new Error("FDA outbreaks parser returned 0 active rows; page structure may have changed");
- return rows;
+ return {rows,note:`${rows.length} active investigations retrieved from official FDA outbreak table`};
 }
 
 async function pullNOAAENSO(){
@@ -324,8 +369,8 @@ async function pullUKFSA(){
 
 async function runSource(source){
  if(source.id==="fda_openfda")return {source,rows:await pullFDA()};
- if(source.id==="usda_fsis")return {source,rows:await pullFSIS()};
- if(source.id==="fda_outbreaks")return {source,rows:await pullFDAOutbreaks()};
+ if(source.id==="usda_fsis"){const x=await pullFSIS();return {source,...x}};
+ if(source.id==="fda_outbreaks"){const x=await pullFDAOutbreaks();return {source,...x}};
  if(source.id==="fda_food_events")return {source,rows:await pullFDAFoodEvents()};
  if(source.id==="cdc_content")return {source,rows:await pullCDCContent()};
  if(source.id==="nws_hazards")return {source,rows:await pullNWSHazards()};
@@ -357,8 +402,8 @@ export async function runSurveillance(){
        events.push({time:now,title:`${source.name} checked`,detail:result.value.climate.note});
      }else{
        const rows=result.value.rows||[];
-       incoming.push(...rows);h.status="ONLINE";h.note=`${rows.length} records retrieved`;
-       events.push({time:now,title:`${source.name} checked`,detail:`${rows.length} records retrieved successfully.`});
+       incoming.push(...rows);h.status="ONLINE";h.note=result.value.note||`${rows.length} records retrieved`;
+       events.push({time:now,title:`${source.name} checked`,detail:h.note});
      }
    }else{
      h.status="DEGRADED";h.note=String(result.reason?.message||result.reason||"Unknown source error");
