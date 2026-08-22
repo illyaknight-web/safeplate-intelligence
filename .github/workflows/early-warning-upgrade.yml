@@ -1,0 +1,197 @@
+name: SAFEPLATE early-warning correlation upgrade
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/early-warning-upgrade.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Activate verified precursor feeds and correlation engine
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          # 1) Activate verified CDC public API and add two verified state precursor feeds.
+          p=Path('netlify/functions/lib/sources.mjs')
+          s=p.read_text()
+          s=s.replace('{id:"cdc_content",name:"CDC Content Services — Public Foodborne Content",family:"Federal",kind:"api",active:false,authority:true,url:"https://tools.cdc.gov/api/v2/resources/media?q=foodborne%20outbreak"}',
+                      '{id:"cdc_content",name:"CDC Content Services — Public Foodborne Content",family:"Federal",kind:"api",active:true,authority:true,url:"https://tools.cdc.gov/api/v2/resources/media?q=foodborne%20outbreak",note:"Official CDC Content Services API; public, keyless signal feed"}')
+          anchor='  {id:"states",name:"State Health + Agriculture Departments",family:"State / Local",kind:"registry",active:false,authority:true,note:"Activate jurisdiction-by-jurisdiction"},\n'
+          insert='''  {id:"mn_health_food",name:"Minnesota Health + Agriculture Food Signals",family:"State / Local",kind:"web",active:true,authority:true,url:"https://www.health.state.mn.us/news",note:"Official MDH/MDA public food-safety releases"},\n  {id:"wi_health_food",name:"Wisconsin DHS Outbreaks + Recalls",family:"State / Local",kind:"web",active:true,authority:true,url:"https://www.dhs.wisconsin.gov/outbreaks/index.htm",note:"Official Wisconsin DHS outbreak/recall page"},\n'''
+          if 'id:"mn_health_food"' not in s:
+              if anchor not in s: raise SystemExit('state registry anchor not found')
+              s=s.replace(anchor,insert+anchor)
+          p.write_text(s)
+
+          # 2) Add state-signal collectors and conservative entity/correlation engine.
+          p=Path('netlify/functions/surveillance.mjs')
+          s=p.read_text()
+          marker='async function pullNWSHazards(){'
+          if marker not in s: raise SystemExit('NWS marker not found')
+          if 'async function pullMinnesotaFoodSignals()' not in s:
+              addition=r'''
+const FOOD_SIGNAL_RE=/\b(?:food|outbreak|recall|salmonella|listeria|e\.?\s*coli|stec|cyclospora|botulism|sprout|jalape[nñ]o|moringa|produce|lettuce|fruit|vegetable|dairy|cheese|meat|poultry|egg|seafood)\b/i;
+const MONTHS={january:0,february:1,march:2,april:3,may:4,june:5,july:6,august:7,september:8,october:9,november:10,december:11};
+function dateFromOfficialText(text=""){
+  const m=cleanText(text).match(/\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),\s+(20\d{2})\b/i);
+  if(!m)return null;
+  return new Date(Date.UTC(+m[3],MONTHS[m[1].toLowerCase()],+m[2])).toISOString();
+}
+function hazardFromText(text=""){
+  const t=text.toLowerCase();
+  const out=[];
+  if(/e\.?\s*coli|stec/.test(t))out.push("E. coli/STEC");
+  if(/salmonella/.test(t))out.push("Salmonella");
+  if(/listeria/.test(t))out.push("Listeria");
+  if(/cyclospora/.test(t))out.push("Cyclospora");
+  if(/botul/.test(t))out.push("Botulism");
+  return out.join(" + ")||"Foodborne illness / recall signal";
+}
+function officialSignalRow({id,title,text,source,url,state,postedAt}){
+  const summary=cleanText(text).slice(0,1800);
+  const hazard=hazardFromText(`${title} ${summary}`);
+  return {
+    id,title,product:title,company:"",hazard,severity:/e\.?\s*coli|listeria|botul/i.test(hazard)?"HIGH":"WATCH",
+    status:"CORROBORATING",category:"State/local precursor signal",states:[state],distribution:state,
+    lat:null,lng:null,source,sourcePostedAt:postedAt,updatedAt:postedAt||new Date().toISOString(),verifiedAt:postedAt||new Date().toISOString(),
+    summary,lots:[],evidence:[{type:"AGENCY",status:"VERIFIED",source,text:summary,url}],
+    entities:[{id:`event-${id}`,type:"Incident",name:title},{id:`geo-${id}`,type:"Geography",name:state}],
+    links:[[ `event-${id}`,`geo-${id}`,"reported in"]],workflowStep:1,rawSource:id.split('-')[0].toLowerCase()
+  };
+}
+async function pullMinnesotaFoodSignals(){
+  const indexUrl="https://www.health.state.mn.us/news";
+  const r=await timeoutFetch(indexUrl,{accept:"text/html,application/xhtml+xml"});
+  if(!r.ok)throw new Error(`Minnesota MDH ${r.status}`);
+  const $=cheerio.load(await r.text()),links=[];
+  $("a[href*='/news/pressrel/']").each((_,a)=>{
+    const title=cleanText($(a).text()),href=$(a).attr("href")||"";
+    if(!title||!FOOD_SIGNAL_RE.test(title))return;
+    try{links.push({title,url:new URL(href,indexUrl).toString()})}catch{}
+  });
+  const unique=[...new Map(links.map(x=>[x.url,x])).values()].slice(0,12);
+  const fetched=await Promise.allSettled(unique.map(async x=>{
+    const rr=await timeoutFetch(x.url,{accept:"text/html,application/xhtml+xml"});
+    if(!rr.ok)throw new Error(String(rr.status));
+    const $$=cheerio.load(await rr.text());
+    const title=cleanText($$("h1").first().text())||x.title;
+    const body=cleanText($$("main").text()||$$("body").text());
+    if(!FOOD_SIGNAL_RE.test(`${title} ${body}`))return null;
+    const postedAt=dateFromOfficialText(body);
+    return officialSignalRow({id:`MN-${fingerprint([title,x.url])}`,title,text:body,source:"Minnesota Department of Health / Agriculture",url:x.url,state:"Minnesota",postedAt});
+  }));
+  const rows=fetched.filter(x=>x.status==="fulfilled"&&x.value).map(x=>x.value);
+  if(!rows.length)throw new Error("Minnesota official food-signal parser returned 0 records");
+  return {rows,note:`${rows.length} official Minnesota food-safety signals retrieved`};
+}
+async function pullWisconsinFoodSignals(){
+  const url="https://www.dhs.wisconsin.gov/outbreaks/index.htm";
+  const r=await timeoutFetch(url,{accept:"text/html,application/xhtml+xml"});
+  if(!r.ok)throw new Error(`Wisconsin DHS ${r.status}`);
+  const $=cheerio.load(await r.text()),rows=[];
+  $("h2").each((_,h)=>{
+    const title=cleanText($(h).text());
+    if(!title||!FOOD_SIGNAL_RE.test(title))return;
+    let text=title,n=$(h).next();
+    while(n.length && n[0].tagName!=="h2") { text+=` ${cleanText(n.text())}`; n=n.next(); }
+    text=cleanText(text);
+    if(!FOOD_SIGNAL_RE.test(text))return;
+    const postedAt=dateFromOfficialText(text);
+    rows.push(officialSignalRow({id:`WI-${fingerprint([title,url])}`,title,text,source:"Wisconsin Department of Health Services",url,state:"Wisconsin",postedAt}));
+  });
+  if(!rows.length)throw new Error("Wisconsin DHS food-signal parser returned 0 records");
+  return {rows:rows.slice(0,30),note:`${rows.length} official Wisconsin outbreak/recall signals retrieved`};
+}
+
+const CORR_STOP=new Set("food foods outbreak outbreaks recall recalled investigation investigations active warning alert alerts product products linked possible public health illness illnesses case cases current update updated brand brands company official state states multistate detected verified signal signals".split(" "));
+function corrTokens(v=""){
+  return new Set(cleanText(v).toLowerCase().replace(/[^a-z0-9]+/g," ").split(/\s+/).filter(x=>x.length>=4&&!CORR_STOP.has(x)));
+}
+function overlap(a,b){let n=0;for(const x of a)if(b.has(x))n++;return n}
+function sourceClass(x){
+  const s=String(x.source||"").toLowerCase();
+  if(/fda|cdc|usda|fsis/.test(s))return"federal";
+  if(/minnesota|wisconsin|department|state|county|city/.test(s))return"state-local";
+  if(/trader|retailer|supplier|manufacturer/.test(s))return"industry";
+  return"other";
+}
+function correlateIncidents(items,now){
+  const rows=(items||[]).map((x,i)=>({x,i,p:corrTokens(`${x.product||""} ${x.title||""}`),h:corrTokens(x.hazard||""),c:corrTokens(x.company||"")}));
+  const parent=rows.map((_,i)=>i),find=i=>parent[i]===i?i:(parent[i]=find(parent[i])),join=(a,b)=>{a=find(a);b=find(b);if(a!==b)parent[b]=a};
+  for(let i=0;i<rows.length;i++){
+    const a=rows[i]; if(a.x.contextOnly)continue;
+    for(let j=i+1;j<rows.length;j++){
+      const b=rows[j]; if(b.x.contextOnly||a.x.source===b.x.source)continue;
+      const po=overlap(a.p,b.p),ho=overlap(a.h,b.h),co=overlap(a.c,b.c);
+      if(po===0 && co===0)continue;
+      const score=Math.min(1,(po?0.55:0)+(ho?0.30:0)+(co?0.25:0));
+      if(score>=0.55 && (ho>0||co>0||po>=2))join(i,j);
+    }
+  }
+  const groups=new Map();
+  rows.forEach((r,i)=>{const root=find(i);if(!groups.has(root))groups.set(root,[]);groups.get(root).push(r.x)});
+  const clusterById=new Map(),clusters=[];
+  for(const members of groups.values()){
+    const sources=[...new Set(members.map(x=>x.source).filter(Boolean))];
+    if(sources.length<2)continue;
+    const authorities=[...new Set(members.map(sourceClass))];
+    const federal=members.filter(x=>sourceClass(x)==="federal");
+    const dates=members.map(x=>x.sourcePostedAt).filter(Boolean).sort();
+    const firstSeen=members.map(x=>x.firstSeenAt).filter(Boolean).sort()[0]||null;
+    const federalDate=federal.map(x=>x.sourcePostedAt).filter(Boolean).sort()[0]||null;
+    const firstSignal=dates[0]||null;
+    const confidence=federal.length&&sources.length>=2?"HIGH":sources.length>=3?"HIGH":"MEDIUM";
+    const confirmation=federal.length?"OFFICIAL_CONFIRMATION":"MULTI-SOURCE_CORROBORATION";
+    const clusterId=`CORR-${stableHash(members.map(x=>x.id).sort())}`;
+    const leadMinutes=firstSignal&&federalDate?Math.round((new Date(federalDate)-new Date(firstSignal))/60000):null;
+    const timeline=members.map(x=>({source:x.source,sourcePostedAt:x.sourcePostedAt||null,firstSeenAt:x.firstSeenAt||null,title:x.title,id:x.id,status:x.status})).sort((a,b)=>new Date(a.sourcePostedAt||a.firstSeenAt||0)-new Date(b.sourcePostedAt||b.firstSeenAt||0));
+    const cluster={clusterId,confidence,confirmation,independentSourceCount:sources.length,sources,sourceClasses:authorities,firstSignalAt:firstSignal,safeplateFirstSeenAt:firstSeen,federalConfirmationAt:federalDate,precursorLeadMinutes:leadMinutes,timeline,memberIds:members.map(x=>x.id),updatedAt:now};
+    clusters.push(cluster); for(const x of members)clusterById.set(x.id,cluster);
+  }
+  const out=items.map(x=>{
+    const c=clusterById.get(x.id); const detectionLag=x.firstSeenAt&&x.sourcePostedAt?Math.round((new Date(x.firstSeenAt)-new Date(x.sourcePostedAt))/60000):null;
+    if(!c)return {...x,detectionLagMinutes:detectionLag};
+    const riskBase=x.severity==="CRITICAL"?85:x.severity==="HIGH"?70:x.severity==="WATCH"?50:30;
+    const riskScore=Math.min(100,riskBase+Math.min(15,(c.independentSourceCount-1)*5)+(c.confirmation==="OFFICIAL_CONFIRMATION"?10:0));
+    return {...x,detectionLagMinutes:detectionLag,correlation:{clusterId:c.clusterId,confidence:c.confidence,confirmation:c.confirmation,independentSourceCount:c.independentSourceCount,sources:c.sources,firstSignalAt:c.firstSignalAt,federalConfirmationAt:c.federalConfirmationAt,precursorLeadMinutes:c.precursorLeadMinutes},riskScore};
+  });
+  return {items:out,clusters:clusters.sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt)).slice(0,250)};
+}
+
+'''
+              s=s.replace(marker,addition+marker)
+
+          # Wire new source handlers.
+          old='  if(source.id==="cdc_content")return {source,rows:await pullCDCContent()};\n'
+          new='''  if(source.id==="cdc_content")return {source,rows:await pullCDCContent()};\n  if(source.id==="mn_health_food"){const x=await pullMinnesotaFoodSignals();return {source,...x}};\n  if(source.id==="wi_health_food"){const x=await pullWisconsinFoodSignals();return {source,...x}};\n'''
+          if old not in s: raise SystemExit('runSource CDC anchor not found')
+          s=s.replace(old,new)
+
+          # Correlate after durable merge; preserve source incidents while adding cluster intelligence.
+          old=''' const merged=merge(state.incidents||[],incoming,now,successfulSources);\n const next={\n'''
+          new=''' const merged=merge(state.incidents||[],incoming,now,successfulSources);\n const correlated=correlateIncidents(merged.items,now);\n const next={\n'''
+          if old not in s: raise SystemExit('merge anchor not found')
+          s=s.replace(old,new)
+          s=s.replace('   incidents:merged.items,\n   sourceHealth:health,','   incidents:correlated.items,\n   investigations:correlated.clusters,\n   sourceHealth:health,')
+          s=s.replace('detail:`${merged.added} new · ${merged.changed} changed · ${merged.unchanged} unchanged · ${incoming.length} records processed.`}',
+                      'detail:`${merged.added} new · ${merged.changed} changed · ${merged.unchanged} unchanged · ${incoming.length} records processed · ${correlated.clusters.length} multi-source clusters.`}')
+          p.write_text(s)
+          PY
+
+          node --check netlify/functions/surveillance.mjs
+          node --check netlify/functions/lib/sources.mjs
+          git config user.name "safeplate-early-warning"
+          git config user.email "actions@users.noreply.github.com"
+          git add netlify/functions/surveillance.mjs netlify/functions/lib/sources.mjs
+          git commit -m "Activate precursor feeds and multi-source correlation"
+          git pull --rebase origin main
+          git push origin HEAD:main
