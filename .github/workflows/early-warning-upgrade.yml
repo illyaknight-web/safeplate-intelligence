@@ -170,13 +170,11 @@ function correlateIncidents(items,now){
 '''
               s=s.replace(marker,addition+marker)
 
-          # Wire new source handlers.
           old='  if(source.id==="cdc_content")return {source,rows:await pullCDCContent()};\n'
           new='''  if(source.id==="cdc_content")return {source,rows:await pullCDCContent()};\n  if(source.id==="mn_health_food"){const x=await pullMinnesotaFoodSignals();return {source,...x}};\n  if(source.id==="wi_health_food"){const x=await pullWisconsinFoodSignals();return {source,...x}};\n'''
           if old not in s: raise SystemExit('runSource CDC anchor not found')
           s=s.replace(old,new)
 
-          # Correlate after durable merge; preserve source incidents while adding cluster intelligence.
           old=''' const merged=merge(state.incidents||[],incoming,now,successfulSources);\n const next={\n'''
           new=''' const merged=merge(state.incidents||[],incoming,now,successfulSources);\n const correlated=correlateIncidents(merged.items,now);\n const next={\n'''
           if old not in s: raise SystemExit('merge anchor not found')
@@ -195,3 +193,5 @@ function correlateIncidents(items,now){
           git commit -m "Activate precursor feeds and multi-source correlation"
           git pull --rebase origin main
           git push origin HEAD:main
+
+# trigger: 2026-08-22
