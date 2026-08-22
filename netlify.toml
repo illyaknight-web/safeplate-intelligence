@@ -13,3 +13,4 @@
 
 # Scheduled function is defined inline in surveillance.mjs:
 # */30 * * * * = every 30 minutes
+# Deployment nudge: Google Search Console verification asset added 2026-08-22.
