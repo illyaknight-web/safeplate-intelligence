@@ -1,0 +1,2 @@
+SAFEPLATE production launch trigger — 2026-08-22.
+This file exists only to trigger Netlify auto-deploy from main.
