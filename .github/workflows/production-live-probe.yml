@@ -1,0 +1,56 @@
+name: SAFEPLATE production live probe
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/production-live-probe.yml
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Capture production SAFEPLATE state
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, urllib.request, urllib.error, time
+          base='https://safeplate-intelligence.netlify.app'
+          def get(path):
+              req=urllib.request.Request(base+path,headers={'User-Agent':'SAFEPLATE-production-probe/1.0','Accept':'application/json,text/plain,*/*'})
+              try:
+                  with urllib.request.urlopen(req,timeout=40) as r:
+                      return {'http':r.status,'body':r.read().decode('utf-8','replace')}
+              except urllib.error.HTTPError as e:
+                  return {'http':e.code,'body':e.read().decode('utf-8','replace') if getattr(e,'fp',None) else '','error':str(e)}
+              except Exception as e:
+                  return {'http':None,'body':'','error':repr(e)}
+          def parse(x):
+              try:return json.loads(x.get('body') or '{}')
+              except:return {'raw':x.get('body'),'error':x.get('error')}
+          status=get('/api/system-status')
+          health=get('/api/source-health')
+          incidents=get('/api/incidents')
+          out={
+            'capturedAt':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),
+            'systemStatus':{'http':status.get('http'),'json':parse(status)},
+            'sourceHealth':{'http':health.get('http'),'json':parse(health)},
+            'incidents':{'http':incidents.get('http'),'json':parse(incidents)}
+          }
+          open('PRODUCTION_LIVE_PROBE.json','w').write(json.dumps(out,indent=2))
+          print(json.dumps(out,indent=2))
+          PY
+      - name: Commit probe result
+        shell: bash
+        run: |
+          git config user.name "safeplate-production-probe"
+          git config user.email "actions@users.noreply.github.com"
+          git add PRODUCTION_LIVE_PROBE.json
+          git commit -m "Record SAFEPLATE production live probe [skip netlify]" || true
+          git pull --rebase origin main
+          git push origin HEAD:main || true
