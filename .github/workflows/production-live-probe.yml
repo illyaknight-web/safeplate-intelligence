@@ -15,14 +15,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Capture production SAFEPLATE state
+      - name: Capture compact production SAFEPLATE state
         shell: bash
         run: |
           python - <<'PY'
           import json, urllib.request, urllib.error, time
           base='https://safeplate-intelligence.netlify.app'
           def get(path):
-              req=urllib.request.Request(base+path,headers={'User-Agent':'SAFEPLATE-production-probe/1.0','Accept':'application/json,text/plain,*/*'})
+              req=urllib.request.Request(base+path,headers={'User-Agent':'SAFEPLATE-production-probe/1.1','Accept':'application/json,text/plain,*/*'})
               try:
                   with urllib.request.urlopen(req,timeout=40) as r:
                       return {'http':r.status,'body':r.read().decode('utf-8','replace')}
@@ -33,16 +33,25 @@ jobs:
           def parse(x):
               try:return json.loads(x.get('body') or '{}')
               except:return {'raw':x.get('body'),'error':x.get('error')}
-          status=get('/api/system-status')
-          health=get('/api/source-health')
-          incidents=get('/api/incidents')
+
+          sraw=get('/api/system-status'); hraw=get('/api/source-health'); iraw=get('/api/incidents')
+          s=parse(sraw); h=parse(hraw); i=parse(iraw)
+          src=[{'id':x.get('id'),'status':x.get('status'),'note':x.get('note'),'lastChecked':x.get('lastChecked')} for x in h.get('sources',[]) if isinstance(x,dict)]
+          rows=i.get('incidents') if isinstance(i,dict) else []
+          if rows is None and isinstance(i,list): rows=i
+          if rows is None: rows=[]
+          compact=[]
+          for x in rows[:150]:
+              if not isinstance(x,dict): continue
+              compact.append({k:x.get(k) for k in ['id','title','product','company','hazard','severity','status','source','sourcePostedAt','updatedAt','lastObservedAt','summary']})
           out={
             'capturedAt':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),
-            'systemStatus':{'http':status.get('http'),'json':parse(status)},
-            'sourceHealth':{'http':health.get('http'),'json':parse(health)},
-            'incidents':{'http':incidents.get('http'),'json':parse(incidents)}
+            'systemStatus':s,
+            'sources':src,
+            'incidentCount':len(rows),
+            'recentIncidents':compact
           }
-          open('PRODUCTION_LIVE_PROBE.json','w').write(json.dumps(out,indent=2))
+          open('PRODUCTION_LIVE_SUMMARY.json','w').write(json.dumps(out,indent=2))
           print(json.dumps(out,indent=2))
           PY
       - name: Commit probe result
@@ -50,7 +59,7 @@ jobs:
         run: |
           git config user.name "safeplate-production-probe"
           git config user.email "actions@users.noreply.github.com"
-          git add PRODUCTION_LIVE_PROBE.json
-          git commit -m "Record SAFEPLATE production live probe [skip netlify]" || true
+          git add PRODUCTION_LIVE_SUMMARY.json
+          git commit -m "Record compact SAFEPLATE production probe [skip netlify]" || true
           git pull --rebase origin main
           git push origin HEAD:main || true
