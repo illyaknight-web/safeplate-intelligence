@@ -5,8 +5,10 @@ export const SOURCE_REGISTRY = [
   {id:"fda_food_events",name:"FDA Food Adverse Events",family:"Federal",kind:"api",active:true,authority:true,url:"https://api.fda.gov/food/event.json",note:"Optional FDA_API_KEY increases rate limits"},
   {id:"usda_fsis",name:"USDA FSIS Recall API",family:"Federal",kind:"api",active:true,authority:true,url:"https://www.fsis.usda.gov/fsis/api/recall/v/1"},
 
-  {id:"cdc_content",name:"CDC Content Services — Public Foodborne Content",family:"Federal",kind:"api",active:false,authority:true,url:"https://tools.cdc.gov/api/v2/resources/media?q=foodborne%20outbreak"},
-  {id:"states",name:"State Health + Agriculture Departments",family:"State / Local",kind:"registry",active:false,authority:true,note:"Activate jurisdiction-by-jurisdiction"},
+  {id:"cdc_content",name:"CDC Content Services — Public Foodborne Content",family:"Federal",kind:"api",active:false,authority:true,url:"https://tools.cdc.gov/api/v2/resources/media?q=foodborne%20outbreak",note:"Managed by SAFEPLATE early-warning scheduler; official public keyless API"},
+  {id:"mn_health_food",name:"Minnesota Health + Agriculture Food Signals",family:"State / Local",kind:"web",active:false,authority:true,url:"https://www.health.state.mn.us/news",note:"Managed by SAFEPLATE early-warning scheduler; official MDH/MDA public releases"},
+  {id:"wi_health_food",name:"Wisconsin DHS Outbreaks + Recalls",family:"State / Local",kind:"web",active:false,authority:true,url:"https://www.dhs.wisconsin.gov/outbreaks/index.htm",note:"Managed by SAFEPLATE early-warning scheduler; official Wisconsin DHS source"},
+  {id:"states",name:"State Health + Agriculture Departments",family:"State / Local",kind:"registry",active:false,authority:true,note:"Expand jurisdiction-by-jurisdiction after parser verification"},
   {id:"locals",name:"County + City Health Departments",family:"State / Local",kind:"registry",active:false,authority:true,note:"Activate jurisdiction-by-jurisdiction"},
   {id:"international",name:"International Food Safety Authorities",family:"International",kind:"registry",active:false,authority:true,note:"International authority registry"},
   {id:"cfia_recalls",name:"CFIA Food Recalls & Safety Alerts",family:"International",kind:"rss",active:false,authority:true,note:"CFIA publicly offers RSS; exact production feed URL must be verified before activation"},
