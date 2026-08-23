@@ -1,18 +1,12 @@
 {
-  "capturedAt": "2026-08-23T01:03:58Z",
-  "http": {
-    "systemStatus": 200,
-    "stateCoverage": 200,
-    "sourceHealth": 200,
-    "incidents": 200
-  },
-  "systemStatus": {
+  "capturedAt": "2026-08-23T02:12:00Z",
+  "firstSystemStatus": {
     "live": true,
     "stale": false,
-    "lastSync": "2026-08-23T01:00:48.075Z",
-    "ageMinutes": 2,
+    "lastSync": "2026-08-23T02:00:47.272Z",
+    "ageMinutes": 10,
     "cycleMinutes": 30,
-    "incidents": 542,
+    "incidents": 561,
     "investigations": 6,
     "sourcesOnline": 8,
     "sourceIssues": 1,
@@ -20,8 +14,8 @@
     "stateScanDispatched": true,
     "earlyWarning": {
       "live": true,
-      "lastSync": "2026-08-23T01:01:03.189Z",
-      "ageMinutes": 2,
+      "lastSync": "2026-08-23T02:01:03.654Z",
+      "ageMinutes": 10,
       "cycleMinutes": 30,
       "sourcesOnline": 2,
       "sourceIssues": 1,
@@ -40,76 +34,486 @@
       "healthEntries": 0
     }
   },
+  "statePolls": [
+    {
+      "attempt": 1,
+      "checked": 0,
+      "http": 200,
+      "lastSync": null
+    },
+    {
+      "attempt": 2,
+      "checked": 51,
+      "http": 200,
+      "lastSync": "2026-08-23T02:11:53.135Z"
+    }
+  ],
+  "systemStatus": {
+    "live": true,
+    "stale": false,
+    "lastSync": "2026-08-23T02:00:47.272Z",
+    "ageMinutes": 11,
+    "cycleMinutes": 30,
+    "incidents": 602,
+    "investigations": 6,
+    "sourcesOnline": 8,
+    "sourceIssues": 1,
+    "sourcesChecked": 9,
+    "stateScanDispatched": false,
+    "earlyWarning": {
+      "live": true,
+      "lastSync": "2026-08-23T02:01:03.654Z",
+      "ageMinutes": 10,
+      "cycleMinutes": 30,
+      "sourcesOnline": 2,
+      "sourceIssues": 1,
+      "sourcesChecked": 3
+    },
+    "stateSurveillance": {
+      "live": true,
+      "lastSync": "2026-08-23T02:11:53.135Z",
+      "ageMinutes": 0,
+      "cycleMinutes": 30,
+      "jurisdictionsTotal": 51,
+      "jurisdictionsChecked": 51,
+      "jurisdictionsOnline": 43,
+      "jurisdictionIssues": 8,
+      "stateSignals": 41,
+      "healthEntries": 51
+    }
+  },
   "stateCoverage": {
     "total": 51,
-    "checked": 0,
-    "online": 0,
-    "degraded": 0,
-    "lastSync": null,
-    "signals": 0,
-    "states": [],
-    "ageMinutes": null,
-    "live": false
+    "checked": 51,
+    "online": 43,
+    "degraded": 8,
+    "signals": 41,
+    "lastSync": "2026-08-23T02:11:53.135Z",
+    "startedAt": "2026-08-23T02:11:40.588Z",
+    "directoryResolved": 51,
+    "directoryError": null,
+    "states": [
+      {
+        "state": "Alabama",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://dph1.adph.state.al.us/FacilitiesDirectory/(S(fktaab2gu2zsuenmcjlyorlu))/default",
+        "durationMs": 4499
+      },
+      {
+        "state": "Alaska",
+        "status": "ONLINE",
+        "note": "checked; 1 current food-safety links surfaced",
+        "officialUrl": "https://alaska.gov/akdir1.html",
+        "durationMs": 9481
+      },
+      {
+        "state": "Arizona",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://azhealth.gov/pio",
+        "durationMs": 8975
+      },
+      {
+        "state": "Arkansas",
+        "status": "ONLINE",
+        "note": "checked; 18 current food-safety links surfaced",
+        "officialUrl": "https://healthy.arkansas.gov/health-topics/",
+        "durationMs": 9668
+      },
+      {
+        "state": "California",
+        "status": "DEGRADED",
+        "note": "fetch failed",
+        "officialUrl": "https://www.cdph.ca.gov/",
+        "durationMs": 301
+      },
+      {
+        "state": "Colorado",
+        "status": "ONLINE",
+        "note": "checked; 1 current food-safety links surfaced",
+        "officialUrl": "https://marijuanahealthinfo.colorado.gov/",
+        "durationMs": 3438
+      },
+      {
+        "state": "Connecticut",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://youtu.be/117FN0yjTwU?feature=shared",
+        "durationMs": 10820
+      },
+      {
+        "state": "Delaware",
+        "status": "DEGRADED",
+        "note": "USA.gov state detail 403",
+        "officialUrl": "https://www.dhss.delaware.gov/dhss/",
+        "durationMs": 362
+      },
+      {
+        "state": "District of Columbia",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://ready.dc.gov/pages/hazard-heat-during",
+        "durationMs": 6307
+      },
+      {
+        "state": "Florida",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://healthcarescreenings.floridahealth.gov/",
+        "durationMs": 4980
+      },
+      {
+        "state": "Georgia",
+        "status": "ONLINE",
+        "note": "checked; 2 current food-safety links surfaced",
+        "officialUrl": "https://wwwnc.cdc.gov/travel",
+        "durationMs": 8345
+      },
+      {
+        "state": "Hawaii",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://portal.ehawaii.gov/",
+        "durationMs": 7200
+      },
+      {
+        "state": "Idaho",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://publicdocuments.dhw.idaho.gov/WebLink/Browse.aspx?id=2980&dbid=0&repo=PUBLIC-DOCUMENTS",
+        "durationMs": 5424
+      },
+      {
+        "state": "Illinois",
+        "status": "ONLINE",
+        "note": "checked; 5 current food-safety links surfaced",
+        "officialUrl": "https://www.cdc.gov/healthy-youth/",
+        "durationMs": 4935
+      },
+      {
+        "state": "Indiana",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://www.coronavirus.in.gov/",
+        "durationMs": 8098
+      },
+      {
+        "state": "Iowa",
+        "status": "DEGRADED",
+        "note": "official health page 404",
+        "officialUrl": "https://hhs.iowa.gov/",
+        "durationMs": 7164
+      },
+      {
+        "state": "Kansas",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://kanphix.kdhe.ks.gov/",
+        "durationMs": 5517
+      },
+      {
+        "state": "Kentucky",
+        "status": "ONLINE",
+        "note": "checked; 1 current food-safety links surfaced",
+        "officialUrl": "https://www.kentuckyhelps.com/",
+        "durationMs": 4461
+      },
+      {
+        "state": "Louisiana",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://www.myplan.healthy.la.gov/en/choose",
+        "durationMs": 7144
+      },
+      {
+        "state": "Maine",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://preventionforme.org/",
+        "durationMs": 4466
+      },
+      {
+        "state": "Maryland",
+        "status": "ONLINE",
+        "note": "checked; 2 current food-safety links surfaced",
+        "officialUrl": "http://www.maryland.gov/pages/accessibility.aspx",
+        "durationMs": 7918
+      },
+      {
+        "state": "Massachusetts",
+        "status": "DEGRADED",
+        "note": "USA.gov state detail 403",
+        "officialUrl": "https://www.mass.gov/orgs/department-of-public-health",
+        "durationMs": 700
+      },
+      {
+        "state": "Michigan",
+        "status": "DEGRADED",
+        "note": "USA.gov state detail 403",
+        "officialUrl": "https://www.michigan.gov/mdhhs/keep-mi-healthy",
+        "durationMs": 605
+      },
+      {
+        "state": "Minnesota",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://mn.gov/",
+        "durationMs": 4802
+      },
+      {
+        "state": "Mississippi",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://apps.msdh.ms.gov/redcap/surveys/?s=KYNP3CTALFDLDFAA",
+        "durationMs": 6957
+      },
+      {
+        "state": "Missouri",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://mohealthdata.org/",
+        "durationMs": 8839
+      },
+      {
+        "state": "Montana",
+        "status": "DEGRADED",
+        "note": "USA.gov state detail 404",
+        "officialUrl": "https://dphhs.mt.gov/publichealthinthe406",
+        "durationMs": 1636
+      },
+      {
+        "state": "Nebraska",
+        "status": "DEGRADED",
+        "note": "This operation was aborted",
+        "officialUrl": "https://dhhs.ne.gov/Pages/public-health.aspx",
+        "durationMs": 12163
+      },
+      {
+        "state": "Nevada",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://hcqc.nv.gov/",
+        "durationMs": 6141
+      },
+      {
+        "state": "New Hampshire",
+        "status": "DEGRADED",
+        "note": "USA.gov state detail 403",
+        "officialUrl": "https://www.dhhs.nh.gov/programs-services/health-care",
+        "durationMs": 940
+      },
+      {
+        "state": "New Jersey",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://healthy.nj.gov/",
+        "durationMs": 5033
+      },
+      {
+        "state": "New Mexico",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://vaxview.doh.nm.gov/",
+        "durationMs": 5232
+      },
+      {
+        "state": "New York",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://hcsinfo.health.ny.gov/",
+        "durationMs": 1995
+      },
+      {
+        "state": "North Carolina",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://medicaid.ncdhhs.gov/",
+        "durationMs": 2294
+      },
+      {
+        "state": "North Dakota",
+        "status": "ONLINE",
+        "note": "checked; 9 current food-safety links surfaced",
+        "officialUrl": "https://deq.nd.gov/",
+        "durationMs": 4331
+      },
+      {
+        "state": "Ohio",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://odhgateway.odh.ohio.gov/lhdinformationsystem/Directory/GetMyLHD",
+        "durationMs": 4025
+      },
+      {
+        "state": "Oklahoma",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://www.health.state.ok.us/ok2share/",
+        "durationMs": 6941
+      },
+      {
+        "state": "Oregon",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://healthcare.oregon.gov/Pages/get-covered.aspx",
+        "durationMs": 5018
+      },
+      {
+        "state": "Pennsylvania",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://sais.health.pa.gov/commonpoc/dohQALocatorcommon.asp",
+        "durationMs": 8798
+      },
+      {
+        "state": "Rhode Island",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://publichealthri.buzzsprout.com/",
+        "durationMs": 8721
+      },
+      {
+        "state": "South Carolina",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://sc.gov/",
+        "durationMs": 2846
+      },
+      {
+        "state": "South Dakota",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://apps.sd.gov/ph18publications/secure/PubOrder.aspx",
+        "durationMs": 4740
+      },
+      {
+        "state": "Tennessee",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://healthdata.tn.gov/",
+        "durationMs": 8694
+      },
+      {
+        "state": "Texas",
+        "status": "ONLINE",
+        "note": "checked; 2 current food-safety links surfaced",
+        "officialUrl": "https://healthdata.dshs.texas.gov/",
+        "durationMs": 6025
+      },
+      {
+        "state": "Utah",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://healthcarestats.utah.gov/",
+        "durationMs": 8905
+      },
+      {
+        "state": "Vermont",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://vermontgov.sharepoint.com/sites/AHS-vdhHub/",
+        "durationMs": 8924
+      },
+      {
+        "state": "Virginia",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://public.govdelivery.com/accounts/VAVDHORCE/subscriber/topics?qsp=VAVDHORCE_10005",
+        "durationMs": 4862
+      },
+      {
+        "state": "Washington",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://sboh.wa.gov/",
+        "durationMs": 7997
+      },
+      {
+        "state": "West Virginia",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://health.wv.gov/",
+        "durationMs": 6096
+      },
+      {
+        "state": "Wisconsin",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://www.wisconsin.gov/Pages/AllAgencies.aspx",
+        "durationMs": 6320
+      },
+      {
+        "state": "Wyoming",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://www.wyo.gov/",
+        "durationMs": 10339
+      }
+    ],
+    "ageMinutes": 0,
+    "live": true
   },
   "feedHealth": {
     "onlineCount": 8,
     "issueCount": 1,
+    "pendingCount": 0,
     "online": [
       {
         "id": "fda_openfda",
         "name": "FDA openFDA Food Enforcement",
         "status": "ONLINE",
         "note": "100 records retrieved",
-        "lastChecked": "2026-08-23T01:00:48.075Z"
+        "lastChecked": "2026-08-23T02:00:47.272Z"
       },
       {
         "id": "fda_outbreaks",
         "name": "FDA Active Foodborne Outbreak Investigations",
         "status": "ONLINE",
         "note": "18 active investigations retrieved from official FDA outbreak table",
-        "lastChecked": "2026-08-23T01:00:48.075Z"
+        "lastChecked": "2026-08-23T02:00:47.272Z"
       },
       {
         "id": "fda_food_events",
         "name": "FDA Food Adverse Events",
         "status": "ONLINE",
         "note": "100 records retrieved",
-        "lastChecked": "2026-08-23T01:00:48.075Z"
+        "lastChecked": "2026-08-23T02:00:47.272Z"
       },
       {
         "id": "usda_fsis",
         "name": "USDA FSIS Recall API",
         "status": "ONLINE",
         "note": "20 recall/public-health-alert records from Official USDA/FSIS GovDelivery RSS (USFSIS_1: News Releases - Recent Updates) (captured 2026-08-22T23:55:49Z)",
-        "lastChecked": "2026-08-23T01:00:48.075Z"
+        "lastChecked": "2026-08-23T02:00:47.272Z"
       },
       {
         "id": "mn_health_food",
         "name": "Minnesota Health + Agriculture Food Signals",
         "status": "ONLINE",
         "note": "1 Minnesota official food-safety signals retrieved",
-        "lastChecked": "2026-08-23T01:01:03.189Z"
+        "lastChecked": "2026-08-23T02:01:03.654Z"
       },
       {
         "id": "wi_health_food",
         "name": "Wisconsin DHS Outbreaks + Recalls",
         "status": "ONLINE",
         "note": "5 Wisconsin official outbreak/recall signals retrieved",
-        "lastChecked": "2026-08-23T01:01:03.189Z"
+        "lastChecked": "2026-08-23T02:01:03.654Z"
       },
       {
         "id": "noaa_enso",
         "name": "NOAA/CPC ENSO + El Ni\u00f1o",
         "status": "ONLINE",
         "note": "NOAA/CPC checked; no active El Ni\u00f1o Advisory phrase detected.",
-        "lastChecked": "2026-08-23T01:00:48.075Z"
+        "lastChecked": "2026-08-23T02:00:47.272Z"
       },
       {
         "id": "nws_hazards",
         "name": "NWS Flood + Heat + Tropical Hazards",
         "status": "ONLINE",
-        "note": "25 records retrieved",
-        "lastChecked": "2026-08-23T01:00:48.075Z"
+        "note": "28 records retrieved",
+        "lastChecked": "2026-08-23T02:00:47.272Z"
       }
     ],
     "issues": [
@@ -118,11 +522,12 @@
         "name": "CDC Content Services \u2014 Public Foodborne Content",
         "status": "DEGRADED",
         "note": "CDC early-warning query returned 0 foodborne records",
-        "lastChecked": "2026-08-23T01:01:03.189Z"
+        "lastChecked": "2026-08-23T02:01:03.654Z"
       }
-    ]
+    ],
+    "pending": []
   },
-  "incidentCount": 464,
+  "incidentCount": 524,
   "languageAudit": {
     "spanishLikeRecordCount": 0,
     "rawHtmlRecordCount": 2,
@@ -167,8 +572,26 @@
       "blueberry",
       "blueberries"
     ],
-    "matchCount": 7,
+    "matchCount": 8,
     "matches": [
+      {
+        "id": "STATE-ILLINOIS-c38dbefd99c2482774b1",
+        "title": "Outbreak linked to alfalfa sprouts; people sickened with E. coli and Salmonella",
+        "product": "Outbreak linked to alfalfa sprouts; people sickened with E. coli and Salmonella",
+        "company": "",
+        "hazard": "State food-safety signal",
+        "severity": "HIGH",
+        "status": "CORROBORATING",
+        "source": "Illinois public health authority",
+        "sourcePostedAt": null,
+        "updatedAt": "2026-08-23T02:11:45.847Z",
+        "lastObservedAt": "2026-08-23T02:11:53.135Z",
+        "summary": "Outbreak linked to alfalfa sprouts; people sickened with E. coli and Salmonella",
+        "matchedTerms": [
+          "alfalfa",
+          "sprout"
+        ]
+      },
       {
         "id": "MN-EW-d5fd526bdf361ed26624",
         "title": "MDH, MDA confirm Shiga Toxin-producing E. coli, Salmonella cases linked to alfalfa sprouts",
@@ -179,8 +602,8 @@
         "status": "CORROBORATING",
         "source": "Minnesota Department of Health / Agriculture",
         "sourcePostedAt": null,
-        "updatedAt": "2026-08-23T01:01:03.189Z",
-        "lastObservedAt": "2026-08-23T01:01:03.189Z",
+        "updatedAt": "2026-08-23T02:01:03.654Z",
+        "lastObservedAt": "2026-08-23T02:01:03.654Z",
         "summary": "Breadcrumb Home News and Announcements News Releases print ol ol { list-style-type: lower-latin; } Topic Menu News and AnnouncementsNews and Announcements Home2026 News Releases2025 News Releases2024 News Releases2023 News ReleasesResources for ReportersInformation Officers News and AnnouncementsNews and Announcements Home2026 News Releases2025 News Releases2024 News Releases2023 News ReleasesResources for ReportersInformation Officers News ReleaseAug. 20, 2026Contact informationMDH, MDA confirm Shiga Toxin-producing E. coli, Salmonella cases linked to alfalfa sproutsMinnesota Department of Health (MDH) and Minnesota Department of Agriculture (MDA) officials are warning Minnesota consumers not to eat alfalfa sprouts sold under the Calco and Everything Sprouts brands due to a multistate outbreak of Shiga toxin-producing E. coli (STEC) and Salmonella infections.Twenty-three Minnesotans became ill between July 8 and Aug. 8 with Salmonella and/or various strains of STEC). Two people have been hospitalized, and no deaths have been reported. In addition to the Minnesota cases, Wisconsin investigators have identified 18 cases, with additional illnesses identified in other states. The number of illnesses will likely increase as the investigation progresses.The illnesses have been linked to eating alfalfa sprouts produced by Everything Sprouts, a Minnesota grower, and sold under the Calco and Everything Sprouts brands to restaurants and grocery stores. Health officials recommend people check for alfalfa sprouts from Calco or Everything Sprouts, not eat them, and throw them away. MDH and MDA are working with health officials from Wisconsin, Centers for Disease Control and Prevention (CDC), the U.S. Food and Drug Administration (FDA) and other states to identify the source and scope of contamination.Symptoms of illness caused by STEC typically include stomach cramps and diarrhea, often with bloody stools, but only a low-grade or no fever. People typically become ill two to five days after exposure, but this period can range from one to eight days. Most people recover in five to seven days. However, STEC infections can lead to hemolytic uremic syndrome (HUS), a severe compl",
         "matchedTerms": [
           "alfalfa",
@@ -200,7 +623,7 @@
         "source": "Wisconsin Department of Health Services",
         "sourcePostedAt": "2026-08-21T00:00:00.000Z",
         "updatedAt": "2026-08-21T00:00:00.000Z",
-        "lastObservedAt": "2026-08-23T01:01:03.189Z",
+        "lastObservedAt": "2026-08-23T02:01:03.654Z",
         "summary": "Infections of Salmonella and E. coli linked to alfalfa sprouts \u2013Updated August 21, 2026 The Wisconsin Department of Health Services (DHS) is working with Minnesota health officials, the Centers for Disease Control and Prevention (CDC), U.S. Food and Drug Administration (FDA), and other states to investigate an outbreak of Shiga toxin-producing E. coli (STEC) and Salmonella infections linked to alfalfa sprouts.According to the CDC, 55 people in 15 states have become sick with one of the outbreak strains of E. coli and/or Salmonella. Four people have become hospitalized and no deaths have occurred.Seventeen Wisconsinites have become sick with one person hospitalized.The illnesses have been linked to alfalfa sprouts produced by Everything Sprouts sold under the Calco and Everything Sprouts brands. The alfalfa sprouts were distributed to restaurants and grocery stores.What you should doCheck your home for alfalfa sprouts from Calco and Everything Sprouts Brand.Do not eat them and throw them away.Wash items and surfaces that may have touched the affected sprouts using hot soapy water.Call your health care provider for any severe symptoms:Diarrhea and a fever higher than 102\u00b0FDiarrhea for more than two days that is not improvingBloody diarrheaSo much vomiting you cannot keep liquids downSigns of dehydration, such as:Not peeing muchDry mouth and throatFeeling dizzy when standing upWhat businesses should doDo not sell or serve alfalfa sprouts grown by Everything Sprouts.Wash and sanitize surfaces that may have come into contact with the affected sprouts.Symptoms of SalmonellaDiarrhea, fever, and stomach cramps are the most common symptoms of Salmonella.Symptoms usually start six hours to six days after swallowing the germ.Most people recover in four to seven days, without treatment.Some groups, like children younger than 5 years, adults 65 years and older, and people with weakened immune systems, may experience more severe illnesses and that require medical treatment and hospitalization.Symptoms of Shiga toxin-producing E. coli (STEC)Stomach cramps and diarrhea, often with bloody stools, with a low-grade or no fever are the most common symptoms of STEC.Symptoms usually",
         "matchedTerms": [
           "alfalfa",
@@ -220,7 +643,7 @@
         "source": "FDA openFDA",
         "sourcePostedAt": null,
         "updatedAt": "2026-08-12T00:00:00.000Z",
-        "lastObservedAt": "2026-08-23T01:00:48.075Z",
+        "lastObservedAt": "2026-08-23T02:00:47.272Z",
         "summary": "Undeclared Soy. The firm received complaints of sausage in the burritos. Upon review the firm discovered the sausage contains soy which is not listed on the label.",
         "matchedTerms": [
           "sprout"
@@ -237,7 +660,7 @@
         "source": "FDA openFDA",
         "sourcePostedAt": null,
         "updatedAt": "2024-10-09T00:00:00.000Z",
-        "lastObservedAt": "2026-08-23T01:00:48.075Z",
+        "lastObservedAt": "2026-08-23T02:00:47.272Z",
         "summary": "Undeclared whey (milk) & wheat flour: no nutrition fact panel & no contains statement",
         "matchedTerms": [
           "blueberry"
@@ -254,7 +677,7 @@
         "source": "FDA openFDA",
         "sourcePostedAt": null,
         "updatedAt": "2025-10-08T00:00:00.000Z",
-        "lastObservedAt": "2026-08-23T01:00:48.075Z",
+        "lastObservedAt": "2026-08-23T02:00:47.272Z",
         "summary": "Product was incorrectly labeled, resulting in undeclared wheat, sesame, and cashew.",
         "matchedTerms": [
           "blueberry"
@@ -271,7 +694,7 @@
         "source": "FDA Active Outbreak Investigations",
         "sourcePostedAt": "2026-08-19T00:00:00.000Z",
         "updatedAt": "2026-08-22T21:00:47.038Z",
-        "lastObservedAt": "2026-08-23T01:00:48.075Z",
+        "lastObservedAt": "2026-08-23T02:00:47.272Z",
         "summary": "FDA active outbreak investigation. Product: Alfalfa Sprouts. Cases: SeeAdvisory. Traceback: \u2714; Inspection: \u2714; Sampling: \u2714.",
         "matchedTerms": [
           "alfalfa",
@@ -289,12 +712,58 @@
         "source": "FDA Active Outbreak Investigations",
         "sourcePostedAt": "2026-07-06T00:00:00.000Z",
         "updatedAt": "2026-07-06T00:00:00.000Z",
-        "lastObservedAt": "2026-08-23T01:00:48.075Z",
+        "lastObservedAt": "2026-08-23T02:00:47.272Z",
         "summary": "FDA active outbreak investigation. Product: FrozenBlueberries. Cases: SeeAdvisory. Traceback: \u2714; Inspection: \u2714; Sampling: \u2714.",
         "matchedTerms": [
           "blueberries"
         ]
       }
     ]
+  },
+  "imagery": {
+    "homeHTTP": 200,
+    "markers": {
+      "selfHostedEditorial": true,
+      "recallVisual": true,
+      "searchVisual": true,
+      "journeyVisual": true,
+      "separateStateBadge": true,
+      "noOldLiveSourcesLabel": true
+    },
+    "assets": {
+      "/assets/safeplate-editorial.jpg": {
+        "http": 200,
+        "contentType": "image/jpeg",
+        "bytes": 177323,
+        "body": null
+      },
+      "/assets/safeplate-banner.jpg": {
+        "http": 200,
+        "contentType": "image/jpeg",
+        "bytes": 125352,
+        "body": null
+      },
+      "/assets/safeplate-brand-card.jpg": {
+        "http": 200,
+        "contentType": "image/jpeg",
+        "bytes": 66110,
+        "body": null
+      },
+      "/assets/safeplate-social.jpg": {
+        "http": 200,
+        "contentType": "image/jpeg",
+        "bytes": 107593,
+        "body": null
+      }
+    }
+  },
+  "proof": {
+    "state51": true,
+    "noPublicPendingFeeds": true,
+    "imagesHTTP200": true,
+    "visualMarkers": true,
+    "apiHTTP200": true,
+    "alfalfaPresent": true,
+    "pass": true
   }
 }
