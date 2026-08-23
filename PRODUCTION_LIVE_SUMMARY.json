@@ -1,154 +1,214 @@
 {
-  "capturedAt": "2026-08-22T22:06:22Z",
+  "capturedAt": "2026-08-23T01:03:58Z",
+  "http": {
+    "systemStatus": 200,
+    "stateCoverage": 200,
+    "sourceHealth": 200,
+    "incidents": 200
+  },
   "systemStatus": {
     "live": true,
     "stale": false,
-    "lastSync": "2026-08-22T22:00:44.668Z",
-    "ageMinutes": 5,
+    "lastSync": "2026-08-23T01:00:48.075Z",
+    "ageMinutes": 2,
     "cycleMinutes": 30,
-    "incidents": 533,
-    "sourcesOnline": 6,
-    "sourceIssues": 0,
-    "sourcesChecked": 6
-  },
-  "sources": [
-    {
-      "id": "fda_openfda",
-      "status": "ONLINE",
-      "note": "100 records retrieved",
-      "lastChecked": "2026-08-22T22:00:44.668Z"
+    "incidents": 542,
+    "investigations": 6,
+    "sourcesOnline": 8,
+    "sourceIssues": 1,
+    "sourcesChecked": 9,
+    "stateScanDispatched": true,
+    "earlyWarning": {
+      "live": true,
+      "lastSync": "2026-08-23T01:01:03.189Z",
+      "ageMinutes": 2,
+      "cycleMinutes": 30,
+      "sourcesOnline": 2,
+      "sourceIssues": 1,
+      "sourcesChecked": 3
     },
-    {
-      "id": "fda_outbreaks",
-      "status": "ONLINE",
-      "note": "18 active investigations retrieved from official FDA outbreak table",
-      "lastChecked": "2026-08-22T22:00:44.668Z"
-    },
-    {
-      "id": "fda_food_events",
-      "status": "ONLINE",
-      "note": "100 records retrieved",
-      "lastChecked": "2026-08-22T22:00:44.668Z"
-    },
-    {
-      "id": "usda_fsis",
-      "status": "ONLINE",
-      "note": "20 recall/public-health-alert records from Official USDA/FSIS GovDelivery RSS (USFSIS_1: News Releases - Recent Updates) (captured 2026-08-22T21:55:49Z)",
-      "lastChecked": "2026-08-22T22:00:44.668Z"
-    },
-    {
-      "id": "cdc_content",
-      "status": "PENDING",
-      "note": "Connector pending",
-      "lastChecked": null
-    },
-    {
-      "id": "states",
-      "status": "PENDING",
-      "note": "Activate jurisdiction-by-jurisdiction",
-      "lastChecked": null
-    },
-    {
-      "id": "locals",
-      "status": "PENDING",
-      "note": "Activate jurisdiction-by-jurisdiction",
-      "lastChecked": null
-    },
-    {
-      "id": "international",
-      "status": "PENDING",
-      "note": "International authority registry",
-      "lastChecked": null
-    },
-    {
-      "id": "cfia_recalls",
-      "status": "PENDING",
-      "note": "CFIA publicly offers RSS; exact production feed URL must be verified before activation",
-      "lastChecked": null
-    },
-    {
-      "id": "eu_rasff",
-      "status": "PENDING",
-      "note": "Public searchable database; connector pending stable public interface validation",
-      "lastChecked": null
-    },
-    {
-      "id": "retailers",
-      "status": "PENDING",
-      "note": "Expanded retailer registry; source-specific connectors activate after validation",
-      "lastChecked": null
-    },
-    {
-      "id": "trader_joes_recalls",
-      "status": "PENDING",
-      "note": "Connector pending",
-      "lastChecked": null
-    },
-    {
-      "id": "uk_fsa_alerts",
-      "status": "PENDING",
-      "note": "Connector pending",
-      "lastChecked": null
-    },
-    {
-      "id": "suppliers",
-      "status": "PENDING",
-      "note": "Supplier notices and trace-forward evidence",
-      "lastChecked": null
-    },
-    {
-      "id": "labs_science",
-      "status": "PENDING",
-      "note": "Public-health labs, universities, journals",
-      "lastChecked": null
-    },
-    {
-      "id": "noaa_enso",
-      "status": "ONLINE",
-      "note": "NOAA/CPC checked; no active El Ni\u00f1o Advisory phrase detected.",
-      "lastChecked": "2026-08-22T22:00:44.668Z"
-    },
-    {
-      "id": "nws_hazards",
-      "status": "ONLINE",
-      "note": "28 records retrieved",
-      "lastChecked": "2026-08-22T22:00:44.668Z"
-    },
-    {
-      "id": "water_irrigation",
-      "status": "PENDING",
-      "note": "Environmental evidence layer",
-      "lastChecked": null
-    },
-    {
-      "id": "ag_environment",
-      "status": "PENDING",
-      "note": "Crop regions, harvest windows and environmental signals",
-      "lastChecked": null
-    },
-    {
-      "id": "logistics",
-      "status": "PENDING",
-      "note": "Ports, imports, distribution and cold-chain events",
-      "lastChecked": null
-    },
-    {
-      "id": "emerging",
-      "status": "PENDING",
-      "note": "Never treated as verified without corroboration",
-      "lastChecked": null
+    "stateSurveillance": {
+      "live": false,
+      "lastSync": null,
+      "ageMinutes": null,
+      "cycleMinutes": 30,
+      "jurisdictionsTotal": 51,
+      "jurisdictionsChecked": 0,
+      "jurisdictionsOnline": 0,
+      "jurisdictionIssues": 0,
+      "stateSignals": 0,
+      "healthEntries": 0
     }
-  ],
-  "incidentCount": 533,
+  },
+  "stateCoverage": {
+    "total": 51,
+    "checked": 0,
+    "online": 0,
+    "degraded": 0,
+    "lastSync": null,
+    "signals": 0,
+    "states": [],
+    "ageMinutes": null,
+    "live": false
+  },
+  "feedHealth": {
+    "onlineCount": 8,
+    "issueCount": 1,
+    "online": [
+      {
+        "id": "fda_openfda",
+        "name": "FDA openFDA Food Enforcement",
+        "status": "ONLINE",
+        "note": "100 records retrieved",
+        "lastChecked": "2026-08-23T01:00:48.075Z"
+      },
+      {
+        "id": "fda_outbreaks",
+        "name": "FDA Active Foodborne Outbreak Investigations",
+        "status": "ONLINE",
+        "note": "18 active investigations retrieved from official FDA outbreak table",
+        "lastChecked": "2026-08-23T01:00:48.075Z"
+      },
+      {
+        "id": "fda_food_events",
+        "name": "FDA Food Adverse Events",
+        "status": "ONLINE",
+        "note": "100 records retrieved",
+        "lastChecked": "2026-08-23T01:00:48.075Z"
+      },
+      {
+        "id": "usda_fsis",
+        "name": "USDA FSIS Recall API",
+        "status": "ONLINE",
+        "note": "20 recall/public-health-alert records from Official USDA/FSIS GovDelivery RSS (USFSIS_1: News Releases - Recent Updates) (captured 2026-08-22T23:55:49Z)",
+        "lastChecked": "2026-08-23T01:00:48.075Z"
+      },
+      {
+        "id": "mn_health_food",
+        "name": "Minnesota Health + Agriculture Food Signals",
+        "status": "ONLINE",
+        "note": "1 Minnesota official food-safety signals retrieved",
+        "lastChecked": "2026-08-23T01:01:03.189Z"
+      },
+      {
+        "id": "wi_health_food",
+        "name": "Wisconsin DHS Outbreaks + Recalls",
+        "status": "ONLINE",
+        "note": "5 Wisconsin official outbreak/recall signals retrieved",
+        "lastChecked": "2026-08-23T01:01:03.189Z"
+      },
+      {
+        "id": "noaa_enso",
+        "name": "NOAA/CPC ENSO + El Ni\u00f1o",
+        "status": "ONLINE",
+        "note": "NOAA/CPC checked; no active El Ni\u00f1o Advisory phrase detected.",
+        "lastChecked": "2026-08-23T01:00:48.075Z"
+      },
+      {
+        "id": "nws_hazards",
+        "name": "NWS Flood + Heat + Tropical Hazards",
+        "status": "ONLINE",
+        "note": "25 records retrieved",
+        "lastChecked": "2026-08-23T01:00:48.075Z"
+      }
+    ],
+    "issues": [
+      {
+        "id": "cdc_content",
+        "name": "CDC Content Services \u2014 Public Foodborne Content",
+        "status": "DEGRADED",
+        "note": "CDC early-warning query returned 0 foodborne records",
+        "lastChecked": "2026-08-23T01:01:03.189Z"
+      }
+    ]
+  },
+  "incidentCount": 464,
+  "languageAudit": {
+    "spanishLikeRecordCount": 0,
+    "rawHtmlRecordCount": 2,
+    "spanishSamples": [],
+    "rawHtmlSamples": [
+      {
+        "id": "FSIS-PHA-03012026-01",
+        "title": "FSIS Issues Public Health Alert for Ready-To-Eat Beef Jerky Products Due to Misbranding and Undeclared Allergen",
+        "product": "6-oz. plastic packages containing \"DRIED HAWAIIAN STYLE BEEF CRISPS, ORIGINAL SALT &amp; PEPPER FLAVOR\", and bearing establishment number \"EST. 2625\" inside the USDA mark of inspection.,4-oz. plastic packages containing \"PUNAHELE JERKY COMPANY INC UNCLE K'S BEEF CRISPS\".,4-oz. plastic packages containing \"PUNAHELE JERKY COMPANY INC KILAUEA FIRE SPICY BEEF CRISPS\".",
+        "company": "Punahele Jerky Company, Inc.",
+        "hazard": "Undeclared allergen",
+        "severity": "WATCH",
+        "status": "VERIFIED",
+        "source": "USDA FSIS",
+        "sourcePostedAt": null,
+        "updatedAt": "2026-03-01T00:00:00.000Z",
+        "lastObservedAt": "2026-08-21T11:32:40.586Z",
+        "summary": "WASHINGTON, March 1, 2026 \u2013 The U.S. Department of Agriculture's Food Safety and Inspection Service (FSIS) is issuing a public health alert for beef jerky products due to misbranding and undeclared allergens. The products may contain soy lecithin, a known allergen, which is not declared on the product label. A recall was not requested because the products are no longer available for purchase. The ready-to-eat beef jerky items bear best by dates of February 17, 2027 or prior. The following products subject to the public health alert are [ view labels ]: 6-oz. plastic packages containing \"DRIED HAWAIIAN STYLE BEEF CRISPS, ORIGINAL SALT & PEPPER FLAVOR\", and bearing establishment number \"EST. 2625\" inside the USDA mark of inspection. 4-oz. plastic packages containing \"PUNAHELE JERKY COMPANY INC UNCLE K'S BEEF CRISPS\". 4-oz. plastic packages containing \"PUNAHELE JERKY COMPANY INC KILAUEA FIRE SPICY BEEF CRISPS\". These items were distributed to retail stores in Hawaii and sold via online sales nationwide. The problem was discovered during a routine FSIS label review. There have been no confirmed reports of adverse reactions due to consumption of these products. Anyone concerned about a reaction should contact a health care provider. FSIS is concerned that some product may be in consumers' pantries. Consumers who have purchased these products are urged not to consume them. These products should be thrown away or returned to the place of purchase. Media and consumers with questions regarding the public health alert can contact Sabrina Vaughn, Food Safety and QA Compliance Officer, at 808-961-0877. Consumers with food safety questions can call the toll-free USDA Meat and Poultry Hotline at 888-MPHotline (888-674-6854) or send a question via email to MPHotline@usda.gov . For consumers that need to report a problem with a meat, poultry, or egg product, the online Electronic Consumer Complaint Monitoring System can be accessed 24 hours a day at https://foodcomplaint.fsis.usda.gov/eCCF/ ."
+      },
+      {
+        "id": "FSIS-PHA-07302025-01",
+        "title": "FSIS Issues Public Health Alert for Frozen Pork and Beef Tortellini Product Due to Misbranding and Undeclared Allergens",
+        "product": "16-oz. bag \"Schnucks Tortellini PORK &amp; BEEF\" with best by date of 05/27/2026 printed at the top of the bag.",
+        "company": "P.E. & F Inc. DBA DiMare's Specialty Foods",
+        "hazard": "Undeclared allergen",
+        "severity": "WATCH",
+        "status": "VERIFIED",
+        "source": "USDA FSIS",
+        "sourcePostedAt": null,
+        "updatedAt": "2025-07-30T00:00:00.000Z",
+        "lastObservedAt": "2026-08-21T11:32:40.586Z",
+        "summary": "WASHINGTON, July 30, 2025 - The U.S. Department of Agriculture's Food Safety and Inspection Service (FSIS) is issuing a public health alert for frozen product labeled as pork and beef tortellini due to misbranding and undeclared allergens. The frozen product labeled as pork and beef tortellini may actually contain pork and beef toasted ravioli, which contains soy and sesame, known allergens, which are not declared on the product label. FSIS is issuing this public health alert to ensure that consumers with allergies to soy and sesame are aware that this product should not be consumed. A recall was not requested because the products are no longer available for purchase. The frozen product labeled as pork and beef tortellini that may contain pork and beef toasted ravioli was produced on May 27, 2025. The following product is subject to the public health alert [ view labels ]: 16-oz. bag \"Schnucks Tortellini PORK & BEEF\" with best by date of 05/27/2026 printed at the top of the bag. The product subject to the public heath alert bears establishment number \"EST. 13051\" inside the USDA mark of inspection. The item was shipped to a Schnucks distribution center in Missouri and was further distributed to store locations in Illinois, Indiana, Missouri, and Wisconsin. The problem was discovered when the establishment notified FSIS that their sole consignee received a consumer complaint of ravioli product in a bag labeled as tortellini. There have been no confirmed reports of adverse reactions due to consumption of these products. Anyone concerned about a reaction should contact a healthcare provider. FSIS is concerned that some product may be in consumers' freezers. Consumers who have purchased these products are urged not to consume them. These products should be thrown away or returned to the place of purchase. Media and consumers with questions regarding the public health alert can contact Jessica Fazio, Plant Manager of P. E. & F, Inc., at (314) 645-6239 ext. 230, or by email at jessica@faziosbakery.com. Consumers with food safety questions can call the toll-free USDA Meat and Poultry Hotline at 888-MPHotline (888-674-6854) or send a question via email to MPHotline@usda.gov . For consumers that need to report a problem with a meat, poultry, or egg product, the online Electronic Consumer Complaint Monitoring System can be accessed 24 hours a day at https://foodcomplaint.fsis.usda.gov/eCCF/ ."
+      }
+    ]
+  },
   "blindTest": {
     "terms": [
       "alfalfa",
       "everything sprouts",
       "calco",
-      "sprout"
+      "sprout",
+      "blueberry",
+      "blueberries"
     ],
-    "matchCount": 2,
+    "matchCount": 7,
     "matches": [
+      {
+        "id": "MN-EW-d5fd526bdf361ed26624",
+        "title": "MDH, MDA confirm Shiga Toxin-producing E. coli, Salmonella cases linked to alfalfa sprouts",
+        "product": "MDH, MDA confirm Shiga Toxin-producing E. coli, Salmonella cases linked to alfalfa sprouts",
+        "company": "",
+        "hazard": "E. coli/STEC + Salmonella",
+        "severity": "HIGH",
+        "status": "CORROBORATING",
+        "source": "Minnesota Department of Health / Agriculture",
+        "sourcePostedAt": null,
+        "updatedAt": "2026-08-23T01:01:03.189Z",
+        "lastObservedAt": "2026-08-23T01:01:03.189Z",
+        "summary": "Breadcrumb Home News and Announcements News Releases print ol ol { list-style-type: lower-latin; } Topic Menu News and AnnouncementsNews and Announcements Home2026 News Releases2025 News Releases2024 News Releases2023 News ReleasesResources for ReportersInformation Officers News and AnnouncementsNews and Announcements Home2026 News Releases2025 News Releases2024 News Releases2023 News ReleasesResources for ReportersInformation Officers News ReleaseAug. 20, 2026Contact informationMDH, MDA confirm Shiga Toxin-producing E. coli, Salmonella cases linked to alfalfa sproutsMinnesota Department of Health (MDH) and Minnesota Department of Agriculture (MDA) officials are warning Minnesota consumers not to eat alfalfa sprouts sold under the Calco and Everything Sprouts brands due to a multistate outbreak of Shiga toxin-producing E. coli (STEC) and Salmonella infections.Twenty-three Minnesotans became ill between July 8 and Aug. 8 with Salmonella and/or various strains of STEC). Two people have been hospitalized, and no deaths have been reported. In addition to the Minnesota cases, Wisconsin investigators have identified 18 cases, with additional illnesses identified in other states. The number of illnesses will likely increase as the investigation progresses.The illnesses have been linked to eating alfalfa sprouts produced by Everything Sprouts, a Minnesota grower, and sold under the Calco and Everything Sprouts brands to restaurants and grocery stores. Health officials recommend people check for alfalfa sprouts from Calco or Everything Sprouts, not eat them, and throw them away. MDH and MDA are working with health officials from Wisconsin, Centers for Disease Control and Prevention (CDC), the U.S. Food and Drug Administration (FDA) and other states to identify the source and scope of contamination.Symptoms of illness caused by STEC typically include stomach cramps and diarrhea, often with bloody stools, but only a low-grade or no fever. People typically become ill two to five days after exposure, but this period can range from one to eight days. Most people recover in five to seven days. However, STEC infections can lead to hemolytic uremic syndrome (HUS), a severe compl",
+        "matchedTerms": [
+          "alfalfa",
+          "everything sprouts",
+          "calco",
+          "sprout"
+        ]
+      },
+      {
+        "id": "WI-EW-f955c386e0a94900ae30",
+        "title": "Infections of Salmonella and E. coli linked to alfalfa sprouts \u2013Updated August 21, 2026",
+        "product": "Infections of Salmonella and E. coli linked to alfalfa sprouts \u2013Updated August 21, 2026",
+        "company": "",
+        "hazard": "E. coli/STEC + Salmonella",
+        "severity": "HIGH",
+        "status": "CORROBORATING",
+        "source": "Wisconsin Department of Health Services",
+        "sourcePostedAt": "2026-08-21T00:00:00.000Z",
+        "updatedAt": "2026-08-21T00:00:00.000Z",
+        "lastObservedAt": "2026-08-23T01:01:03.189Z",
+        "summary": "Infections of Salmonella and E. coli linked to alfalfa sprouts \u2013Updated August 21, 2026 The Wisconsin Department of Health Services (DHS) is working with Minnesota health officials, the Centers for Disease Control and Prevention (CDC), U.S. Food and Drug Administration (FDA), and other states to investigate an outbreak of Shiga toxin-producing E. coli (STEC) and Salmonella infections linked to alfalfa sprouts.According to the CDC, 55 people in 15 states have become sick with one of the outbreak strains of E. coli and/or Salmonella. Four people have become hospitalized and no deaths have occurred.Seventeen Wisconsinites have become sick with one person hospitalized.The illnesses have been linked to alfalfa sprouts produced by Everything Sprouts sold under the Calco and Everything Sprouts brands. The alfalfa sprouts were distributed to restaurants and grocery stores.What you should doCheck your home for alfalfa sprouts from Calco and Everything Sprouts Brand.Do not eat them and throw them away.Wash items and surfaces that may have touched the affected sprouts using hot soapy water.Call your health care provider for any severe symptoms:Diarrhea and a fever higher than 102\u00b0FDiarrhea for more than two days that is not improvingBloody diarrheaSo much vomiting you cannot keep liquids downSigns of dehydration, such as:Not peeing muchDry mouth and throatFeeling dizzy when standing upWhat businesses should doDo not sell or serve alfalfa sprouts grown by Everything Sprouts.Wash and sanitize surfaces that may have come into contact with the affected sprouts.Symptoms of SalmonellaDiarrhea, fever, and stomach cramps are the most common symptoms of Salmonella.Symptoms usually start six hours to six days after swallowing the germ.Most people recover in four to seven days, without treatment.Some groups, like children younger than 5 years, adults 65 years and older, and people with weakened immune systems, may experience more severe illnesses and that require medical treatment and hospitalization.Symptoms of Shiga toxin-producing E. coli (STEC)Stomach cramps and diarrhea, often with bloody stools, with a low-grade or no fever are the most common symptoms of STEC.Symptoms usually",
+        "matchedTerms": [
+          "alfalfa",
+          "everything sprouts",
+          "calco",
+          "sprout"
+        ]
+      },
       {
         "id": "FDA-H-1192-2026",
         "title": "Spicy Breakfast Burrito sold under the following brand names: FRESH & READY FOODS Spicy Breakfast Burrito Net Wt. 8.2 oz (232g) UPC 1 00001 00029 7 and Sprig & Sprout Spicy Breakfast Burrito IN A SPICY TORTILLA NET WEIGHT 8.3oz (234g) Contains: Egg, Milk, Wheat. MG Foods Charlotte, NC 28272",
@@ -160,10 +220,44 @@
         "source": "FDA openFDA",
         "sourcePostedAt": null,
         "updatedAt": "2026-08-12T00:00:00.000Z",
-        "lastObservedAt": "2026-08-22T22:00:44.668Z",
+        "lastObservedAt": "2026-08-23T01:00:48.075Z",
         "summary": "Undeclared Soy. The firm received complaints of sausage in the burritos. Upon review the firm discovered the sausage contains soy which is not listed on the label.",
         "matchedTerms": [
           "sprout"
+        ]
+      },
+      {
+        "id": "FDA-F-0018-2025",
+        "title": "Whole Grains Bakery labeled \"Blueberry Muffin\", 6 oz. Whole Grains Bon Croissant, Sacramento, CA 95826, (916)-793-0090 UPC\"7 13583 05 102 3\"",
+        "product": "Whole Grains Bakery labeled \"Blueberry Muffin\", 6 oz. Whole Grains Bon Croissant, Sacramento, CA 95826, (916)-793-0090 UPC\"7 13583 05 102 3\"",
+        "company": "The Posh Bakery, Inc.",
+        "hazard": "Food safety / compliance",
+        "severity": "HIGH",
+        "status": "VERIFIED",
+        "source": "FDA openFDA",
+        "sourcePostedAt": null,
+        "updatedAt": "2024-10-09T00:00:00.000Z",
+        "lastObservedAt": "2026-08-23T01:00:48.075Z",
+        "summary": "Undeclared whey (milk) & wheat flour: no nutrition fact panel & no contains statement",
+        "matchedTerms": [
+          "blueberry"
+        ]
+      },
+      {
+        "id": "FDA-H-0002-2026",
+        "title": "Whole Foods Market Blueberry Almond Granola, PLU 86032, packaged in a clear plastic container.",
+        "product": "Whole Foods Market Blueberry Almond Granola, PLU 86032, packaged in a clear plastic container.",
+        "company": "WFM Purchasing, LP",
+        "hazard": "Food safety / compliance",
+        "severity": "CRITICAL",
+        "status": "VERIFIED",
+        "source": "FDA openFDA",
+        "sourcePostedAt": null,
+        "updatedAt": "2025-10-08T00:00:00.000Z",
+        "lastObservedAt": "2026-08-23T01:00:48.075Z",
+        "summary": "Product was incorrectly labeled, resulting in undeclared wheat, sesame, and cashew.",
+        "matchedTerms": [
+          "blueberry"
         ]
       },
       {
@@ -177,11 +271,28 @@
         "source": "FDA Active Outbreak Investigations",
         "sourcePostedAt": "2026-08-19T00:00:00.000Z",
         "updatedAt": "2026-08-22T21:00:47.038Z",
-        "lastObservedAt": "2026-08-22T22:00:44.668Z",
+        "lastObservedAt": "2026-08-23T01:00:48.075Z",
         "summary": "FDA active outbreak investigation. Product: Alfalfa Sprouts. Cases: SeeAdvisory. Traceback: \u2714; Inspection: \u2714; Sampling: \u2714.",
         "matchedTerms": [
           "alfalfa",
           "sprout"
+        ]
+      },
+      {
+        "id": "FDA-OUTBREAK-1389",
+        "title": "E. coliO145:H28 \u2014 FrozenBlueberries",
+        "product": "FrozenBlueberries",
+        "company": "",
+        "hazard": "E. coliO145:H28",
+        "severity": "HIGH",
+        "status": "CORROBORATING",
+        "source": "FDA Active Outbreak Investigations",
+        "sourcePostedAt": "2026-07-06T00:00:00.000Z",
+        "updatedAt": "2026-07-06T00:00:00.000Z",
+        "lastObservedAt": "2026-08-23T01:00:48.075Z",
+        "summary": "FDA active outbreak investigation. Product: FrozenBlueberries. Cases: SeeAdvisory. Traceback: \u2714; Inspection: \u2714; Sampling: \u2714.",
+        "matchedTerms": [
+          "blueberries"
         ]
       }
     ]
