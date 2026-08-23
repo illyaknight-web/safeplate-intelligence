@@ -1,6 +1,22 @@
 import { getState } from "./lib/store.mjs";
 
-export default async()=>{
+async function kickStateScan(req, stateScanLastSync){
+  const age=stateScanLastSync?Math.floor((Date.now()-new Date(stateScanLastSync).getTime())/60000):9999;
+  if(age<=35)return false;
+  const token=Netlify.env.get("SAFEPLATE_ADMIN_TOKEN");
+  if(!token)return false;
+  try{
+    const origin=new URL(req.url).origin;
+    const r=await fetch(`${origin}/.netlify/functions/state-scan-background`,{
+      method:"POST",
+      headers:{authorization:`Bearer ${token}`,"content-type":"application/json"},
+      body:"{}"
+    });
+    return r.ok||r.status===202;
+  }catch{return false}
+}
+
+export default async(req)=>{
  const s=await getState();
  const sources=s.sourceHealth||[];
  const lastSync=s.meta?.lastSync||null;
@@ -12,13 +28,15 @@ export default async()=>{
  const fresh=ageMinutes!==null && ageMinutes<=75;
  const earlyWarningFresh=earlyWarningAgeMinutes!==null && earlyWarningAgeMinutes<=75;
  const stateScanFresh=stateScanAgeMinutes!==null && stateScanAgeMinutes<=75;
- const online=sources.filter(x=>x.status==="ONLINE").length;
- const degraded=sources.filter(x=>["DEGRADED","OFFLINE"].includes(x.status)).length;
- const checked=sources.filter(x=>x.lastChecked).length;
- const precursorIds=new Set(["cdc_content","mn_health_food","wi_health_food"]);
- const precursorSources=sources.filter(x=>precursorIds.has(x.id));
  const stateSources=sources.filter(x=>String(x.id||"").startsWith("state_"));
+ const feedSources=sources.filter(x=>!String(x.id||"").startsWith("state_"));
+ const online=feedSources.filter(x=>x.status==="ONLINE").length;
+ const degraded=feedSources.filter(x=>["DEGRADED","OFFLINE"].includes(x.status)).length;
+ const checked=feedSources.filter(x=>x.lastChecked).length;
+ const precursorIds=new Set(["cdc_content","mn_health_food","wi_health_food"]);
+ const precursorSources=feedSources.filter(x=>precursorIds.has(x.id));
  const coverage=s.stateCoverage||{total:51,checked:0,online:0,degraded:0,signals:0,lastSync:null};
+ const stateScanDispatched=await kickStateScan(req,stateScanLastSync);
 
  return Response.json({
    live:fresh && checked>0,
@@ -31,6 +49,7 @@ export default async()=>{
    sourcesOnline:online,
    sourceIssues:degraded,
    sourcesChecked:checked,
+   stateScanDispatched,
    earlyWarning:{
      live:earlyWarningFresh && precursorSources.some(x=>x.status==="ONLINE"),
      lastSync:earlyWarningLastSync,
