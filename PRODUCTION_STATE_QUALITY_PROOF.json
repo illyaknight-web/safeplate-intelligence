@@ -1,0 +1,465 @@
+{
+  "capturedAt": "2026-08-23T02:16:05Z",
+  "workflowStartedAt": "2026-08-23T02:16:03Z",
+  "coverage": {
+    "total": 51,
+    "checked": 51,
+    "online": 43,
+    "degraded": 8,
+    "signals": 41,
+    "lastSync": "2026-08-23T02:11:53.135Z",
+    "startedAt": "2026-08-23T02:11:40.588Z",
+    "directoryResolved": 51,
+    "directoryError": null,
+    "states": [
+      {
+        "state": "Alabama",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://dph1.adph.state.al.us/FacilitiesDirectory/(S(fktaab2gu2zsuenmcjlyorlu))/default",
+        "durationMs": 4499
+      },
+      {
+        "state": "Alaska",
+        "status": "ONLINE",
+        "note": "checked; 1 current food-safety links surfaced",
+        "officialUrl": "https://alaska.gov/akdir1.html",
+        "durationMs": 9481
+      },
+      {
+        "state": "Arizona",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://azhealth.gov/pio",
+        "durationMs": 8975
+      },
+      {
+        "state": "Arkansas",
+        "status": "ONLINE",
+        "note": "checked; 18 current food-safety links surfaced",
+        "officialUrl": "https://healthy.arkansas.gov/health-topics/",
+        "durationMs": 9668
+      },
+      {
+        "state": "California",
+        "status": "DEGRADED",
+        "note": "fetch failed",
+        "officialUrl": "https://www.cdph.ca.gov/",
+        "durationMs": 301
+      },
+      {
+        "state": "Colorado",
+        "status": "ONLINE",
+        "note": "checked; 1 current food-safety links surfaced",
+        "officialUrl": "https://marijuanahealthinfo.colorado.gov/",
+        "durationMs": 3438
+      },
+      {
+        "state": "Connecticut",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://youtu.be/117FN0yjTwU?feature=shared",
+        "durationMs": 10820
+      },
+      {
+        "state": "Delaware",
+        "status": "DEGRADED",
+        "note": "USA.gov state detail 403",
+        "officialUrl": "https://www.dhss.delaware.gov/dhss/",
+        "durationMs": 362
+      },
+      {
+        "state": "District of Columbia",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://ready.dc.gov/pages/hazard-heat-during",
+        "durationMs": 6307
+      },
+      {
+        "state": "Florida",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://healthcarescreenings.floridahealth.gov/",
+        "durationMs": 4980
+      },
+      {
+        "state": "Georgia",
+        "status": "ONLINE",
+        "note": "checked; 2 current food-safety links surfaced",
+        "officialUrl": "https://wwwnc.cdc.gov/travel",
+        "durationMs": 8345
+      },
+      {
+        "state": "Hawaii",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://portal.ehawaii.gov/",
+        "durationMs": 7200
+      },
+      {
+        "state": "Idaho",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://publicdocuments.dhw.idaho.gov/WebLink/Browse.aspx?id=2980&dbid=0&repo=PUBLIC-DOCUMENTS",
+        "durationMs": 5424
+      },
+      {
+        "state": "Illinois",
+        "status": "ONLINE",
+        "note": "checked; 5 current food-safety links surfaced",
+        "officialUrl": "https://www.cdc.gov/healthy-youth/",
+        "durationMs": 4935
+      },
+      {
+        "state": "Indiana",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://www.coronavirus.in.gov/",
+        "durationMs": 8098
+      },
+      {
+        "state": "Iowa",
+        "status": "DEGRADED",
+        "note": "official health page 404",
+        "officialUrl": "https://hhs.iowa.gov/",
+        "durationMs": 7164
+      },
+      {
+        "state": "Kansas",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://kanphix.kdhe.ks.gov/",
+        "durationMs": 5517
+      },
+      {
+        "state": "Kentucky",
+        "status": "ONLINE",
+        "note": "checked; 1 current food-safety links surfaced",
+        "officialUrl": "https://www.kentuckyhelps.com/",
+        "durationMs": 4461
+      },
+      {
+        "state": "Louisiana",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://www.myplan.healthy.la.gov/en/choose",
+        "durationMs": 7144
+      },
+      {
+        "state": "Maine",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://preventionforme.org/",
+        "durationMs": 4466
+      },
+      {
+        "state": "Maryland",
+        "status": "ONLINE",
+        "note": "checked; 2 current food-safety links surfaced",
+        "officialUrl": "http://www.maryland.gov/pages/accessibility.aspx",
+        "durationMs": 7918
+      },
+      {
+        "state": "Massachusetts",
+        "status": "DEGRADED",
+        "note": "USA.gov state detail 403",
+        "officialUrl": "https://www.mass.gov/orgs/department-of-public-health",
+        "durationMs": 700
+      },
+      {
+        "state": "Michigan",
+        "status": "DEGRADED",
+        "note": "USA.gov state detail 403",
+        "officialUrl": "https://www.michigan.gov/mdhhs/keep-mi-healthy",
+        "durationMs": 605
+      },
+      {
+        "state": "Minnesota",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://mn.gov/",
+        "durationMs": 4802
+      },
+      {
+        "state": "Mississippi",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://apps.msdh.ms.gov/redcap/surveys/?s=KYNP3CTALFDLDFAA",
+        "durationMs": 6957
+      },
+      {
+        "state": "Missouri",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://mohealthdata.org/",
+        "durationMs": 8839
+      },
+      {
+        "state": "Montana",
+        "status": "DEGRADED",
+        "note": "USA.gov state detail 404",
+        "officialUrl": "https://dphhs.mt.gov/publichealthinthe406",
+        "durationMs": 1636
+      },
+      {
+        "state": "Nebraska",
+        "status": "DEGRADED",
+        "note": "This operation was aborted",
+        "officialUrl": "https://dhhs.ne.gov/Pages/public-health.aspx",
+        "durationMs": 12163
+      },
+      {
+        "state": "Nevada",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://hcqc.nv.gov/",
+        "durationMs": 6141
+      },
+      {
+        "state": "New Hampshire",
+        "status": "DEGRADED",
+        "note": "USA.gov state detail 403",
+        "officialUrl": "https://www.dhhs.nh.gov/programs-services/health-care",
+        "durationMs": 940
+      },
+      {
+        "state": "New Jersey",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://healthy.nj.gov/",
+        "durationMs": 5033
+      },
+      {
+        "state": "New Mexico",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://vaxview.doh.nm.gov/",
+        "durationMs": 5232
+      },
+      {
+        "state": "New York",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://hcsinfo.health.ny.gov/",
+        "durationMs": 1995
+      },
+      {
+        "state": "North Carolina",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://medicaid.ncdhhs.gov/",
+        "durationMs": 2294
+      },
+      {
+        "state": "North Dakota",
+        "status": "ONLINE",
+        "note": "checked; 9 current food-safety links surfaced",
+        "officialUrl": "https://deq.nd.gov/",
+        "durationMs": 4331
+      },
+      {
+        "state": "Ohio",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://odhgateway.odh.ohio.gov/lhdinformationsystem/Directory/GetMyLHD",
+        "durationMs": 4025
+      },
+      {
+        "state": "Oklahoma",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://www.health.state.ok.us/ok2share/",
+        "durationMs": 6941
+      },
+      {
+        "state": "Oregon",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://healthcare.oregon.gov/Pages/get-covered.aspx",
+        "durationMs": 5018
+      },
+      {
+        "state": "Pennsylvania",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://sais.health.pa.gov/commonpoc/dohQALocatorcommon.asp",
+        "durationMs": 8798
+      },
+      {
+        "state": "Rhode Island",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://publichealthri.buzzsprout.com/",
+        "durationMs": 8721
+      },
+      {
+        "state": "South Carolina",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://sc.gov/",
+        "durationMs": 2846
+      },
+      {
+        "state": "South Dakota",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://apps.sd.gov/ph18publications/secure/PubOrder.aspx",
+        "durationMs": 4740
+      },
+      {
+        "state": "Tennessee",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://healthdata.tn.gov/",
+        "durationMs": 8694
+      },
+      {
+        "state": "Texas",
+        "status": "ONLINE",
+        "note": "checked; 2 current food-safety links surfaced",
+        "officialUrl": "https://healthdata.dshs.texas.gov/",
+        "durationMs": 6025
+      },
+      {
+        "state": "Utah",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://healthcarestats.utah.gov/",
+        "durationMs": 8905
+      },
+      {
+        "state": "Vermont",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://vermontgov.sharepoint.com/sites/AHS-vdhHub/",
+        "durationMs": 8924
+      },
+      {
+        "state": "Virginia",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://public.govdelivery.com/accounts/VAVDHORCE/subscriber/topics?qsp=VAVDHORCE_10005",
+        "durationMs": 4862
+      },
+      {
+        "state": "Washington",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://sboh.wa.gov/",
+        "durationMs": 7997
+      },
+      {
+        "state": "West Virginia",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://health.wv.gov/",
+        "durationMs": 6096
+      },
+      {
+        "state": "Wisconsin",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://www.wisconsin.gov/Pages/AllAgencies.aspx",
+        "durationMs": 6320
+      },
+      {
+        "state": "Wyoming",
+        "status": "ONLINE",
+        "note": "checked; 0 current food-safety links surfaced",
+        "officialUrl": "https://www.wyo.gov/",
+        "durationMs": 10339
+      }
+    ],
+    "ageMinutes": 4,
+    "live": true
+  },
+  "systemStatus": {
+    "live": true,
+    "stale": false,
+    "lastSync": "2026-08-23T02:00:47.272Z",
+    "ageMinutes": 15,
+    "cycleMinutes": 30,
+    "incidents": 602,
+    "investigations": 6,
+    "sourcesOnline": 8,
+    "sourceIssues": 1,
+    "sourcesChecked": 9,
+    "stateScanDispatched": false,
+    "earlyWarning": {
+      "live": true,
+      "lastSync": "2026-08-23T02:01:03.654Z",
+      "ageMinutes": 15,
+      "cycleMinutes": 30,
+      "sourcesOnline": 2,
+      "sourceIssues": 1,
+      "sourcesChecked": 3
+    },
+    "stateSurveillance": {
+      "live": true,
+      "lastSync": "2026-08-23T02:11:53.135Z",
+      "ageMinutes": 4,
+      "cycleMinutes": 30,
+      "jurisdictionsTotal": 51,
+      "jurisdictionsChecked": 51,
+      "jurisdictionsOnline": 43,
+      "jurisdictionIssues": 8,
+      "stateSignals": 41,
+      "healthEntries": 51
+    }
+  },
+  "sourceHealthSummary": {
+    "online": 51,
+    "checked": 60,
+    "issues": 9,
+    "pendingCount": 0
+  },
+  "badTargets": [
+    {
+      "state": "Colorado",
+      "url": "https://marijuanahealthinfo.colorado.gov/"
+    },
+    {
+      "state": "Connecticut",
+      "url": "https://youtu.be/117FN0yjTwU?feature=shared"
+    },
+    {
+      "state": "Georgia",
+      "url": "https://wwwnc.cdc.gov/travel"
+    },
+    {
+      "state": "North Carolina",
+      "url": "https://medicaid.ncdhhs.gov/"
+    }
+  ],
+  "images": {
+    "/assets/safeplate-editorial.jpg": {
+      "http": 200,
+      "bytes": 177323,
+      "body": null
+    },
+    "/assets/safeplate-banner.jpg": {
+      "http": 200,
+      "bytes": 125352,
+      "body": null
+    },
+    "/assets/safeplate-brand-card.jpg": {
+      "http": 200,
+      "bytes": 66110,
+      "body": null
+    },
+    "/assets/safeplate-social.jpg": {
+      "http": 200,
+      "bytes": 107593,
+      "body": null
+    }
+  },
+  "proof": {
+    "checked51": true,
+    "directoryResolved51": true,
+    "noKnownFalseStateTargets": false,
+    "noPublicPendingSources": true,
+    "allImages200": true,
+    "stateStatusLive": true,
+    "pass": false
+  }
+}
