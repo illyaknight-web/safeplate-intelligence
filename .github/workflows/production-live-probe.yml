@@ -14,49 +14,55 @@ permissions:
 jobs:
   probe:
     runs-on: ubuntu-latest
+    timeout-minutes: 18
     steps:
       - uses: actions/checkout@v4
-      - name: Capture production SAFEPLATE state
+      - name: Capture and prove production SAFEPLATE state
         shell: bash
         run: |
           python - <<'PY'
           import json, urllib.request, urllib.error, time, re
           base='https://safeplate-intelligence.netlify.app'
-          def get(path):
-              req=urllib.request.Request(base+path,headers={'User-Agent':'SAFEPLATE-production-probe/2.0','Accept':'application/json,text/plain,*/*'})
+          def get(path, binary=False):
+              req=urllib.request.Request(base+path,headers={'User-Agent':'SAFEPLATE-production-probe/3.0','Accept':'*/*' if binary else 'application/json,text/html,text/plain,*/*'})
               try:
-                  with urllib.request.urlopen(req,timeout=60) as r:
-                      return {'http':r.status,'body':r.read().decode('utf-8','replace')}
+                  with urllib.request.urlopen(req,timeout=75) as r:
+                      body=r.read()
+                      return {'http':r.status,'contentType':r.headers.get('content-type'),'bytes':len(body),'body':None if binary else body.decode('utf-8','replace')}
               except urllib.error.HTTPError as e:
-                  return {'http':e.code,'body':e.read().decode('utf-8','replace') if getattr(e,'fp',None) else '','error':str(e)}
+                  body=e.read() if getattr(e,'fp',None) else b''
+                  return {'http':e.code,'contentType':e.headers.get('content-type') if e.headers else None,'bytes':len(body),'body':None if binary else body.decode('utf-8','replace'),'error':str(e)}
               except Exception as e:
-                  return {'http':None,'body':'','error':repr(e)}
+                  return {'http':None,'contentType':None,'bytes':0,'body':'','error':repr(e)}
           def parse(x):
               try:return json.loads(x.get('body') or '{}')
               except:return {'raw':x.get('body'),'error':x.get('error')}
 
-          # Calling system-status also self-heals a missing/stale 51-jurisdiction scan.
-          sraw=get('/api/system-status')
-          time.sleep(35)
-          craw=get('/api/state-coverage')
-          hraw=get('/api/source-health')
-          iraw=get('/api/incidents')
-          s=parse(sraw); c=parse(craw); h=parse(hraw); i=parse(iraw)
+          # system-status dispatches the protected background state scan if coverage is stale/missing.
+          first_status_raw=get('/api/system-status'); first_status=parse(first_status_raw)
+          polls=[]; coverage={}
+          for attempt in range(48):  # up to 12 minutes, 15 seconds apart
+              c_raw=get('/api/state-coverage'); coverage=parse(c_raw)
+              checked=int(coverage.get('checked') or coverage.get('jurisdictionsChecked') or 0)
+              polls.append({'attempt':attempt+1,'checked':checked,'http':c_raw.get('http'),'lastSync':coverage.get('lastSync')})
+              if checked==51: break
+              if attempt%4==3: get('/api/system-status')
+              time.sleep(15)
+
+          sraw=get('/api/system-status'); hraw=get('/api/source-health'); iraw=get('/api/incidents'); home=get('/')
+          s=parse(sraw); h=parse(hraw); i=parse(iraw)
           src=[{'id':x.get('id'),'name':x.get('name'),'status':x.get('status'),'note':x.get('note'),'lastChecked':x.get('lastChecked')} for x in h.get('sources',[]) if isinstance(x,dict)]
           rows=i.get('incidents') if isinstance(i,dict) else []
           if rows is None and isinstance(i,list): rows=i
           if rows is None: rows=[]
           def compact(x): return {k:x.get(k) for k in ['id','title','product','company','hazard','severity','status','source','sourcePostedAt','updatedAt','lastObservedAt','summary']}
           terms=['alfalfa','everything sprouts','calco','sprout','blueberry','blueberries']
-          matches=[]
-          spanish=[]
-          raw_html=[]
+          matches=[]; spanish=[]; raw_html=[]
           spanish_re=re.compile(r'\b(retira|productos|debido|contaminaci[oó]n|aproximadamente|podr[ií]an)\b',re.I)
           for x in rows:
               if not isinstance(x,dict): continue
               hay=' '.join(str(x.get(k) or '') for k in ['title','product','company','hazard','summary','source'])
-              low=hay.lower()
-              hit=[t for t in terms if t in low]
+              low=hay.lower(); hit=[t for t in terms if t in low]
               if hit:
                   y=compact(x); y['matchedTerms']=hit; matches.append(y)
               if len(spanish_re.findall(hay))>=2: spanish.append(compact(x))
@@ -64,25 +70,53 @@ jobs:
           non_state=[x for x in src if not str(x.get('id') or '').startswith('state_')]
           online=[x for x in non_state if x.get('status')=='ONLINE']
           issues=[x for x in non_state if x.get('status') in ('DEGRADED','OFFLINE')]
+          pending=[x for x in non_state if x.get('status')=='PENDING']
+
+          image_paths=['/assets/safeplate-editorial.jpg','/assets/safeplate-banner.jpg','/assets/safeplate-brand-card.jpg','/assets/safeplate-social.jpg']
+          images={p:get(p,binary=True) for p in image_paths}
+          home_html=home.get('body') or ''
+          visual_markers={
+             'selfHostedEditorial':"/assets/safeplate-editorial.jpg" in home_html,
+             'recallVisual':"/assets/safeplate-banner.jpg" in home_html,
+             'searchVisual':"/assets/safeplate-social.jpg" in home_html,
+             'journeyVisual':"/assets/safeplate-brand-card.jpg" in home_html,
+             'separateStateBadge':"States · checking 0/51" in home_html,
+             'noOldLiveSourcesLabel':"LIVE · 7 sources" not in home_html and "LIVE · 8 sources" not in home_html
+          }
+          coverage_checked=int(coverage.get('checked') or coverage.get('jurisdictionsChecked') or 0)
+          proof={
+            'state51':coverage_checked==51,
+            'noPublicPendingFeeds':len(pending)==0,
+            'imagesHTTP200':all(v.get('http')==200 and v.get('bytes',0)>5000 for v in images.values()),
+            'visualMarkers':all(visual_markers.values()),
+            'apiHTTP200':all(x.get('http')==200 for x in [sraw,hraw,iraw]),
+            'alfalfaPresent':any('alfalfa' in (m.get('matchedTerms') or []) for m in matches)
+          }
+          proof['pass']=all(proof.values())
           out={
             'capturedAt':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),
-            'http':{'systemStatus':sraw.get('http'),'stateCoverage':craw.get('http'),'sourceHealth':hraw.get('http'),'incidents':iraw.get('http')},
+            'firstSystemStatus':first_status,
+            'statePolls':polls,
             'systemStatus':s,
-            'stateCoverage':c,
-            'feedHealth':{'onlineCount':len(online),'issueCount':len(issues),'online':online,'issues':issues},
+            'stateCoverage':coverage,
+            'feedHealth':{'onlineCount':len(online),'issueCount':len(issues),'pendingCount':len(pending),'online':online,'issues':issues,'pending':pending},
             'incidentCount':len(rows),
             'languageAudit':{'spanishLikeRecordCount':len(spanish),'rawHtmlRecordCount':len(raw_html),'spanishSamples':spanish[:5],'rawHtmlSamples':raw_html[:5]},
-            'blindTest':{'terms':terms,'matchCount':len(matches),'matches':matches[:50]}
+            'blindTest':{'terms':terms,'matchCount':len(matches),'matches':matches[:50]},
+            'imagery':{'homeHTTP':home.get('http'),'markers':visual_markers,'assets':images},
+            'proof':proof
           }
           open('PRODUCTION_LIVE_SUMMARY.json','w').write(json.dumps(out,indent=2))
           print(json.dumps(out,indent=2))
+          if not proof['pass']:
+              print('SAFEPLATE proof has open gates; result is committed for diagnosis rather than hidden.')
           PY
-      - name: Commit probe result
+      - name: Commit proof result
         shell: bash
         run: |
           git config user.name "safeplate-production-probe"
           git config user.email "actions@users.noreply.github.com"
           git add PRODUCTION_LIVE_SUMMARY.json
-          git commit -m "Record SAFEPLATE production coverage probe [skip netlify]" || true
+          git commit -m "Record SAFEPLATE full production proof [skip netlify]" || true
           git pull --rebase origin main
           git push origin HEAD:main || true
