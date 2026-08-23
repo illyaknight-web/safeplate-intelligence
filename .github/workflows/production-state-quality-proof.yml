@@ -1,0 +1,72 @@
+name: SAFEPLATE state quality proof
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/production-state-quality-proof.yml]
+permissions:
+  contents: write
+jobs:
+  prove:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prove current production state coverage and assets
+        run: |
+          python - <<'PY'
+          import json,time,urllib.request,urllib.error
+          B='https://safeplate-intelligence.netlify.app'
+          def get(path,binary=False):
+            try:
+              q=urllib.request.Request(B+path,headers={'User-Agent':'SAFEPLATE-quality-proof/1.0','Accept':'*/*'})
+              with urllib.request.urlopen(q,timeout=75) as r:
+                b=r.read(); return {'http':r.status,'bytes':len(b),'body':None if binary else b.decode('utf-8','replace')}
+            except Exception as e:return {'http':None,'bytes':0,'body':'','error':repr(e)}
+          def j(path):
+            x=get(path)
+            try:return json.loads(x['body'])
+            except:return {'error':x.get('error'),'http':x.get('http')}
+          # Wait until prior state coverage is stale enough to force the new worker only if necessary.
+          # Directly touching system-status is safe and dispatches a missing/stale protected background scan.
+          before=j('/api/state-coverage'); status=j('/api/system-status')
+          # Existing coverage may be from the prior implementation. Force freshness by waiting for scheduler if needed,
+          # but first poll for any lastSync newer than workflow start.
+          start=time.time(); start_iso=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime(start))
+          cov=before
+          for i in range(48):
+            cov=j('/api/state-coverage')
+            # We need a 51-result object; the current production implementation always records directoryResolved too.
+            if int(cov.get('checked') or 0)==51 and int(cov.get('directoryResolved') or 0)==51:
+              break
+            if i%4==3:j('/api/system-status')
+            time.sleep(15)
+          health=j('/api/source-health'); status=j('/api/system-status')
+          states=cov.get('states') or []
+          bad_targets=[]
+          for s in states:
+            u=str(s.get('officialUrl') or '')
+            # Guard against the exact false targets the previous scanner produced.
+            if any(x in u for x in ['youtube.com','youtu.be','marijuanahealthinfo','cdc.gov/travel','medicaid.ncdhhs.gov']):bad_targets.append({'state':s.get('state'),'url':u})
+          imgs={p:get(p,True) for p in ['/assets/safeplate-editorial.jpg','/assets/safeplate-banner.jpg','/assets/safeplate-brand-card.jpg','/assets/safeplate-social.jpg']}
+          pending=[x for x in (health.get('sources') or []) if x.get('status')=='PENDING']
+          proof={
+            'checked51':int(cov.get('checked') or 0)==51,
+            'directoryResolved51':int(cov.get('directoryResolved') or 0)==51,
+            'noKnownFalseStateTargets':len(bad_targets)==0,
+            'noPublicPendingSources':len(pending)==0,
+            'allImages200':all(x.get('http')==200 and x.get('bytes',0)>5000 for x in imgs.values()),
+            'stateStatusLive':bool((status.get('stateSurveillance') or {}).get('live'))
+          }
+          proof['pass']=all(proof.values())
+          out={'capturedAt':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),'workflowStartedAt':start_iso,'coverage':cov,'systemStatus':status,'sourceHealthSummary':{'online':health.get('online'),'checked':health.get('checked'),'issues':health.get('issues'),'pendingCount':len(pending)},'badTargets':bad_targets,'images':imgs,'proof':proof}
+          open('PRODUCTION_STATE_QUALITY_PROOF.json','w').write(json.dumps(out,indent=2))
+          print(json.dumps({'coverage':{k:cov.get(k) for k in ['total','checked','online','degraded','signals','lastSync','directoryResolved','directoryError']},'sourceHealthSummary':out['sourceHealthSummary'],'badTargets':bad_targets,'proof':proof},indent=2))
+          PY
+      - name: Commit proof
+        run: |
+          git config user.name safeplate-quality-proof
+          git config user.email actions@users.noreply.github.com
+          git add PRODUCTION_STATE_QUALITY_PROOF.json
+          git commit -m "Record SAFEPLATE state quality proof [skip netlify]" || true
+          git pull --rebase origin main
+          git push origin HEAD:main || true
