@@ -1,31 +1,34 @@
-
 export const SOURCE_REGISTRY = [
   {id:"fda_openfda",name:"FDA openFDA Food Enforcement",family:"Federal",kind:"api",active:true,authority:true,url:"https://api.fda.gov/food/enforcement.json"},
   {id:"fda_outbreaks",name:"FDA Active Foodborne Outbreak Investigations",family:"Federal",kind:"web",active:true,authority:true,url:"https://www.fda.gov/food/outbreaks-foodborne-illness/investigations-foodborne-illness-outbreaks"},
   {id:"fda_food_events",name:"FDA Food Adverse Events",family:"Federal",kind:"api",active:true,authority:true,url:"https://api.fda.gov/food/event.json",note:"Optional FDA_API_KEY increases rate limits"},
-  {id:"usda_fsis",name:"USDA FSIS Recall API",family:"Federal",kind:"api",active:true,authority:true,url:"https://www.fsis.usda.gov/fsis/api/recall/v/1"},
+  {id:"usda_fsis",name:"USDA FSIS Recall / Public Health Alerts",family:"Federal",kind:"api+bridge",active:true,authority:true,url:"https://www.fsis.usda.gov/fsis/api/recall/v/1"},
 
-  {id:"cdc_content",name:"CDC Content Services — Public Foodborne Content",family:"Federal",kind:"api",active:false,authority:true,url:"https://tools.cdc.gov/api/v2/resources/media?q=foodborne%20outbreak",note:"Managed by SAFEPLATE early-warning scheduler; official public keyless API"},
-  {id:"mn_health_food",name:"Minnesota Health + Agriculture Food Signals",family:"State / Local",kind:"web",active:false,authority:true,url:"https://www.health.state.mn.us/news",note:"Managed by SAFEPLATE early-warning scheduler; official MDH/MDA public releases"},
-  {id:"wi_health_food",name:"Wisconsin DHS Outbreaks + Recalls",family:"State / Local",kind:"web",active:false,authority:true,url:"https://www.dhs.wisconsin.gov/outbreaks/index.htm",note:"Managed by SAFEPLATE early-warning scheduler; official Wisconsin DHS source"},
-  {id:"states",name:"State Health + Agriculture Departments",family:"State / Local",kind:"registry",active:false,authority:true,note:"Expand jurisdiction-by-jurisdiction after parser verification"},
-  {id:"locals",name:"County + City Health Departments",family:"State / Local",kind:"registry",active:false,authority:true,note:"Activate jurisdiction-by-jurisdiction"},
-  {id:"international",name:"International Food Safety Authorities",family:"International",kind:"registry",active:false,authority:true,note:"International authority registry"},
-  {id:"cfia_recalls",name:"CFIA Food Recalls & Safety Alerts",family:"International",kind:"rss",active:false,authority:true,note:"CFIA publicly offers RSS; exact production feed URL must be verified before activation"},
-  {id:"eu_rasff",name:"EU RASFF Window",family:"International",kind:"web",active:false,authority:true,note:"Public searchable database; connector pending stable public interface validation"},
+  // These three are executed by the dedicated early-warning scheduler.
+  {id:"cdc_content",name:"CDC Content Services — Public Foodborne Content",family:"Federal",kind:"api",active:false,managed:true,authority:true,url:"https://tools.cdc.gov/api/v2/resources/media?q=foodborne%20outbreak",note:"Executed every 30 minutes by SAFEPLATE early warning"},
+  {id:"mn_health_food",name:"Minnesota Health + Agriculture Food Signals",family:"State / Local",kind:"web",active:false,managed:true,authority:true,url:"https://www.health.state.mn.us/news",note:"Executed every 30 minutes by SAFEPLATE early warning"},
+  {id:"wi_health_food",name:"Wisconsin DHS Outbreaks + Recalls",family:"State / Local",kind:"web",active:false,managed:true,authority:true,url:"https://www.dhs.wisconsin.gov/outbreaks/index.htm",note:"Executed every 30 minutes by SAFEPLATE early warning"},
 
-  {id:"retailers",name:"Retailers + Manufacturers",family:"Industry",kind:"registry",active:false,authority:false,note:"Expanded retailer registry; source-specific connectors activate after validation"},
-  {id:"trader_joes_recalls",name:"Trader Joe’s Food Safety & Product Recalls",family:"Retailer",kind:"web",active:false,authority:false,url:"https://www.traderjoes.com/home/announcements?category=recalls"},
-  {id:"uk_fsa_alerts",name:"UK Food Standards Agency Alerts",family:"International",kind:"web",active:false,authority:true,url:"https://alerts.food.gov.uk/"},
-  {id:"suppliers",name:"Suppliers + Distributors",family:"Industry",kind:"registry",active:false,authority:false,note:"Supplier notices and trace-forward evidence"},
-  {id:"labs_science",name:"Laboratories + Scientific Literature",family:"Science",kind:"registry",active:false,authority:false,note:"Public-health labs, universities, journals"},
+  // Concrete international / industry surfaces. These are executed by main surveillance.
+  {id:"cfia_recalls",name:"Canada Food Recalls & Safety Alerts",family:"International",kind:"rss",active:true,authority:true,url:"https://recalls-rappels.canada.ca/en/feed/cfia-alerts-recalls",note:"Government of Canada food recall RSS"},
+  {id:"uk_fsa_alerts",name:"UK Food Standards Agency Alerts",family:"International",kind:"web",active:true,authority:true,url:"https://alerts.food.gov.uk/"},
+  {id:"trader_joes_recalls",name:"Trader Joe’s Food Safety & Product Recalls",family:"Retailer",kind:"web",active:true,authority:false,url:"https://www.traderjoes.com/home/announcements?category=recalls"},
 
   {id:"noaa_enso",name:"NOAA/CPC ENSO + El Niño",family:"Climate",kind:"web",active:true,authority:true,url:"https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/enso_advisory/ensodisc.html",note:"Contextual climate intelligence — never proof of food contamination"},
   {id:"nws_hazards",name:"NWS Flood + Heat + Tropical Hazards",family:"Climate",kind:"api",active:true,authority:true,url:"https://api.weather.gov/alerts/active",note:"No API key required; context only"},
-  {id:"water_irrigation",name:"Water + Irrigation + Environmental Quality",family:"Environment",kind:"registry",active:false,authority:false,note:"Environmental evidence layer"},
-  {id:"ag_environment",name:"Agriculture + Growing Region Conditions",family:"Environment",kind:"registry",active:false,authority:false,note:"Crop regions, harvest windows and environmental signals"},
-  {id:"logistics",name:"Logistics + Cold Chain",family:"Logistics",kind:"registry",active:false,authority:false,note:"Ports, imports, distribution and cold-chain events"},
-  {id:"emerging",name:"News + Consumer + Emerging Signals",family:"Emerging",kind:"registry",active:false,authority:false,note:"Never treated as verified without corroboration"}
+
+  // Coverage roadmap entries are intentionally not exposed as live sources until a concrete connector executes.
+  {id:"states",name:"State Health + Agriculture Departments",family:"State / Local",kind:"registry",active:false,display:false,authority:true,note:"Represented publicly by the separate 51-jurisdiction coverage result"},
+  {id:"locals",name:"County + City Health Departments",family:"State / Local",kind:"registry",active:false,display:false,authority:true,note:"Expansion registry — not counted as live"},
+  {id:"international",name:"International Food Safety Authorities",family:"International",kind:"registry",active:false,display:false,authority:true,note:"Expansion registry — not counted as live"},
+  {id:"eu_rasff",name:"EU RASFF Window",family:"International",kind:"web",active:false,display:false,authority:true,url:"https://food.ec.europa.eu/food-safety/rasff_en",note:"Public portal validated; notification normalization not yet counted as live"},
+  {id:"retailers",name:"Retailers + Manufacturers",family:"Industry",kind:"registry",active:false,display:false,authority:false,note:"Expansion registry — not counted as live"},
+  {id:"suppliers",name:"Suppliers + Distributors",family:"Industry",kind:"registry",active:false,display:false,authority:false,note:"Expansion registry — not counted as live"},
+  {id:"labs_science",name:"Laboratories + Scientific Literature",family:"Science",kind:"registry",active:false,display:false,authority:false,note:"Expansion registry — not counted as live"},
+  {id:"water_irrigation",name:"Water + Irrigation + Environmental Quality",family:"Environment",kind:"registry",active:false,display:false,authority:false,note:"Expansion registry — not counted as live"},
+  {id:"ag_environment",name:"Agriculture + Growing Region Conditions",family:"Environment",kind:"registry",active:false,display:false,authority:false,note:"Expansion registry — not counted as live"},
+  {id:"logistics",name:"Logistics + Cold Chain",family:"Logistics",kind:"registry",active:false,display:false,authority:false,note:"Expansion registry — not counted as live"},
+  {id:"emerging",name:"News + Consumer + Emerging Signals",family:"Emerging",kind:"registry",active:false,display:false,authority:false,note:"Expansion registry — never treated as verified without corroboration"}
 ];
 
 export const FOOD_CATEGORIES = [
