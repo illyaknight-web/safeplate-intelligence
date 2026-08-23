@@ -12,11 +12,11 @@ const hash=v=>crypto.createHash("sha256").update(String(v)).digest("hex").slice(
 
 async function fetchPage(url,ms=8500){
  const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);
- try{return await fetch(url,{signal:c.signal,redirect:"follow",headers:{accept:"text/html,application/xhtml+xml,*/*;q=0.8","accept-language":"en-US,en;q=0.9","cache-control":"no-cache","user-agent":"Mozilla/5.0 (compatible; SAFEPLATE-StateScan/2.0; +https://safeplate-intelligence.netlify.app)"}})}finally{clearTimeout(t)}
+ try{return await fetch(url,{signal:c.signal,redirect:"follow",headers:{accept:"text/html,application/xhtml+xml,*/*;q=0.8","accept-language":"en-US,en;q=0.9","cache-control":"no-cache","user-agent":"Mozilla/5.0 (compatible; SAFEPLATE-StateScan/2.1; +https://safeplate-intelligence.netlify.app)"}})}finally{clearTimeout(t)}
 }
 function stateFromLabel(text){
  const a=clean(text).toLowerCase();
- return STATES.find(s=>{const b=s.toLowerCase();return a===b||a.startsWith(b+" (")||a.startsWith(b+" ")||a.includes(b+" department");})||null;
+ return STATES.find(s=>{const b=s.toLowerCase();return a===b||a.startsWith(b+" (")||a.startsWith(b+" ");})||null;
 }
 async function discoverDirectory(){
  const r=await fetchPage(DIRECTORY,12000);if(!r.ok)throw new Error(`USA.gov state-health directory ${r.status}`);
@@ -27,17 +27,9 @@ async function discoverDirectory(){
  });
  return map;
 }
-function findOfficial(html,base){
- const $=cheerio.load(html),baseHost=new URL(base).hostname,c=[];
- $("a[href]").each((_,a)=>{
-   const txt=clean($(a).text()),href=$(a).attr("href")||"";
-   try{const u=new URL(href,base);if(!/^https?:$/.test(u.protocol)||u.hostname===baseHost)return;if(/facebook|twitter|x\.com|instagram|youtube|linkedin/i.test(u.hostname))return;const score=(/health|public health|department/i.test(txt)?5:0)+(/\.gov$/i.test(u.hostname)?4:0)+(/health/i.test(u.hostname)?2:0);c.push({url:u.toString(),score})}catch{}
- });
- c.sort((a,b)=>b.score-a.score);return c[0]?.url||base;
-}
 function findNews(html,base){
- const $=cheerio.load(html),c=[];
- $("a[href]").each((_,a)=>{const txt=clean($(a).text()),href=$(a).attr("href")||"";if(!NEWS_RE.test(`${txt} ${href}`))return;try{const u=new URL(href,base);if(/^https?:$/.test(u.protocol))c.push({url:u.toString(),score:(/outbreak|recall|food/i.test(`${txt} ${href}`)?4:0)+(/news|press|alert/i.test(`${txt} ${href}`)?2:0)})}catch{}});
+ const $=cheerio.load(html),host=new URL(base).hostname,c=[];
+ $("a[href]").each((_,a)=>{const txt=clean($(a).text()),href=$(a).attr("href")||"";if(!NEWS_RE.test(`${txt} ${href}`))return;try{const u=new URL(href,base);if(!/^https?:$/.test(u.protocol))return;const same=u.hostname===host;const score=(same?5:0)+(/outbreak|recall|food/i.test(`${txt} ${href}`)?4:0)+(/news|press|alert/i.test(`${txt} ${href}`)?2:0);c.push({url:u.toString(),score})}catch{}});
  c.sort((a,b)=>b.score-a.score);return c[0]?.url||null;
 }
 function signal(state,title,url,summary){
@@ -53,13 +45,13 @@ async function scanOne(state,directoryUrl){
  const started=Date.now();
  try{
    if(!directoryUrl)throw new Error("USA.gov state directory link not resolved");
-   const d=await fetchPage(directoryUrl);if(!d.ok)throw new Error(`USA.gov state detail ${d.status}`);
-   const dhtml=await d.text(),official=findOfficial(dhtml,directoryUrl);
-   const r=await fetchPage(official);if(!r.ok)throw new Error(`official health page ${r.status}`);
-   const html=await r.text();let signals=extract(html,official,state);const news=findNews(html,official);
-   if(news&&news!==official){try{const nr=await fetchPage(news,6500);if(nr.ok)signals=[...signals,...extract(await nr.text(),news,state)]}catch{}}
+   // USA.gov already supplies the state health agency destination. Do not hop to an arbitrary
+   // outbound link from that page; doing so previously produced false 'online' targets.
+   const r=await fetchPage(directoryUrl);if(!r.ok)throw new Error(`official health surface ${r.status}`);
+   const html=await r.text();let signals=extract(html,directoryUrl,state);const news=findNews(html,directoryUrl);
+   if(news&&news!==directoryUrl){try{const nr=await fetchPage(news,6500);if(nr.ok)signals=[...signals,...extract(await nr.text(),news,state)]}catch{}}
    signals=[...new Map(signals.map(x=>[x.id,x])).values()].slice(0,24);
-   return {state,id:`state_${slug(state)}`,status:"ONLINE",officialUrl:official,signals,note:`checked; ${signals.length} current food-safety links surfaced`,durationMs:Date.now()-started};
+   return {state,id:`state_${slug(state)}`,status:"ONLINE",officialUrl:directoryUrl,signals,note:`checked official USA.gov-listed health surface; ${signals.length} food-safety links surfaced`,durationMs:Date.now()-started};
  }catch(e){return {state,id:`state_${slug(state)}`,status:"DEGRADED",officialUrl:directoryUrl||null,signals:[],note:String(e?.message||e),durationMs:Date.now()-started}}
 }
 function merge(existing,incoming,now){
@@ -78,6 +70,6 @@ export async function runStateScan(){
  const stateHealth=results.map(r=>({id:r.id,name:`${r.state} state public-health scan`,family:"State / Local",status:r.status,lastChecked:finishedAt,note:r.note,url:r.officialUrl}));
  const online=results.filter(x=>x.status==="ONLINE").length,degraded=results.length-online;
  const coverage={total:51,checked:results.length,online,degraded,signals:incoming.length,lastSync:finishedAt,startedAt,directoryResolved:directory.size,directoryError,states:results.map(({state,status,note,officialUrl,durationMs})=>({state,status,note,officialUrl,durationMs}))};
- const next={...state,meta:{...(state.meta||{}),stateScanLastSync:finishedAt,stateScanCycleMinutes:30},incidents,sourceHealth:[...nonState,...stateHealth],stateCoverage:coverage,changes:[{time:finishedAt,title:"51-jurisdiction state surveillance cycle complete",detail:`51/51 checked · ${online} online · ${degraded} degraded · ${incoming.length} state signals · directory links resolved ${directory.size}/51.`},...(state.changes||[])].slice(0,350)};
+ const next={...state,meta:{...(state.meta||{}),stateScanLastSync:finishedAt,stateScanCycleMinutes:30},incidents,sourceHealth:[...nonState,...stateHealth],stateCoverage:coverage,changes:[{time:finishedAt,title:"51-jurisdiction state surveillance cycle complete",detail:`51/51 checked · ${online} online · ${degraded} degraded · ${incoming.length} state signals · USA.gov links resolved ${directory.size}/51.`},...(state.changes||[])].slice(0,350)};
  await saveState(next);return next;
 }
