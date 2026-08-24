@@ -1,0 +1,34 @@
+name: Capture SAFEPLATE surveillance proof
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - netlify/functions/surveillance-history.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wait for Netlify production deploy
+        run: sleep 120
+      - name: Fetch surveillance history
+        run: |
+          mkdir -p runtime
+          curl --fail --silent --show-error --retry 6 --retry-delay 20 \
+            https://safeplate-intelligence.netlify.app/api/surveillance-history \
+            -o runtime/surveillance-proof.json
+          python -m json.tool runtime/surveillance-proof.json >/dev/null
+      - name: Commit proof snapshot
+        run: |
+          git config user.name "safeplate-runtime-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add runtime/surveillance-proof.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Capture SAFEPLATE surveillance runtime proof"
+          git push
