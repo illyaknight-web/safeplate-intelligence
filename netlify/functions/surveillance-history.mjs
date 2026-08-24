@@ -1,5 +1,6 @@
 import { getState } from "./lib/store.mjs";
 
+// Public, read-only proof endpoint for retained surveillance-cycle timestamps.
 export default async () => {
   const s = await getState();
   const cycles = (s.changes || [])
