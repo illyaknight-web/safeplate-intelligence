@@ -17,9 +17,22 @@ export default async (req) => {
     }
   }
 
-  const tag = '<script src="/live-alert.js" defer></script>';
+  // Never flash misleading 0/51 or developer-facing "backend" language before
+  // the live runtime has returned production status.
+  html = html
+    .replace("Feeds · checking", "Intelligence · initializing")
+    .replace("States · checking 0/51", "States · initializing")
+    .replace("Backend: checking…", "System status · initializing")
+    .replace(">Checking…<", ">Initializing…<");
+
+  const styleTag = '<link rel="stylesheet" href="/polish.css">';
+  if (!html.includes('/polish.css')) {
+    html = html.includes('</head>') ? html.replace('</head>', `${styleTag}</head>`) : `${styleTag}${html}`;
+  }
+
+  const runtimeTag = '<script src="/live-alert.js" defer></script>';
   if (!html.includes('/live-alert.js')) {
-    html = html.includes('</body>') ? html.replace('</body>', `${tag}</body>`) : `${html}${tag}`;
+    html = html.includes('</body>') ? html.replace('</body>', `${runtimeTag}</body>`) : `${html}${runtimeTag}`;
   }
 
   return new Response(html, {
