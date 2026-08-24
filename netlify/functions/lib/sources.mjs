@@ -8,8 +8,8 @@ export const SOURCE_REGISTRY = [
   {id:"mn_health_food",name:"Minnesota Health + Agriculture Food Signals",family:"State / Local",kind:"web",active:false,managed:true,authority:true,url:"https://www.health.state.mn.us/news",note:"Executed every 30 minutes by SAFEPLATE early warning"},
   {id:"wi_health_food",name:"Wisconsin DHS Outbreaks + Recalls",family:"State / Local",kind:"web",active:false,managed:true,authority:true,url:"https://www.dhs.wisconsin.gov/outbreaks/index.htm",note:"Executed every 30 minutes by SAFEPLATE early warning"},
 
-  {id:"uk_fsa_alerts",name:"UK Food Standards Agency Alerts",family:"International",kind:"web",active:true,authority:true,url:"https://alerts.food.gov.uk/"},
-  {id:"trader_joes_recalls",name:"Trader Joe’s Food Safety & Product Recalls",family:"Retailer",kind:"web",active:true,authority:false,url:"https://www.traderjoes.com/home/announcements?category=recalls"},
+  {id:"uk_fsa_alerts",name:"UK Food Standards Agency Alerts",family:"International",kind:"web",active:false,authority:true,url:"https://alerts.food.gov.uk/",note:"Parser retained but disabled in production until a fresh source-specific runtime validation passes"},
+  {id:"trader_joes_recalls",name:"Trader Joe’s Food Safety & Product Recalls",family:"Retailer",kind:"web",active:false,authority:false,url:"https://www.traderjoes.com/home/announcements?category=recalls",note:"Parser retained but disabled in production until a fresh source-specific runtime validation passes"},
   {id:"noaa_enso",name:"NOAA/CPC ENSO + El Niño",family:"Climate",kind:"web",active:true,authority:true,url:"https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/enso_advisory/ensodisc.html",note:"Contextual climate intelligence — never proof of food contamination"},
   {id:"nws_hazards",name:"NWS Flood + Heat + Tropical Hazards",family:"Climate",kind:"api",active:true,authority:true,url:"https://api.weather.gov/alerts/active",note:"No API key required; context only"},
 
