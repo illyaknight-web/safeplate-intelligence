@@ -1,7 +1,8 @@
 import { getState } from "./lib/store.mjs";
 
 const IMPORTANT_SEVERITIES = new Set(["CRITICAL","HIGH","WATCH"]);
-const IMPORTANT_CATEGORIES = /recall|outbreak|public health alert|foodborne/i;
+const IMPORTANT_CATEGORIES = /recall|outbreak|public health alert|foodborne|early-warning precursor/i;
+const CONTEXT_ONLY_CATEGORIES = /climate|weather context/i;
 
 function ms(v){
   const t = new Date(v || 0).getTime();
@@ -16,9 +17,11 @@ function publicItem(x, now){
   const ageMinutes = newest ? Math.max(0, Math.round((now - newest) / 60000)) : null;
   const isNew = first > 0 && (now - first) <= 6 * 60 * 60 * 1000;
   const isMaterialUpdate = updated > 0 && first > 0 && updated > first + 60000 && (now - updated) <= 6 * 60 * 60 * 1000;
-  const important = IMPORTANT_SEVERITIES.has(String(x.severity || "").toUpperCase()) || IMPORTANT_CATEGORIES.test(String(x.category || ""));
+  const category = String(x.category || "");
+  const contextOnly = Boolean(x.contextOnly) || CONTEXT_ONLY_CATEGORIES.test(category);
+  const important = IMPORTANT_SEVERITIES.has(String(x.severity || "").toUpperCase()) || IMPORTANT_CATEGORIES.test(category);
   const active = String(x.status || "").toUpperCase() !== "RESOLVED";
-  const alertEligible = active && important && (isNew || isMaterialUpdate);
+  const alertEligible = active && !contextOnly && important && (isNew || isMaterialUpdate);
   const evidence = Array.isArray(x.evidence) ? x.evidence[0] : null;
   return {
     id: x.id || null,
@@ -26,7 +29,7 @@ function publicItem(x, now){
     product: x.product || "",
     company: x.company || "",
     hazard: x.hazard || "",
-    category: x.category || "",
+    category,
     severity: String(x.severity || "EMERGING").toUpperCase(),
     status: x.status || "",
     source: x.source || evidence?.source || "SAFEPLATE",
@@ -38,6 +41,7 @@ function publicItem(x, now){
     ageMinutes,
     isNew,
     isMaterialUpdate,
+    contextOnly,
     alertEligible
   };
 }
