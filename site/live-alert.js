@@ -1,189 +1,43 @@
 (()=>{
-  'use strict';
+'use strict';
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const ROUTES=['home','recalls','search','track','journey','command'];
+const data={incidents:[],sources:[],status:null,coverage:null,filter:'official'};
+const STYLE_ID='safeplate-live-alert-style', CARD_ID='safeplate-live-alert';
+const strip=(v='')=>String(v).replace(/<[^>]*>/g,' ').replace(/&amp;/gi,'&').replace(/&quot;/gi,'"').replace(/&#39;|&#039;/gi,"'").replace(/&lt;/gi,'<').replace(/&gt;/gi,'>').replace(/&nbsp;/gi,' ').replace(/\s+/g,' ').trim();
+const esc=(v='')=>strip(v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#039;'}[m]));
+const dt=x=>{const d=new Date(x||0);return Number.isNaN(d.getTime())?0:d.getTime()};
+const when=x=>x?.sourcePostedAt||x?.updatedAt||x?.lastObservedAt||x?.verifiedAt||null;
+const ago=x=>{if(!x)return'never';const m=Math.max(0,Math.floor((Date.now()-dt(x))/60000));return m<1?'just now':m<60?m+'m ago':m<1440?Math.floor(m/60)+'h ago':Math.floor(m/1440)+'d ago'};
+const sorted=rows=>[...rows].sort((a,b)=>dt(when(b))-dt(when(a)));
+const match=(q,x)=>JSON.stringify(x).toLowerCase().includes(String(q||'').trim().toLowerCase());
+const isSpanish=x=>{const t=strip(`${x?.title||''} ${x?.summary||''}`).toLowerCase();return [/\bretira\b/,/\bproductos\b/,/\bdebido\b/,/\bcontaminaci[oó]n\b/,/\bsin el beneficio\b/,/\bservicio de inocuidad\b/,/\baproximadamente\b/,/\bpodr[ií]an\b/].filter(r=>r.test(t)).length>=2};
+const isOfficialRecall=x=>x.rawSource==='fda_openfda'||x.rawSource==='usda_fsis'||x.rawSource==='cfia_recalls'||x.rawSource==='uk_fsa_alerts'||(/recall|public health alert/i.test((x.category||'')+' '+(x.title||''))&&/VERIFIED|CORROBORATING/i.test(x.status||''));
+const isInvestigation=x=>!isOfficialRecall(x)||/outbreak|adverse event|signal|investigation/i.test((x.category||'')+' '+(x.title||''));
 
-  const STYLE_ID='safeplate-live-alert-style';
-  const CARD_ID='safeplate-live-alert';
-  const ROUTES=['home','recalls','search','track','journey','command'];
+async function getJSON(url){const c=new AbortController(),t=setTimeout(()=>c.abort(),20000);try{const r=await fetch(url,{cache:'no-store',signal:c.signal,headers:{accept:'application/json'}});if(!r.ok)throw new Error(url+' → HTTP '+r.status);return await r.json()}finally{clearTimeout(t)}}
+function setRoute(id,{hash=true}={}){if(!ROUTES.includes(id))id='home';$$('.screen').forEach(x=>x.classList.toggle('active',x.id===id));$$('[data-route]').forEach(x=>x.classList.toggle('on',x.dataset.route===id));if(hash&&location.hash!==`#${id}`){try{history.replaceState(null,'',`#${id}`)}catch(_){location.hash=id}}window.scrollTo({top:0,behavior:'smooth'})}
+function sevClass(s=''){s=s.toLowerCase();return s==='critical'?'critical':s==='high'?'high':'watch'}
+function ss(){return data.status?.stateSurveillance||{}}
+function stateText(){const s=ss();return `${s.jurisdictionsChecked??data.coverage?.checked??0}/${s.jurisdictionsTotal??data.coverage?.total??51}`}
+function recordCard(x){const tags=[x.category,x.hazard,...(x.states||[])].filter(Boolean).slice(0,8);return `<article class="recall"><div class="eyebrow ${sevClass(x.severity)}">${esc(x.severity||'WATCH')} · ${esc(x.status||'DETECTED')} · ${esc(x.source||'Source')}</div><h3>${esc(x.title||x.product||'Food safety record')}</h3><p>${esc(x.summary||'Source-backed SAFEPLATE record. Open details for provenance.')}</p><div class="tags">${tags.map(v=>`<span class="tag">${esc(v)}</span>`).join('')}</div><div class="facts"><div class="fact"><span>Company</span><strong>${esc(x.company||'Not yet published')}</strong></div><div class="fact"><span>Source date</span><strong>${esc(when(x)?new Date(when(x)).toLocaleDateString('en-US'):'Unknown')}</strong></div><div class="fact"><span>SAFEPLATE observed</span><strong>${esc(ago(x.lastObservedAt||x.updatedAt))}</strong></div></div><button class="details" data-open="${esc(x.id)}">View evidence</button></article>`}
+function bindDetails(){$$('[data-open]').forEach(b=>b.onclick=()=>openDetail(b.dataset.open))}
+function openDetail(id){const x=data.incidents.find(r=>String(r.id)===String(id));if(!x)return;const ev=x.evidence||[],ents=x.entities||[];const body=$('#modal-body');if(body)body.innerHTML=`<div class="kicker">SAFEPLATE RECORD</div><h2>${esc(x.title||x.product)}</h2><p>${esc(x.summary||'')}</p><div class="facts"><div class="fact"><span>Status</span><strong>${esc(x.status||'')}</strong></div><div class="fact"><span>Severity</span><strong>${esc(x.severity||'')}</strong></div><div class="fact"><span>Source</span><strong>${esc(x.source||'')}</strong></div></div><h3>Evidence</h3>${ev.length?ev.map(e=>`<div class="row"><strong>${esc(e.source||e.type||'Evidence')}</strong><span>${esc(e.text||e.summary||'')}</span>${e.url?`<span><a href="${esc(e.url)}" target="_blank" rel="noopener">Open official source ↗</a></span>`:''}</div>`).join(''):'<p>No evidence objects published for this record.</p>'}<h3>Connected entities</h3>${ents.length?ents.map(e=>`<div class="row"><strong>${esc(e.name||'Entity')}</strong><span>${esc(e.type||'')}</span></div>`).join(''):'<p>No connected entities published yet.</p>'}`;$('#modal')?.classList.add('open');const j=$('#journey-output');if(j)j.innerHTML=`<div class="section-title"><h2>${esc(x.title||x.product)}</h2></div>${ents.length?ents.map(e=>`<div class="row"><strong>${esc(e.name||'Entity')}</strong><span>${esc(e.type||'')}</span></div>`).join(''):'<div class="empty">No connected entities published yet.</div>'}`}
+function renderHome(){const rows=sorted(data.incidents),st=data.status||{};if($('#home-incidents'))$('#home-incidents').textContent=rows.length;if($('#home-high'))$('#home-high').textContent=rows.filter(x=>['CRITICAL','HIGH'].includes(String(x.severity||'').toUpperCase())).length;if($('#home-sources'))$('#home-sources').textContent=st.sourcesOnline??data.sources.filter(x=>x.status==='ONLINE').length;if($('#home-states'))$('#home-states').textContent=stateText();if($('#home-sync'))$('#home-sync').textContent=st.lastSync?ago(st.lastSync):'Never';if($('#home-feed'))$('#home-feed').innerHTML=rows.length?rows.slice(0,6).map(recordCard).join(''):'<div class="error">SAFEPLATE did not receive incident data from the production backend.</div>';bindDetails()}
+function recallRows(){const q=$('#recall-search')?.value||'';let rows=data.incidents;if(data.filter==='official')rows=rows.filter(isOfficialRecall);else if(data.filter==='investigations')rows=rows.filter(isInvestigation);if(q)rows=rows.filter(x=>match(q,x));return sorted(rows)}
+function renderRecalls(){const rows=recallRows(),names={official:'Latest official recalls',investigations:'Investigations & emerging signals',all:'All SAFEPLATE records'};if($('#recall-heading'))$('#recall-heading').textContent=names[data.filter];if($('#recall-count'))$('#recall-count').textContent=`${rows.length} record${rows.length===1?'':'s'} loaded`;if($('#recall-status'))$('#recall-status').textContent=data.status?.live?`LIVE · updated ${ago(data.status.lastSync)}`:data.status?.stale?`STALE · ${ago(data.status.lastSync)}`:'BACKEND NOT CURRENT';if($('#recall-list'))$('#recall-list').innerHTML=rows.length?rows.slice(0,100).map(recordCard).join(''):'<div class="error">No records are available for this view. Check Source Health for the backend condition.</div>';bindDetails()}
+function renderSearch(){const q=$('#global-search')?.value.trim()||'',rows=q?sorted(data.incidents.filter(x=>match(q,x))):[];if($('#search-results'))$('#search-results').innerHTML=!q?'<div class="empty">Enter a product, company, pathogen, lot or state.</div>':rows.length?rows.slice(0,100).map(recordCard).join(''):'<div class="empty">No grounded SAFEPLATE record matched this search.</div>';bindDetails()}
+function renderTrack(){const q=$('#track-input')?.value.trim()||'',rows=q?sorted(data.incidents.filter(x=>match(q,x))):[];if($('#track-output'))$('#track-output').innerHTML=!q?'<div class="empty">Enter a product, company, lot or ingredient.</div>':rows.length?`<div class="section-title"><h2>${rows.length} evidence-linked match${rows.length===1?'':'es'}</h2></div><div class="recall-grid">${rows.slice(0,30).map(recordCard).join('')}</div>`:'<div class="empty">No source-backed SAFEPLATE record matched.</div>';bindDetails()}
+function renderCommand(){const rows=sorted(data.incidents),official=rows.filter(isOfficialRecall),high=rows.filter(x=>['CRITICAL','HIGH'].includes(String(x.severity||'').toUpperCase())),st=data.status||{},s=ss();const set=(id,v)=>{if($(id))$(id).textContent=v};set('#kpi-records',rows.length);set('#kpi-recalls',official.length);set('#kpi-high',high.length);set('#kpi-online',st.sourcesOnline??data.sources.filter(x=>x.status==='ONLINE').length);set('#kpi-states',stateText());set('#kpi-sync',st.lastSync?ago(st.lastSync):'Never');if($('#priority-list'))$('#priority-list').innerHTML=rows.length?rows.slice(0,18).map(x=>`<div class="row"><strong>${esc(x.title||x.product)}</strong><span>${esc(x.severity||'WATCH')} · ${esc(x.status||'')} · ${esc(x.source||'')} · ${esc(ago(x.lastObservedAt||x.updatedAt))}</span></div>`).join(''):'<div class="row"><strong>No incident data loaded</strong></div>';if($('#system-health'))$('#system-health').innerHTML=`<div class="coverage"><strong>U.S. jurisdiction scan: ${esc(stateText())}</strong><span>${s.live?'Current 51-jurisdiction coverage window complete.':st.stateScanDispatched?'Background scan dispatched.':'Coverage is incomplete.'}</span></div><div class="row"><strong>Main surveillance: ${st.live?'LIVE':'NOT CURRENT'}</strong><span>Last sync: ${esc(st.lastSync?ago(st.lastSync):'never')} · cycle: 30 minutes</span></div><div class="row"><strong>Early warning: ${st.earlyWarning?.live?'LIVE':'NOT VERIFIED'}</strong><span>Last sync: ${esc(st.earlyWarning?.lastSync?ago(st.earlyWarning.lastSync):'never')}</span></div><div class="row"><strong>State surveillance: ${s.live?'LIVE':'NOT COMPLETE'}</strong><span>${esc(s.jurisdictionsChecked??data.coverage?.checked??0)}/${esc(s.jurisdictionsTotal??data.coverage?.total??51)} checked · ${esc(s.jurisdictionsOnline??data.coverage?.online??0)} online · ${esc(s.jurisdictionIssues??data.coverage?.degraded??0)} issues · ${esc(s.stateSignals??data.coverage?.signals??0)} signals</span></div>`;if($('#incident-list'))$('#incident-list').innerHTML=rows.length?rows.map(x=>`<div class="row"><strong>${esc(x.title||x.product)}</strong><span>${esc(x.status||'')} · ${esc(x.source||'')} · ${esc(ago(x.lastObservedAt||x.updatedAt))}</span></div>`).join(''):'<div class="row"><strong>No incidents loaded</strong></div>';const evidence=rows.flatMap(x=>(x.evidence||[]).map(e=>({...e,_incident:x.title||x.product}))).slice(0,300);if($('#evidence-list'))$('#evidence-list').innerHTML=evidence.length?evidence.map(e=>`<div class="row"><strong>${esc(e.source||e.type||'Evidence')}</strong><span>${esc(e._incident)} — ${esc(e.text||e.summary||'')}</span></div>`).join(''):'<div class="row"><strong>No evidence loaded</strong></div>';const feeds=data.sources.filter(x=>!String(x.id||'').startsWith('state_')&&x.lastChecked&&x.status!=='PENDING');if($('#source-list'))$('#source-list').innerHTML=`<div class="coverage"><strong>State/DC coverage ${esc(stateText())}</strong><span>${esc(s.jurisdictionsOnline??data.coverage?.online??0)} online · ${esc(s.jurisdictionIssues??data.coverage?.degraded??0)} degraded/issues · every 30 minutes</span></div>`+(feeds.length?feeds.map(x=>`<div class="source"><strong>${esc(x.name||x.id)}</strong><span class="${x.status==='ONLINE'?'status-online':'status-degraded'}">${esc(x.status||'')}</span><span>${esc(ago(x.lastChecked))}</span></div>`).join(''):'<div class="row"><strong>No executed source-health records loaded</strong></div>')}
+function setStatus(){const st=data.status||{},s=ss(),feed=$('#feed-text'),fd=$('#feed-dot'),cd=$('#cmd-dot');const live=!!st.live;if(fd)fd.className='dot '+(live?'live':'bad');if(cd)cd.className='dot '+(live?'live':'bad');const ft=live?`Feeds · ${st.sourcesOnline??data.sources.filter(x=>x.status==='ONLINE').length} online${st.sourceIssues?` · ${st.sourceIssues} issue${st.sourceIssues===1?'':'s'}`:''}`:(st.stale?'Feeds · stale':'Feeds · not current');if(feed)feed.textContent=ft;if($('#cmd-live-text'))$('#cmd-live-text').textContent=ft;if($('#footer-status'))$('#footer-status').textContent=`Backend: ${live?'LIVE':'DEGRADED'} · ${ft} · States ${stateText()}`;if($('#state-pill')){$('#state-pill').textContent=s.live?`States · ${stateText()} LIVE`:st.stateScanDispatched?`States · scanning ${stateText()}`:`States · ${stateText()}`;$('#state-pill').className='status-pill state-pill '+(s.live?'':(s.jurisdictionsChecked??0)>0?'warn':'bad')}}
 
-  function injectStyle(){
-    if(document.getElementById(STYLE_ID)) return;
-    const s=document.createElement('style');
-    s.id=STYLE_ID;
-    s.textContent=`
-      #${CARD_ID}{position:fixed;right:22px;top:96px;z-index:1000;width:min(390px,calc(100% - 44px));background:rgba(255,255,255,.98);backdrop-filter:blur(14px);border:1px solid rgba(15,23,42,.12);box-shadow:0 24px 60px rgba(0,0,0,.22);border-radius:18px;padding:16px 17px 15px;color:#0a0d12;animation:safeplateAlertIn .35s ease-out}
-      #${CARD_ID}[data-severity="CRITICAL"]{border-left:5px solid #b42318}
-      #${CARD_ID}[data-severity="HIGH"]{border-left:5px solid #b54708}
-      #${CARD_ID}[data-severity="WATCH"]{border-left:5px solid #175cd3}
-      #${CARD_ID} .sp-alert-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
-      #${CARD_ID} .sp-alert-label{display:flex;align-items:center;gap:7px;font-size:10px;letter-spacing:.15em;font-weight:900;text-transform:uppercase;color:#0b6b36}
-      #${CARD_ID} .sp-alert-pulse{width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 0 rgba(239,68,68,.45);animation:spPulse 1.8s infinite}
-      #${CARD_ID} .sp-alert-time{font-size:10px;color:#64748b;font-weight:800}
-      #${CARD_ID} h3{font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.08;font-weight:400;margin:4px 0 8px}
-      #${CARD_ID} p{font-size:12px;line-height:1.45;color:#475569;margin:0 0 10px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-      #${CARD_ID} .sp-alert-meta{display:flex;flex-wrap:wrap;gap:6px;margin:9px 0 12px}
-      #${CARD_ID} .sp-chip{font-size:9px;font-weight:900;border-radius:999px;padding:5px 7px;background:#f1f5f9;color:#334155;border:1px solid #e2e8f0}
-      #${CARD_ID} .sp-alert-actions{display:flex;gap:8px;align-items:center}
-      #${CARD_ID} .sp-view{border:0;border-radius:9px;padding:9px 11px;background:#0b6b36;color:#fff;font-weight:900;font-size:11px;cursor:pointer}
-      #${CARD_ID} .sp-source{font-size:9px;color:#64748b;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:210px}
-      #${CARD_ID} .sp-close{border:0;background:transparent;color:#64748b;font-size:16px;line-height:1;cursor:pointer;padding:2px 4px}
-      .sp-runtime-good{color:#0b6b36!important;border-color:#b9dcc3!important;background:#f4fbf6!important}
-      .sp-runtime-bad{color:#9b2c21!important;border-color:#efc4bf!important;background:#fff8f7!important}
-      @keyframes spPulse{0%{box-shadow:0 0 0 0 rgba(239,68,68,.45)}70%{box-shadow:0 0 0 8px rgba(239,68,68,0)}100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}}
-      @keyframes safeplateAlertIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
-      @media(max-width:980px){#${CARD_ID}{right:16px;top:88px;width:calc(100% - 32px)}}
-    `;
-    document.head.appendChild(s);
-  }
+function injectAlertStyle(){if(document.getElementById(STYLE_ID))return;const s=document.createElement('style');s.id=STYLE_ID;s.textContent=`#${CARD_ID}{position:fixed;right:22px;top:96px;z-index:1000;width:min(390px,calc(100% - 44px));background:rgba(255,255,255,.98);backdrop-filter:blur(14px);border:1px solid rgba(15,23,42,.12);box-shadow:0 24px 60px rgba(0,0,0,.22);border-radius:18px;padding:16px 17px 15px;color:#0a0d12;animation:spIn .35s ease-out}#${CARD_ID}[data-severity="CRITICAL"]{border-left:5px solid #b42318}#${CARD_ID}[data-severity="HIGH"]{border-left:5px solid #b54708}#${CARD_ID}[data-severity="WATCH"]{border-left:5px solid #175cd3}#${CARD_ID} .top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}#${CARD_ID} .label{display:flex;align-items:center;gap:7px;font-size:10px;letter-spacing:.15em;font-weight:900;text-transform:uppercase;color:#0b6b36}#${CARD_ID} .pulse{width:8px;height:8px;border-radius:50%;background:#ef4444;animation:spPulse 1.8s infinite}#${CARD_ID} h3{font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.08;font-weight:400;margin:4px 0 8px}#${CARD_ID} p{font-size:12px;line-height:1.45;color:#475569;margin:0 0 10px}#${CARD_ID} .chips{display:flex;flex-wrap:wrap;gap:6px;margin:9px 0 12px}#${CARD_ID} .chip{font-size:9px;font-weight:900;border-radius:999px;padding:5px 7px;background:#f1f5f9;color:#334155;border:1px solid #e2e8f0}#${CARD_ID} .actions{display:flex;gap:8px;align-items:center}#${CARD_ID} .view{border:0;border-radius:9px;padding:9px 11px;background:#0b6b36;color:#fff;font-weight:900;font-size:11px;cursor:pointer}#${CARD_ID} .source{font-size:9px;color:#64748b;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:210px}#${CARD_ID} .x{border:0;background:transparent;color:#64748b;font-size:16px;cursor:pointer}@keyframes spPulse{0%{box-shadow:0 0 0 0 rgba(239,68,68,.45)}70%{box-shadow:0 0 0 8px rgba(239,68,68,0)}100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}}@keyframes spIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}@media(max-width:980px){#${CARD_ID}{right:16px;top:88px;width:calc(100% - 32px)}}`;document.head.appendChild(s)}
+const rel=m=>m==null?'just detected':m<2?'just detected':m<60?`${m} min ago`:`${Math.max(1,Math.round(m/60))} hr ago`;
+function showAlert(item){injectAlertStyle();let card=document.getElementById(CARD_ID);if(!card){card=document.createElement('div');card.id=CARD_ID;document.body.appendChild(card)}card.dataset.severity=item.severity||'WATCH';card.innerHTML=`<div class="top"><div class="label"><span class="pulse"></span>${item.isNew?'NEW LIVE ALERT':'IMPORTANT UPDATE'}</div><div style="display:flex;gap:8px;align-items:center"><small>${esc(rel(item.ageMinutes))}</small><button class="x" aria-label="Dismiss">×</button></div></div><h3>${esc(item.title||item.product||'Food safety alert')}</h3><p>${esc(item.summary||'SAFEPLATE detected a new food-safety intelligence record.')}</p><div class="chips">${item.severity?`<span class="chip">${esc(item.severity)}</span>`:''}${item.hazard?`<span class="chip">${esc(item.hazard)}</span>`:''}${item.product?`<span class="chip">${esc(item.product)}</span>`:''}</div><div class="actions"><button class="view">View intelligence</button><span class="source">Source: ${esc(item.source||'SAFEPLATE')}</span></div>`;card.querySelector('.x').onclick=()=>card.remove();card.querySelector('.view').onclick=()=>{card.remove();setRoute('recalls')}}
+async function refreshAlert(){try{const j=await getJSON('/api/latest-intelligence');const item=(j.alerts||[])[0];if(item)setTimeout(()=>showAlert(item),700);else document.getElementById(CARD_ID)?.remove()}catch(e){console.warn('SAFEPLATE alert unavailable',e)}}
 
-  const esc=(v='')=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const relative=(mins)=> mins==null?'just detected': mins<2?'just detected':mins<60?`${mins} min ago`:`${Math.max(1,Math.round(mins/60))} hr ago`;
-
-  function setRoute(route,{pushHash=true}={}){
-    if(!ROUTES.includes(route)) route='home';
-    document.querySelectorAll('.screen').forEach(el=>el.classList.toggle('active',el.id===route));
-    document.querySelectorAll('[data-route]').forEach(btn=>btn.classList.toggle('on',btn.dataset.route===route));
-    if(pushHash && location.hash!==`#${route}`){
-      try{ history.replaceState(null,'',`#${route}`); }catch(_){ location.hash=route; }
-    }
-    window.scrollTo({top:0,behavior:'smooth'});
-  }
-
-  function wireControls(){
-    document.addEventListener('click',e=>{
-      const routeBtn=e.target.closest('[data-route]');
-      if(routeBtn){
-        e.preventDefault();
-        e.stopPropagation();
-        setRoute(routeBtn.dataset.route||'home');
-        return;
-      }
-
-      const filterBtn=e.target.closest('[data-filter]');
-      if(filterBtn){
-        filterBtn.parentElement?.querySelectorAll('[data-filter]').forEach(b=>b.classList.remove('on'));
-        filterBtn.classList.add('on');
-        const input=document.getElementById('recall-search');
-        if(input) input.dispatchEvent(new Event('input',{bubbles:true}));
-        return;
-      }
-
-      const cmdBtn=e.target.closest('.cmd-tabs button');
-      if(cmdBtn){
-        cmdBtn.parentElement?.querySelectorAll('button').forEach(b=>b.classList.remove('on'));
-        cmdBtn.classList.add('on');
-      }
-
-      const closeBtn=e.target.closest('.close');
-      if(closeBtn){
-        closeBtn.closest('.detail-modal')?.classList.remove('open');
-      }
-    },true);
-
-    window.addEventListener('hashchange',()=>setRoute((location.hash||'#home').slice(1),{pushHash:false}));
-    setRoute((location.hash||'#home').slice(1),{pushHash:false});
-  }
-
-  function setText(id,text){ const el=document.getElementById(id); if(el) el.textContent=text; }
-  function markPill(id,ok){ const el=document.getElementById(id); if(!el) return; el.classList.remove('sp-runtime-good','sp-runtime-bad','bad','warn'); el.classList.add(ok?'sp-runtime-good':'sp-runtime-bad'); }
-
-  async function probeRuntime(){
-    let incidentsOk=false, sourceOk=false, stateOk=false;
-    let incidentData=null, sourceData=null, stateData=null;
-    try{
-      const [a,b,c]=await Promise.allSettled([
-        fetch('/api/incidents',{cache:'no-store'}).then(r=>{if(!r.ok) throw new Error(`incidents ${r.status}`); return r.json();}),
-        fetch('/api/source-health',{cache:'no-store'}).then(r=>{if(!r.ok) throw new Error(`source-health ${r.status}`); return r.json();}),
-        fetch('/api/state-coverage',{cache:'no-store'}).then(r=>{if(!r.ok) throw new Error(`state-coverage ${r.status}`); return r.json();})
-      ]);
-      if(a.status==='fulfilled'){incidentsOk=true;incidentData=a.value;}
-      if(b.status==='fulfilled'){sourceOk=true;sourceData=b.value;}
-      if(c.status==='fulfilled'){stateOk=true;stateData=c.value;}
-    }catch(_){ }
-
-    const overall=incidentsOk && sourceOk;
-    const feedText=document.getElementById('feed-text');
-    const feedDot=document.getElementById('feed-dot');
-    if(feedText) feedText.textContent=overall?'Feeds · live':'Feeds · degraded';
-    if(feedDot){feedDot.classList.toggle('live',overall);feedDot.classList.toggle('bad',!overall);}
-    markPill('feed-pill',overall);
-
-    if(stateOk){
-      const n=Number(stateData?.coveredStates ?? stateData?.coverage?.covered ?? stateData?.statesCovered ?? 0);
-      setText('state-pill',`States · live ${Number.isFinite(n)&&n>0?n:'51'}/51`);
-      markPill('state-pill',true);
-    }else{
-      setText('state-pill','States · degraded');
-      markPill('state-pill',false);
-    }
-
-    const incidents=Array.isArray(incidentData)?incidentData:(incidentData?.incidents||incidentData?.items||incidentData?.records||[]);
-    if(Array.isArray(incidents)){
-      setText('home-incidents',String(incidents.length));
-      const high=incidents.filter(x=>['CRITICAL','HIGH'].includes(String(x?.severity||'').toUpperCase())).length;
-      setText('home-high',String(high));
-    }
-    if(sourceData){
-      const sources=Array.isArray(sourceData)?sourceData:(sourceData?.sources||sourceData?.items||[]);
-      if(Array.isArray(sources)) setText('home-sources',String(sources.filter(x=>String(x?.status||x?.state||'').toLowerCase()!=='offline').length));
-    }
-    if(stateOk) setText('home-states','51');
-
-    try{
-      const h=await fetch('/api/surveillance-history',{cache:'no-store'}).then(r=>r.ok?r.json():null);
-      const last=h?.latest?.timestamp || h?.latest?.at || h?.lastRun || h?.lastSync || h?.history?.at(-1)?.timestamp || null;
-      if(last){
-        const mins=Math.max(0,Math.round((Date.now()-new Date(last).getTime())/60000));
-        setText('home-sync',mins<2?'now':`${mins}m ago`);
-      }
-    }catch(_){ }
-
-    const footer=[...document.querySelectorAll('footer *')].find(el=>/^Backend:\s*checking/i.test(el.textContent||''));
-    if(footer) footer.textContent=overall?'Backend: live':'Backend: degraded';
-
-    return overall;
-  }
-
-  function render(item){
-    injectStyle();
-    let card=document.getElementById(CARD_ID);
-    if(!card){card=document.createElement('div');card.id=CARD_ID;document.body.appendChild(card);}
-    card.dataset.severity=item.severity||'WATCH';
-    const label=item.isNew?'NEW LIVE ALERT':'IMPORTANT UPDATE';
-    card.innerHTML=`
-      <div class="sp-alert-top"><div class="sp-alert-label"><span class="sp-alert-pulse"></span>${label}</div><div style="display:flex;align-items:center;gap:8px"><div class="sp-alert-time">${esc(relative(item.ageMinutes))}</div><button class="sp-close" aria-label="Dismiss alert">×</button></div></div>
-      <h3>${esc(item.title||item.product||'Food safety alert')}</h3>
-      <p>${esc(item.summary||'SAFEPLATE detected a new food-safety intelligence record.')}</p>
-      <div class="sp-alert-meta">
-        ${item.severity?`<span class="sp-chip">${esc(item.severity)}</span>`:''}
-        ${item.hazard?`<span class="sp-chip">${esc(item.hazard)}</span>`:''}
-        ${item.product?`<span class="sp-chip">${esc(item.product)}</span>`:''}
-      </div>
-      <div class="sp-alert-actions"><button class="sp-view" type="button">View intelligence</button><span class="sp-source">Source: ${esc(item.source||'SAFEPLATE')}</span></div>`;
-    card.querySelector('.sp-close')?.addEventListener('click',()=>card.remove());
-    card.querySelector('.sp-view')?.addEventListener('click',()=>{card.remove();setRoute('recalls');});
-  }
-
-  function clear(){document.getElementById(CARD_ID)?.remove();}
-
-  async function refreshAlert(){
-    try{
-      const r=await fetch('/api/latest-intelligence',{cache:'no-store'});
-      if(!r.ok) throw new Error('latest intelligence unavailable');
-      const j=await r.json();
-      const item=(j.alerts||[])[0];
-      if(item) setTimeout(()=>render(item),700); else clear();
-    }catch(e){
-      console.warn('SAFEPLATE live alert:',e);
-    }
-  }
-
-  function boot(){
-    wireControls();
-    probeRuntime();
-    refreshAlert();
-    setInterval(probeRuntime,60000);
-    setInterval(refreshAlert,60000);
-  }
-
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true}); else boot();
+function wire(){document.addEventListener('click',e=>{const r=e.target.closest('[data-route]');if(r){e.preventDefault();e.stopPropagation();setRoute(r.dataset.route);return}const f=e.target.closest('[data-filter]');if(f){data.filter=f.dataset.filter;$$('[data-filter]').forEach(x=>x.classList.toggle('on',x===f));renderRecalls();return}const c=e.target.closest('[data-cmd]');if(c){$$('[data-cmd]').forEach(x=>x.classList.toggle('on',x===c));$$('.cmd-view').forEach(v=>v.classList.add('hidden'));$('#cmd-'+c.dataset.cmd)?.classList.remove('hidden');return}if(e.target.closest('#global-search-btn')){renderSearch();return}if(e.target.closest('#track-btn')){renderTrack();return}if(e.target.closest('#modal-close')||e.target.classList.contains('close')){$('#modal')?.classList.remove('open')}},true);$('#recall-search')?.addEventListener('input',renderRecalls);$('#global-search')?.addEventListener('keydown',e=>{if(e.key==='Enter')renderSearch()});$('#track-input')?.addEventListener('keydown',e=>{if(e.key==='Enter')renderTrack()});$('#modal')?.addEventListener('click',e=>{if(e.target.id==='modal')$('#modal').classList.remove('open')});window.addEventListener('hashchange',()=>setRoute((location.hash||'#home').slice(1),{hash:false}))}
+async function load(){try{const [inc,health,status,coverage]=await Promise.all([getJSON('/api/incidents'),getJSON('/api/source-health'),getJSON('/api/system-status'),getJSON('/api/state-coverage').catch(()=>null)]);data.incidents=(inc.incidents||inc.items||inc.records||[]).filter(x=>!isSpanish(x));data.sources=health.sources||health.items||[];data.status=status||{};data.coverage=coverage;setStatus();renderHome();renderRecalls();renderCommand()}catch(e){console.error('SAFEPLATE live load failed',e);data.incidents=[];data.sources=[];data.status={live:false,stateSurveillance:{jurisdictionsChecked:0,jurisdictionsTotal:51}};setStatus();renderHome();renderRecalls();renderCommand();if($('#recall-list'))$('#recall-list').innerHTML=`<div class="error"><strong>Live data connection failed.</strong><br>${esc(e.message)}</div>`}}
+function boot(){wire();setRoute((location.hash||'#home').slice(1),{hash:false});load();refreshAlert();setInterval(load,30000);setInterval(refreshAlert,60000)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
