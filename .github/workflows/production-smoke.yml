@@ -1,0 +1,86 @@
+name: SAFEPLATE Production Smoke Test
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '12,42 * * * *'
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Test production API and UI surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://safeplate-intelligence.netlify.app"
+          mkdir -p smoke
+
+          curl -fsSL "$BASE/" -o smoke/home.html
+          grep -q 'SAFEPLATE' smoke/home.html
+          grep -q 'data-route="recalls"' smoke/home.html
+          grep -q 'data-route="search"' smoke/home.html
+          grep -q 'data-route="track"' smoke/home.html
+          grep -q 'data-route="journey"' smoke/home.html
+          grep -q 'data-route="command"' smoke/home.html
+          grep -q '/live-alert.js' smoke/home.html
+
+          curl -fsSL "$BASE/live-alert.js" -o smoke/live-alert.js
+          grep -q 'function setRoute' smoke/live-alert.js
+          grep -q 'renderRecalls' smoke/live-alert.js
+          grep -q 'renderSearch' smoke/live-alert.js
+          grep -q 'renderTrack' smoke/live-alert.js
+          grep -q 'renderCommand' smoke/live-alert.js
+
+          curl -fsSL "$BASE/api/system-status" -o smoke/system-status.json
+          curl -fsSL "$BASE/api/source-health" -o smoke/source-health.json
+          curl -fsSL "$BASE/api/state-coverage" -o smoke/state-coverage.json
+          curl -fsSL "$BASE/api/incidents" -o smoke/incidents.json
+          curl -fsSL "$BASE/api/latest-intelligence" -o smoke/latest-intelligence.json
+          curl -fsSL "$BASE/api/surveillance-history" -o smoke/surveillance-history.json
+
+          python - <<'PY'
+          import json, sys, pathlib
+          p=pathlib.Path('smoke')
+          status=json.loads((p/'system-status.json').read_text())
+          health=json.loads((p/'source-health.json').read_text())
+          coverage=json.loads((p/'state-coverage.json').read_text())
+          incidents=json.loads((p/'incidents.json').read_text())
+          history=json.loads((p/'surveillance-history.json').read_text())
+
+          failures=[]
+          if not status.get('live'): failures.append(f"system-status not live: {status}")
+          if status.get('ageMinutes') is None or status.get('ageMinutes',999)>75: failures.append(f"main surveillance stale: {status.get('ageMinutes')}")
+          if coverage.get('checked') != 51: failures.append(f"state coverage checked {coverage.get('checked')}/51")
+          if not coverage.get('live'): failures.append(f"state coverage not live: {coverage}")
+          if coverage.get('ageMinutes') is None or coverage.get('ageMinutes',999)>75: failures.append(f"state coverage stale: {coverage.get('ageMinutes')}")
+          rows=incidents.get('incidents',[])
+          if len(rows)==0: failures.append('no incidents returned')
+          sources=health.get('sources',[]) if isinstance(health,dict) else health
+          checked=[s for s in sources if s.get('lastChecked')]
+          if len(checked)==0: failures.append('no source-health checks found')
+
+          # Require enough recent schedule evidence to show the scanner is actually cycling.
+          hist=history.get('history') or history.get('runs') or history.get('entries') or []
+          if isinstance(hist,list) and len(hist)<2: failures.append('surveillance history has fewer than 2 retained runs')
+
+          if failures:
+              print('SMOKE TEST FAILURES:')
+              for f in failures: print('-',f)
+              sys.exit(1)
+          print('SAFEPLATE production smoke test passed')
+          print('incidents:',len(rows))
+          print('states:',coverage.get('checked'),'/51')
+          print('state online:',coverage.get('online'),'degraded:',coverage.get('degraded'))
+          print('main age minutes:',status.get('ageMinutes'))
+          print('state age minutes:',coverage.get('ageMinutes'))
+          PY
+
+      - name: Upload smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: safeplate-production-smoke
+          path: smoke/
+          retention-days: 14
