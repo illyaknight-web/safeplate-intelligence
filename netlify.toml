@@ -4,7 +4,7 @@
 
 [[redirects]]
   from = "/unified-intelligence.html"
-  to = "/unified-intelligence-v5.html"
+  to = "/unified-intelligence-v6.html"
   status = 302
   force = true
 
@@ -19,4 +19,4 @@
 
 # Scheduled function is defined inline in surveillance.mjs:
 # */30 * * * * = every 30 minutes
-# Deployment nudge: searchable unified food journey v5 2026-08-25.
+# Deployment nudge: resilient food-only Food Journey v6 2026-08-25.
