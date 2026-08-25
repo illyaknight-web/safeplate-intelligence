@@ -17,6 +17,12 @@ export default async (req) => {
     }
   }
 
+  // Food Journey is the live geographic tracer, not the old static in-page panel.
+  html = html.replace(
+    '<button data-route="journey">Food Journey</button>',
+    '<button type="button" onclick="location.href=\'/unified-intelligence.html\'">Food Journey</button>'
+  );
+
   // Never flash misleading 0/51 or developer-facing "backend" language before
   // the live runtime has returned production status.
   html = html
@@ -28,6 +34,12 @@ export default async (req) => {
   const styleTag = '<link rel="stylesheet" href="/polish.css">';
   if (!html.includes('/polish.css')) {
     html = html.includes('</head>') ? html.replace('</head>', `${styleTag}</head>`) : `${styleTag}${html}`;
+  }
+
+  // Old #journey bookmarks/history should land on the same live tracer.
+  const journeyRedirect = '<script>if(location.hash==="#journey")location.replace("/unified-intelligence.html");</script>';
+  if (!html.includes('location.hash==="#journey"')) {
+    html = html.includes('</head>') ? html.replace('</head>', `${journeyRedirect}</head>`) : `${journeyRedirect}${html}`;
   }
 
   const runtimeTag = '<script src="/live-alert.js" defer></script>';
