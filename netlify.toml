@@ -2,6 +2,12 @@
   publish = "site"
   functions = "netlify/functions"
 
+[[redirects]]
+  from = "/unified-intelligence.html"
+  to = "/unified-intelligence-v2.html"
+  status = 302
+  force = true
+
 [[headers]]
   for = "/*"
   [headers.values]
@@ -13,4 +19,4 @@
 
 # Scheduled function is defined inline in surveillance.mjs:
 # */30 * * * * = every 30 minutes
-# Deployment nudge: Food Journey satellite map approved 2026-08-24.
+# Deployment nudge: unified animated Food Journey map upgrade 2026-08-25.
