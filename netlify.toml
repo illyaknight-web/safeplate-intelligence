@@ -4,7 +4,7 @@
 
 [[redirects]]
   from = "/unified-intelligence.html"
-  to = "/unified-intelligence-v11.html"
+  to = "/unified-intelligence-v12.html"
   status = 302
   force = true
 
@@ -19,4 +19,4 @@
 
 # Scheduled function is defined inline in surveillance.mjs:
 # */30 * * * * = every 30 minutes
-# Deployment nudge: guided autoplay Food Journey v11 2026-08-26.
+# Deployment nudge: elevated first-use Food Journey v12 2026-08-26.
