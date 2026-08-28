@@ -18,9 +18,11 @@ export default async (req) => {
   }
 
   // Food Journey is the live geographic tracer, not the old static in-page panel.
+  // Keep the data-route marker so production smoke tests and accessibility tooling
+  // can verify that Journey is present while the click still opens the live tracer.
   html = html.replace(
     '<button data-route="journey">Food Journey</button>',
-    '<button type="button" onclick="location.href=\'/unified-intelligence.html\'">Food Journey</button>'
+    '<button data-route="journey" type="button" onclick="location.href=\'/unified-intelligence.html\'">Food Journey</button>'
   );
 
   // Never flash misleading 0/51 or developer-facing "backend" language before
