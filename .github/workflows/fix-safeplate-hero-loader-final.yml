@@ -1,0 +1,88 @@
+name: Fix SAFEPLATE hero loader final
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-safeplate-hero-loader-final.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Validate all five production hero images
+        shell: bash
+        run: |
+          python -m pip install --quiet pillow
+          python - <<'PY'
+          from PIL import Image
+          from pathlib import Path
+          for i in range(1,6):
+              p=Path(f'site/assets/public-hero-{i}.webp')
+              if not p.exists():
+                  raise SystemExit(f'MISSING {p}')
+              with Image.open(p) as im:
+                  im.load()
+                  w,h=im.size
+                  print(f'HERO {i}: {w}x{h}, {p.stat().st_size} bytes, {im.format}')
+                  if w < 250 or h < 250:
+                      raise SystemExit(f'HERO {i} too small: {w}x{h}')
+          print('ALL FIVE HERO FILES DECODE SUCCESSFULLY')
+          PY
+      - name: Remove cached-image race and harden mobile hero
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('site/public-view-v1.html')
+          s=p.read_text()
+          start=s.index('function loadHero(startIndex){')
+          end=s.index('\nloadHero(chooseHeroIndex());', start)
+          new='''function loadHero(startIndex){
+  let attempts=0;
+  const tryIndex=(index)=>{
+    const src=HEROES[index]+'?v=20260829-final-hero';
+    heroImage.classList.remove('ready');
+    heroImage.onload=()=>{
+      heroImage.classList.add('ready');
+      heroImage.onload=null;
+      heroImage.onerror=null;
+    };
+    heroImage.onerror=()=>{
+      attempts++;
+      if(attempts<HEROES.length) tryIndex((index+1)%HEROES.length);
+    };
+    heroImage.src=src;
+    if(heroImage.complete && heroImage.naturalWidth>0){
+      heroImage.classList.add('ready');
+    }
+  };
+  tryIndex(startIndex);
+}'''
+          s=s[:start]+new+s[end:]
+          # Keep hero content below the sticky header on phones and prevent hidden copy.
+          marker='@media(max-width:390px){'
+          if 'scroll-padding-top:86px' not in s:
+              s=s.replace(marker, 'html{scroll-padding-top:86px}\n'+marker, 1)
+          if '.hero-copy{position:relative;z-index:1}' not in s:
+              s=s.replace('.hero-copy{padding:26px 0}', '.hero-copy{padding:26px 0;position:relative;z-index:1}', 1)
+          p.write_text(s)
+          PY
+      - name: Commit verified repair
+        shell: bash
+        run: |
+          git config user.name 'SAFEPLATE Release Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add site/public-view-v1.html
+          if git diff --cached --quiet; then
+            echo 'Hero loader already repaired.'
+          else
+            git commit -m 'Fix SAFEPLATE hero loading and mobile header overlap'
+            git push origin HEAD:main
+          fi
