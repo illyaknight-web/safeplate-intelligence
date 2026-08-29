@@ -2,12 +2,6 @@
   publish = "site"
   functions = "netlify/functions"
 
-[[redirects]]
-  from = "/unified-intelligence.html"
-  to = "/unified-intelligence-v12.html"
-  status = 302
-  force = true
-
 [[headers]]
   for = "/*"
   [headers.values]
@@ -19,4 +13,4 @@
 
 # Scheduled function is defined inline in surveillance.mjs:
 # */30 * * * * = every 30 minutes
-# Deployment nudge: elevated first-use Food Journey v12 2026-08-26.
+# Food Journey is served by netlify/functions/journey.mjs so selected-record query state is preserved.
