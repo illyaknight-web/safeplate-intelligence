@@ -1,0 +1,111 @@
+name: Install approved SAFEPLATE heroes
+
+on:
+  push:
+    paths:
+      - '.github/workflows/install-approved-safeplate-heroes.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Pillow
+        run: python -m pip install --disable-pip-version-check pillow
+
+      - name: Rebuild approved source and replace hero assets
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import base64, hashlib
+          from PIL import Image
+
+          a = Path('site/assets')
+          def t(name):
+              return (a / name).read_text().strip()
+
+          # Reassemble the exact approved source. Four historic chunks were
+          # missing their first base64 character; restore those bytes here.
+          b64 = ''.join([
+              t('approved-heroes-source.part01'),
+              t('approved-heroes-source.part02'),
+              t('approved-heroes-source.part03'),
+              'k' + t('approved-heroes-source.part04'),
+              'j' + t('approved-heroes-source.part05'),
+              'b' + t('approved-heroes-source.part06'),
+              'q' + t('approved-heroes-source.part07'),
+              t('approved-heroes-source.part08'),
+              t('approved-heroes-source.part09pre1'),
+              t('approved-heroes-source.part09pre2'),
+              t('approved-heroes-source.part09pre3'),
+              t('approved-heroes-source.part09'),
+              t('approved-heroes-source.part10a'),
+              t('approved-heroes-source.part10b'),
+              t('approved-heroes-source.part10c'),
+              t('approved-heroes-source.part10d'),
+              t('approved-heroes-source.part10e'),
+              t('approved-heroes-source.part10f'),
+              t('approved-heroes-source.part11a'),
+              t('approved-heroes-source.part11b'),
+          ])
+          if len(b64) != 197232:
+              raise SystemExit(f'Unexpected approved source length: {len(b64)}')
+          raw = base64.b64decode(b64, validate=True)
+          if len(raw) != 147924:
+              raise SystemExit(f'Unexpected source byte length: {len(raw)}')
+          source = Path('/tmp/safeplate-approved.webp')
+          source.write_bytes(raw)
+          img = Image.open(source).convert('RGB')
+          if img.size != (1536, 1024):
+              raise SystemExit(f'Unexpected source dimensions: {img.size}')
+
+          boxes = [
+              (0, 0, 768, 516),
+              (770, 0, 1536, 516),
+              (0, 518, 509, 1024),
+              (511, 518, 1023, 1024),
+              (1025, 518, 1536, 1024),
+          ]
+          for i, box in enumerate(boxes, 1):
+              panel = img.crop(box)
+              # Remove only the numbered review badge area.
+              panel = panel.crop((90, 0, panel.width, panel.height))
+              target_w = 1800
+              target_h = round(panel.height * target_w / panel.width)
+              panel = panel.resize((target_w, target_h), Image.Resampling.LANCZOS)
+              out = a / f'public-hero-{i}.webp'
+              panel.save(out, 'WEBP', quality=88, method=6)
+              if out.stat().st_size < 50000:
+                  raise SystemExit(f'Hero {i} output unexpectedly small: {out.stat().st_size}')
+              check = Image.open(out)
+              if check.width != 1800:
+                  raise SystemExit(f'Hero {i} width verification failed: {check.size}')
+              print(i, check.size, out.stat().st_size, hashlib.sha256(out.read_bytes()).hexdigest())
+          PY
+
+      - name: Commit approved high-resolution heroes
+        shell: bash
+        run: |
+          git config user.name 'SAFEPLATE Release Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add site/assets/public-hero-1.webp site/assets/public-hero-2.webp site/assets/public-hero-3.webp site/assets/public-hero-4.webp site/assets/public-hero-5.webp
+          if git diff --cached --quiet; then
+            echo 'Hero assets already current.'
+          else
+            git commit -m 'Replace pixelated SAFEPLATE heroes with approved set'
+            git push origin HEAD:main
+          fi
