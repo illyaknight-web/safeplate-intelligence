@@ -52,12 +52,12 @@ html{scroll-padding-top:86px}
 </section>
 <section class="results" id="results"><div class="result-head"><h3>Start with a question.</h3><small>Current recall data comes from SAFEPLATE’s live food-safety feed.</small></div><div class="empty">Type a food or question above, or tap one of the choices. You do not need to know a technical term.</div></section>
 <section class="visual-intro"><h2>See it. Understand it. Decide what to do.</h2><p>Public View uses real food and everyday language. Advanced View keeps the deeper evidence, tracing and professional tools.</p></section>
-<section class="photo-strip"><div class="photo-card"><img src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=84&w=1400" alt="Produce market"><div><b>Food recalls</b><span>See what happened and what you should check.</span></div></div><div class="photo-card"><img src="/assets/public-hero-1.webp" alt="Smiling woman with a bowl of food"><div><b>Food knowledge</b><span>Cooking, storage, freshness and spoilage in everyday language.</span></div></div><div class="photo-card"><img src="https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?auto=format&fit=crop&q=84&w=1400" alt="Fresh food supply"><div><b>Food Journey</b><span>Follow verified evidence from where a food started to where it went.</span></div></div></section>
+<section class="photo-strip"><div class="photo-card"><img src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=84&w=1400" alt="Produce market"><div><b>Food recalls</b><span>See what happened and what you should check.</span></div></div><div class="photo-card"><img src="/assets/public-hero-1-confirmed.jpg" alt="Smiling woman with a bowl of food"><div><b>Food knowledge</b><span>Cooking, storage, freshness and spoilage in everyday language.</span></div></div><div class="photo-card"><img src="https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?auto=format&fit=crop&q=84&w=1400" alt="Fresh food supply"><div><b>Food Journey</b><span>Follow verified evidence from where a food started to where it went.</span></div></div></section>
 <section class="advanced"><h2>Need the technical details?</h2><p>Advanced View keeps SAFEPLATE intelligence tools, evidence, provenance, source health, Command Center and professional search.</p><a href="/">Open Advanced View →</a></section>
 </main>
 <footer><span>© 2026 Function Media LLC. All rights reserved.</span><span>SAFEPLATE™ — Food Safety Intelligence Infrastructure</span></footer>
 <script>
-const HEROES=['/assets/public-hero-1.webp','/assets/public-hero-2.webp','/assets/public-hero-3.webp','/assets/public-hero-4.webp','/assets/public-hero-5.webp'];
+const HEROES=['/assets/public-hero-1-confirmed.jpg','/assets/public-hero-2-confirmed.jpg','/assets/public-hero-3-confirmed.jpg','/assets/public-hero-4-confirmed.jpg','/assets/public-hero-5-confirmed.jpg'];
 const heroImage=document.getElementById('heroImage');
 function chooseHeroIndex(){
   const raw=sessionStorage.getItem('safeplateHeroIndex');
@@ -68,7 +68,7 @@ function chooseHeroIndex(){
 function loadHero(startIndex){
   let attempts=0;
   const tryIndex=(index)=>{
-    const src=HEROES[index]+'?v=20260829-approved-final';
+    const src=HEROES[index]+'?v=20260829-confirmed-five-v2';
     heroImage.classList.remove('ready');
     heroImage.onload=()=>{heroImage.classList.add('ready');heroImage.onload=null;heroImage.onerror=null;};
     heroImage.onerror=()=>{attempts++;if(attempts<HEROES.length)tryIndex((index+1)%HEROES.length);};
