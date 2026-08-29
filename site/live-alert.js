@@ -5,7 +5,7 @@ const ROUTES=['home','recalls','search','track','command'];
 const data={incidents:[],sources:[],status:null,coverage:null,filter:'official'};
 
 const strip=(v='')=>String(v).replace(/<[^>]*>/g,' ').replace(/&amp;/gi,'&').replace(/&quot;/gi,'"').replace(/&#39;|&#039;/gi,"'").replace(/&lt;/gi,'<').replace(/&gt;/gi,'>').replace(/&nbsp;/gi,' ').replace(/\s+/g,' ').trim();
-const esc=(v='')=>strip(v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+const esc=(v='')=>strip(v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#039;'}[m]));
 const dt=x=>{const d=new Date(x||0);return Number.isNaN(d.getTime())?0:d.getTime()};
 const when=x=>x?.sourcePostedAt||x?.updatedAt||x?.lastObservedAt||x?.verifiedAt||null;
 const ago=x=>{if(!x)return'never';const m=Math.max(0,Math.floor((Date.now()-dt(x))/60000));return m<1?'just now':m<60?m+'m ago':m<1440?Math.floor(m/60)+'h ago':Math.floor(m/1440)+'d ago'};
@@ -134,15 +134,28 @@ function wire(){
   window.addEventListener('hashchange',()=>{const id=(location.hash||'#home').slice(1);if(id==='journey')location.replace('/unified-intelligence.html');else setRoute(id,{hash:false})});
 }
 async function load(){
-  try{
-    const [inc,health,status,coverage]=await Promise.all([getJSON('/api/incidents'),getJSON('/api/source-health'),getJSON('/api/system-status'),getJSON('/api/state-coverage').catch(()=>null)]);
+  const results=await Promise.allSettled([
+    getJSON('/api/incidents'),
+    getJSON('/api/source-health'),
+    getJSON('/api/system-status'),
+    getJSON('/api/state-coverage')
+  ]);
+  const [incR,healthR,statusR,coverageR]=results;
+  if(incR.status==='fulfilled'){
+    const inc=incR.value||{};
     data.incidents=(inc.incidents||inc.items||inc.records||[]).filter(isFoodRecord).filter(x=>!isSpanish(x));
-    data.sources=health.sources||health.items||[];data.status=status||{};data.coverage=coverage;
-    setStatus();renderHome();renderRecalls();renderSearch();renderTrack();renderCommand();
-  }catch(e){
-    console.error('SAFEPLATE live load failed',e);data.incidents=[];data.sources=[];data.status={live:false,stateSurveillance:{jurisdictionsChecked:0,jurisdictionsTotal:51}};
-    setStatus();renderHome();renderRecalls();renderSearch();renderTrack();renderCommand();
   }
+  if(healthR.status==='fulfilled'){
+    const health=healthR.value||{};
+    data.sources=health.sources||health.items||[];
+  }
+  if(statusR.status==='fulfilled') data.status=statusR.value||{};
+  else data.status={...(data.status||{}),live:false,stale:true,stateSurveillance:(data.status||{}).stateSurveillance||{jurisdictionsChecked:data.coverage?.checked??0,jurisdictionsTotal:data.coverage?.total??51}};
+  if(coverageR.status==='fulfilled') data.coverage=coverageR.value||null;
+  const failures=results.map((r,i)=>r.status==='rejected'?['incidents','source-health','system-status','state-coverage'][i]:null).filter(Boolean);
+  if(failures.length) console.warn('SAFEPLATE partial data degradation:',failures.join(', '));
+  if(incR.status==='rejected'&&!data.incidents.length) console.error('SAFEPLATE incident feed unavailable',incR.reason);
+  setStatus();renderHome();renderRecalls();renderSearch();renderTrack();renderCommand();
 }
 function boot(){wire();const id=(location.hash||'#home').slice(1);if(id==='journey')location.replace('/unified-intelligence.html');else setRoute(id,{hash:false});load();setInterval(load,30000)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
