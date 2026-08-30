@@ -28,7 +28,7 @@ export default async (req) => {
     html = html.includes('</head>') ? html.replace('</head>', `${mobileRelease}</head>`) : `${mobileRelease}${html}`;
   }
 
-  const modeSwitch = '<div class="safeplate-mode-switch" role="navigation" aria-label="SAFEPLATE view switch"><a href="/public-view-v1.html" aria-label="Switch to SAFEPLATE Public View">Public View</a><a class="active" href="/unified-intelligence.html" aria-current="page">Advanced View</a></div>';
+  const modeSwitch = '<div class="safeplate-mode-switch" role="navigation" aria-label="SAFEPLATE view switch"><a href="/" aria-label="Switch to SAFEPLATE Public View">Public View</a><a class="active" href="/unified-intelligence.html" aria-current="page">Advanced View</a></div>';
   if (!html.includes('safeplate-mode-switch')) {
     html = html.includes('</body>') ? html.replace('</body>', `${modeSwitch}</body>`) : `${html}${modeSwitch}`;
   }
