@@ -32,15 +32,15 @@ jobs:
             fi
           }
 
-          # Current public SAFEPLATE surface. These checks intentionally follow
-          # the live site architecture instead of the retired route-shell build.
+          # Current simplified public SAFEPLATE experience.
           assert_contains smoke/home.html 'SAFEPLATE™' 'SAFEPLATE product name'
-          assert_contains smoke/home.html 'Function Media LLC' 'Function Media attribution'
-          assert_contains smoke/home.html 'id="ecosystem"' 'Connected ecosystem section'
-          assert_contains smoke/home.html 'id="scope"' 'Recall scope section'
-          assert_contains smoke/home.html 'id="about"' 'About section'
-          assert_contains smoke/home.html 'SAFEPLATE CORE' 'SAFEPLATE CORE layer'
-          assert_contains smoke/home.html 'under active development' 'Development-stage disclosure'
+          assert_contains smoke/home.html 'by Function Media LLC' 'Function Media attribution'
+          assert_contains smoke/home.html 'Know what’s going on with your food.' 'Public-view headline'
+          assert_contains smoke/home.html 'id="q"' 'Consumer question input'
+          assert_contains smoke/home.html 'id="go"' 'SAFEPLATE question action'
+          assert_contains smoke/home.html 'id="liveState"' 'Live recall status'
+          assert_contains smoke/home.html 'id="results"' 'Answer results surface'
+          assert_contains smoke/home.html 'Open Advanced View' 'Evidence-layer link'
 
           curl -fsSL "$BASE/api/system-status" -o smoke/system-status.json
           curl -fsSL "$BASE/api/source-health" -o smoke/source-health.json
