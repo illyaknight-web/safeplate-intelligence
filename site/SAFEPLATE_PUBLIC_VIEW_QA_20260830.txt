@@ -1,0 +1,12 @@
+SAFEPLATE Public View QA 2026-08-30
+
+Validated before production merge:
+- JavaScript syntax compiles cleanly.
+- No duplicate DOM IDs.
+- Live recall match renders.
+- Official source links render when present.
+- FoodSafety.gov/USDA consumer guidance is separated from live recall intelligence.
+- Live API outage does not produce a false 'not recalled' conclusion.
+- Food Journey routing preserves the user query.
+- Loader concurrency is serialized to prevent race conditions.
+- Empty incident arrays are checked by length, not array truthiness.
