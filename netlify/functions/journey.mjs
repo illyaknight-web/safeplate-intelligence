@@ -74,6 +74,11 @@ export default async (req) => {
     html = html.includes('</body>') ? html.replace('</body>', `${controlGuard}</body>`) : `${html}${controlGuard}`;
   }
 
+  const recallAlert = '<script src="/recall-entry-alert.js" defer></script>';
+  if (!html.includes('/recall-entry-alert.js')) {
+    html = html.includes('</body>') ? html.replace('</body>', `${recallAlert}</body>`) : `${html}${recallAlert}`;
+  }
+
   return new Response(html, {
     headers: {
       "content-type": "text/html; charset=utf-8",
