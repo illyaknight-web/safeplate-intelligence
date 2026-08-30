@@ -54,6 +54,26 @@ export default async (req) => {
     html = html.includes('</body>') ? html.replace('</body>', `${queryBridge}</body>`) : `${html}${queryBridge}`;
   }
 
+  const controlGuard = `<script id="safeplate-journey-control-guard">
+  window.addEventListener('DOMContentLoaded',()=>{
+    const primary=document.getElementById('playBig');
+    const transport=['prev','play','next','reset'].map(id=>document.getElementById(id)).filter(Boolean);
+    if(!primary||!transport.length)return;
+    const sync=()=>{
+      const locked=primary.disabled;
+      transport.forEach(btn=>{
+        btn.disabled=locked;
+        btn.setAttribute('aria-disabled',locked?'true':'false');
+      });
+    };
+    sync();
+    new MutationObserver(sync).observe(primary,{attributes:true,attributeFilter:['disabled']});
+  });
+  </script>`;
+  if (!html.includes('safeplate-journey-control-guard')) {
+    html = html.includes('</body>') ? html.replace('</body>', `${controlGuard}</body>`) : `${html}${controlGuard}`;
+  }
+
   return new Response(html, {
     headers: {
       "content-type": "text/html; charset=utf-8",
