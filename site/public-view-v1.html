@@ -26,7 +26,7 @@
 <button class="choice" data-topic="fresh"><div class="pic"><img src="/assets/public-hero-3.webp" alt="Fresh food"></div><div class="copy"><b>Is it still good?</b><span>Freshness, spoilage and when to throw it away.</span></div></button>
 <button class="choice" data-topic="store"><div class="pic"><img src="/assets/public-hero-4.webp" alt="Food storage"></div><div class="copy"><b>How do I store it?</b><span>Refrigerator, freezer and storage guidance.</span></div></button>
 <button class="choice" data-topic="cook"><div class="pic"><img src="/assets/public-hero-5.webp" alt="Safe cooking"></div><div class="copy"><b>How do I cook it?</b><span>Safe cooking and food-handling guidance.</span></div></button>
-<button class="choice" data-topic="journey"><div class="pic"><img src="/assets/public-hero-6.webp" alt="Food journey"></div><div class="copy"><b>Where did it come from?</b><span>Open the verified Food Journey when evidence is available.</span></div></button>
+<button class="choice" data-topic="journey"><div class="pic"><img src="/assets/safeplate-social.jpg" alt="Food journey"></div><div class="copy"><b>Where did it come from?</b><span>Open the verified Food Journey when evidence is available.</span></div></button>
 </section>
 <section class="results" id="results"><div class="result-head"><h3>Start with a question.</h3><small>Live recall intelligence + official consumer safety guidance.</small></div><div class="empty">Type a food or question above, or tap one of the choices.</div></section>
 <section class="advanced"><h2>Need the evidence layer?</h2><p>Advanced View keeps source provenance, tracing, route evidence and professional intelligence tools separate from the simplified public experience.</p><a href="/">Open Advanced View</a></section>
@@ -34,7 +34,7 @@
 <footer><span>SAFEPLATE™ by Function Media LLC</span><span>© 2026 Function Media LLC. All rights reserved.</span></footer>
 <script>
 const q=document.getElementById('q'),results=document.getElementById('results'),liveState=document.getElementById('liveState'),hero=document.getElementById('heroImage');
-const HEROES=['/assets/public-hero-1.webp','/assets/public-hero-2.webp','/assets/public-hero-3.webp','/assets/public-hero-4.webp','/assets/public-hero-5.webp','/assets/public-hero-6.webp','/assets/safeplate-editorial.jpg'];
+const HEROES=['/assets/public-hero-1.webp','/assets/public-hero-2.webp','/assets/public-hero-3.webp','/assets/public-hero-4.webp','/assets/public-hero-5.webp','/assets/safeplate-editorial.jpg','/assets/safeplate-social.jpg'];
 let heroIndex=(Number(sessionStorage.getItem('safeplateHeroIndex')||'-1')+1)%HEROES.length;
 function setHero(index){heroIndex=((index%HEROES.length)+HEROES.length)%HEROES.length;const src=HEROES[heroIndex]+'?v=20260830-seven';const probe=new Image();probe.onload=()=>{hero.classList.remove('ready');setTimeout(()=>{hero.src=src;hero.alt=`SAFEPLATE food safety hero ${heroIndex+1} of ${HEROES.length}`;hero.classList.add('ready');sessionStorage.setItem('safeplateHeroIndex',String(heroIndex));},120)};probe.onerror=()=>setHero(heroIndex+1);probe.src=src;}
 hero.onload=()=>hero.classList.add('ready');hero.onerror=()=>setHero(heroIndex+1);setHero(heroIndex);
