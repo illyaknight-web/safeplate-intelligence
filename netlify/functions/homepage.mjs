@@ -5,15 +5,14 @@ export default async (req) => {
 
   let html = await r.text();
 
-  // SAFEPLATE is one site with two persistent modes: Public and Advanced.
   html = html
     .replace('href="/public-view-v1.html">Public View</a>', 'href="/" aria-current="page">Public View</a>')
     .replace('href="/">Advanced View</a>', 'href="/unified-intelligence.html">Advanced View</a>')
     .replace('<a href="/">Open Advanced View</a>', '<a href="/unified-intelligence.html">Open Advanced View</a>');
 
-  const recallAlert = '<script src="/recall-entry-alert.js" defer></script>';
-  if (!html.includes('/recall-entry-alert.js')) {
-    html = html.includes('</body>') ? html.replace('</body>', `${recallAlert}</body>`) : `${html}${recallAlert}`;
+  const uiFixes = '<script src="/ui-fixes.js" defer></script>';
+  if (!html.includes('/ui-fixes.js')) {
+    html = html.includes('</body>') ? html.replace('</body>', `${uiFixes}</body>`) : `${html}${uiFixes}`;
   }
 
   return new Response(html, {
