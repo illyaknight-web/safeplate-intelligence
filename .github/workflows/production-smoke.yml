@@ -18,20 +18,26 @@ jobs:
           mkdir -p smoke
 
           curl -fsSL "$BASE/" -o smoke/home.html
-          grep -q 'SAFEPLATE' smoke/home.html
-          grep -q 'data-route="recalls"' smoke/home.html
-          grep -q 'data-route="search"' smoke/home.html
-          grep -q 'data-route="track"' smoke/home.html
-          grep -q 'data-route="journey"' smoke/home.html
-          grep -q 'data-route="command"' smoke/home.html
-          grep -q '/live-alert.js' smoke/home.html
 
-          curl -fsSL "$BASE/live-alert.js" -o smoke/live-alert.js
-          grep -q 'function setRoute' smoke/live-alert.js
-          grep -q 'renderRecalls' smoke/live-alert.js
-          grep -q 'renderSearch' smoke/live-alert.js
-          grep -q 'renderTrack' smoke/live-alert.js
-          grep -q 'renderCommand' smoke/live-alert.js
+          assert_contains() {
+            local file="$1"
+            local value="$2"
+            local label="$3"
+            if ! grep -Fq "$value" "$file"; then
+              echo "::error::$label was not found in $file"
+              return 1
+            fi
+          }
+
+          # Current public SAFEPLATE surface. These checks intentionally follow
+          # the live site architecture instead of the retired route-shell build.
+          assert_contains smoke/home.html 'SAFEPLATE™' 'SAFEPLATE product name'
+          assert_contains smoke/home.html 'Function Media LLC' 'Function Media attribution'
+          assert_contains smoke/home.html 'id="ecosystem"' 'Connected ecosystem section'
+          assert_contains smoke/home.html 'id="scope"' 'Recall scope section'
+          assert_contains smoke/home.html 'id="about"' 'About section'
+          assert_contains smoke/home.html 'SAFEPLATE CORE' 'SAFEPLATE CORE layer'
+          assert_contains smoke/home.html 'under active development' 'Development-stage disclosure'
 
           curl -fsSL "$BASE/api/system-status" -o smoke/system-status.json
           curl -fsSL "$BASE/api/source-health" -o smoke/source-health.json
@@ -61,7 +67,6 @@ jobs:
           checked=[s for s in sources if s.get('lastChecked')]
           if len(checked)==0: failures.append('no source-health checks found')
 
-          # History depth is diagnostic only. The core freshness checks above prove the live scheduler state.
           hist=history.get('history') or history.get('runs') or history.get('entries') or []
           if isinstance(hist,list) and len(hist)<2:
               print(f"WARNING: surveillance history retained only {len(hist)} run(s); not failing live health check")
