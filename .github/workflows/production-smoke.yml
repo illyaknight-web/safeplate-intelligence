@@ -2,6 +2,9 @@ name: SAFEPLATE Production Smoke Test
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/production-smoke.yml'
   schedule:
     - cron: '12,42 * * * *'
 
