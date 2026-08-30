@@ -24,7 +24,7 @@ export default async (req) => {
   const controlGuard = `<script id="safeplate-journey-control-guard">window.addEventListener('DOMContentLoaded',()=>{const primary=document.getElementById('playBig');const transport=['prev','play','next','reset'].map(id=>document.getElementById(id)).filter(Boolean);if(!primary||!transport.length)return;const sync=()=>{const locked=primary.disabled;transport.forEach(btn=>{btn.disabled=locked;btn.setAttribute('aria-disabled',locked?'true':'false')})};sync();new MutationObserver(sync).observe(primary,{attributes:true,attributeFilter:['disabled']})});</script>`;
   if (!html.includes('safeplate-journey-control-guard')) html = html.includes('</body>') ? html.replace('</body>', `${controlGuard}</body>`) : `${html}${controlGuard}`;
 
-  for (const asset of ['<script src="/source-status-panel.js" defer></script>','<script src="/recall-entry-alert.js" defer></script>']) {
+  for (const asset of ['<script src="/source-status-panel.js" defer></script>','<script src="/ui-fixes.js" defer></script>']) {
     const src = asset.match(/src="([^"]+)/)?.[1];
     if (src && !html.includes(src)) html = html.includes('</body>') ? html.replace('</body>', `${asset}</body>`) : `${html}${asset}`;
   }
