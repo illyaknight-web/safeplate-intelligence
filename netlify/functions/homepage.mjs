@@ -11,6 +11,11 @@ export default async (req) => {
     .replace('href="/">Advanced View</a>', 'href="/unified-intelligence.html">Advanced View</a>')
     .replace('<a href="/">Open Advanced View</a>', '<a href="/unified-intelligence.html">Open Advanced View</a>');
 
+  const recallAlert = '<script src="/recall-entry-alert.js" defer></script>';
+  if (!html.includes('/recall-entry-alert.js')) {
+    html = html.includes('</body>') ? html.replace('</body>', `${recallAlert}</body>`) : `${html}${recallAlert}`;
+  }
+
   return new Response(html, {
     headers: {
       "content-type": "text/html; charset=utf-8",
