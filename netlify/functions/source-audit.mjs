@@ -1,6 +1,8 @@
 import { getState } from "./lib/store.mjs";
 import { SOURCE_REGISTRY } from "./lib/sources.mjs";
 
+const RUNTIME_VALIDATED = new Set(["cdc_content","cfia_recalls","uk_fsa_alerts"]);
+
 export default async () => {
   const state = await getState();
   const health = new Map((state.sourceHealth || []).filter(Boolean).map(x => [x.id, x]));
@@ -9,7 +11,8 @@ export default async () => {
     const h = health.get(reg.id);
     const lastChecked = h?.lastChecked || null;
     const ageMinutes = lastChecked ? Math.max(0, Math.floor((now - new Date(lastChecked).getTime()) / 60000)) : null;
-    const connected = Boolean(reg.active);
+    const runtimePassed = RUNTIME_VALIDATED.has(reg.id) && Boolean(lastChecked) && h?.status === "ONLINE";
+    const connected = Boolean(reg.active) || runtimePassed;
     return {
       id: reg.id,
       name: reg.name,
