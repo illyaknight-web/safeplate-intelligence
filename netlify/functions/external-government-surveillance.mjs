@@ -5,9 +5,9 @@ import * as cheerio from "cheerio";
 const nowISO=()=>new Date().toISOString();
 const clean=v=>String(v||"").replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim();
 const toISO=v=>{const d=new Date(v||0);return Number.isNaN(d.getTime())?null:d.toISOString()};
-const fetchWithTimeout=async(url,{accept="application/json",ms=12000}={})=>{
+const fetchWithTimeout=async(url,{accept="application/json",ms=12000,headers={}}={})=>{
   const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);
-  try{return await fetch(url,{signal:c.signal,redirect:"follow",headers:{accept,"accept-language":"en-US,en;q=0.9","cache-control":"no-cache","user-agent":"Mozilla/5.0 (compatible; SAFEPLATE/0.35.13; +https://safeplate-intelligence.netlify.app)"}})}finally{clearTimeout(t)}
+  try{return await fetch(url,{signal:c.signal,redirect:"follow",headers:{accept,"accept-language":"en-US,en;q=0.9","cache-control":"no-cache","user-agent":"Mozilla/5.0 (compatible; SAFEPLATE/0.35.13; +https://safeplate-intelligence.netlify.app)",...headers}})}finally{clearTimeout(t)}
 };
 const hazardFrom=t=>{const s=String(t||"").toLowerCase();if(s.includes("listeria"))return"Listeria";if(s.includes("salmonella"))return"Salmonella";if(/e\.?\s*coli/.test(s))return"E. coli";if(/allerg|undeclared/.test(s))return"Undeclared allergen";if(/stone|glass|metal|foreign/.test(s))return"Foreign material";return"Food safety alert"};
 const severity=t=>/listeria|salmonella|e\.?\s*coli|botulin/i.test(String(t||""))?"HIGH":"WATCH";
@@ -41,14 +41,26 @@ async function pullUKFSA(){
   return {rows:rows.slice(0,100),note:`${rows.length} UK FSA alerts retrieved from official API`};
 }
 
+async function pullUSDAAMS(){
+  const key=process.env.USDA_AMS_API_KEY;
+  if(!key)throw new Error("USDA_AMS_API_KEY is not configured");
+  const auth=`Basic ${Buffer.from(`${key}:`).toString('base64')}`;
+  const url="https://marsapi.ams.usda.gov/services/v1.2/reports";
+  const r=await fetchWithTimeout(url,{headers:{authorization:auth}});if(!r.ok)throw new Error(`USDA AMS MyMarketNews HTTP ${r.status}`);
+  const j=await r.json();
+  const raw=Array.isArray(j)?j:Array.isArray(j.results)?j.results:Array.isArray(j.data)?j.data:[];
+  if(!raw.length)throw new Error("USDA AMS MyMarketNews returned zero report metadata records");
+  return {rows:[],note:`Authenticated successfully; ${raw.length} USDA AMS Market News report metadata records available`};
+}
+
 function mergeIncidents(existing,incoming,now){const m=new Map((existing||[]).map(x=>[x.id,x]));for(const x of incoming){const old=m.get(x.id);m.set(x.id,old?{...old,...x,firstSeenAt:old.firstSeenAt||now,lastObservedAt:now,observationCount:(old.observationCount||1)+1}:{...x,firstSeenAt:now,lastObservedAt:now,observationCount:1})}return [...m.values()].sort((a,b)=>new Date(b.lastObservedAt||b.updatedAt||0)-new Date(a.lastObservedAt||a.updatedAt||0)).slice(0,1800)}
 
 export default async()=>{
-  const started=nowISO(),tests=[['cdc_content','CDC Content Services — Foodborne Content','Federal',pullCDC],['cfia_recalls','Canada Food Recalls & Safety Alerts','International',pullCFIA],['uk_fsa_alerts','UK Food Standards Agency Alerts','International',pullUKFSA]];
+  const started=nowISO(),tests=[['cdc_content','CDC Content Services — Foodborne Content','Federal',pullCDC],['usda_ams','USDA AMS MyMarketNews','Federal',pullUSDAAMS],['cfia_recalls','Canada Food Recalls & Safety Alerts','International',pullCFIA],['uk_fsa_alerts','UK Food Standards Agency Alerts','International',pullUKFSA]];
   const results=await Promise.allSettled(tests.map(x=>x[3]()));let incoming=[],health=[];
   results.forEach((res,i)=>{const [id,name,family]=tests[i];if(res.status==='fulfilled'){incoming.push(...res.value.rows);health.push({id,name,family,status:'ONLINE',lastChecked:started,note:res.value.note})}else health.push({id,name,family,status:'DEGRADED',lastChecked:started,note:String(res.reason?.message||res.reason||'Unknown source error')})});
   const state=await getState(),oldHealth=(state.sourceHealth||[]).filter(x=>!health.some(h=>h.id===x.id)),incidents=mergeIncidents(state.incidents||[],incoming,started),online=health.filter(x=>x.status==='ONLINE').length;
-  await saveState({...state,meta:{...(state.meta||{}),extendedGovernmentLastSync:started,extendedGovernmentCycleMinutes:30},incidents,sourceHealth:[...oldHealth,...health],changes:[{time:started,title:'Extended government source validation complete',detail:`${online}/3 sources online · ${incoming.length} records processed.`},...(state.changes||[])].slice(0,350)});
+  await saveState({...state,meta:{...(state.meta||{}),extendedGovernmentLastSync:started,extendedGovernmentCycleMinutes:30},incidents,sourceHealth:[...oldHealth,...health],changes:[{time:started,title:'Extended government source validation complete',detail:`${online}/${tests.length} sources online · ${incoming.length} incident records processed.`},...(state.changes||[])].slice(0,350)});
 };
 
 export const config={schedule:"8,38 * * * *"};
