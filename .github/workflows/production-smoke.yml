@@ -21,6 +21,7 @@ jobs:
           mkdir -p smoke
 
           curl -fsSL "$BASE/" -o smoke/home.html
+          curl -fsSL "$BASE/unified-intelligence.html" -o smoke/advanced.html
 
           assert_contains() {
             local file="$1"
@@ -41,6 +42,14 @@ jobs:
           assert_contains smoke/home.html 'id="liveState"' 'Live recall status'
           assert_contains smoke/home.html 'id="results"' 'Answer results surface'
           assert_contains smoke/home.html 'Open Advanced View' 'Evidence-layer link'
+
+          # Advanced View must resolve inside the same SAFEPLATE site and never return Netlify's 404 page.
+          assert_contains smoke/advanced.html 'SAFEPLATE™' 'Advanced SAFEPLATE brand'
+          assert_contains smoke/advanced.html 'Watch a recall unfold.' 'Advanced Food Journey headline'
+          if grep -Fq 'Page not found' smoke/advanced.html; then
+            echo '::error::Advanced View returned Netlify 404 page'
+            exit 1
+          fi
 
           curl -fsSL "$BASE/api/system-status" -o smoke/system-status.json
           curl -fsSL "$BASE/api/source-health" -o smoke/source-health.json
