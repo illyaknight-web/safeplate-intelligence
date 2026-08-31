@@ -1,12 +1,5 @@
 (()=>{
 'use strict';
-const fixLinks=()=>{
- document.querySelectorAll('a').forEach(a=>{
-  const t=(a.textContent||'').trim();
-  if(t==='Public View') a.setAttribute('href','/');
-  if(t==='Advanced View'||t.startsWith('Open Advanced View')) a.setAttribute('href','/unified-intelligence.html');
- });
-};
 const restoreNativePublicImages=()=>{
  if(location.pathname!=='/'&&location.pathname!=='/public-view-v1.html')return;
  document.querySelectorAll('.quick .choice .pic').forEach(pic=>{
@@ -26,7 +19,7 @@ const restoreNativePublicImages=()=>{
  }
  if(heroImg){heroImg.style.opacity='1';heroImg.style.visibility='visible';}
 };
-const run=()=>{fixLinks();restoreNativePublicImages();};
+const run=()=>restoreNativePublicImages();
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
 new MutationObserver(run).observe(document.documentElement,{subtree:true,childList:true});
 })();
