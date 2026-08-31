@@ -2,6 +2,14 @@
   publish = "site"
   functions = "netlify/functions"
 
+# Explicitly route the public Advanced View URL to the Food Journey function.
+# This prevents /unified-intelligence.html from falling through to Netlify's 404 page.
+[[redirects]]
+  from = "/unified-intelligence.html"
+  to = "/.netlify/functions/journey"
+  status = 200
+  force = true
+
 [[headers]]
   for = "/*"
   [headers.values]
