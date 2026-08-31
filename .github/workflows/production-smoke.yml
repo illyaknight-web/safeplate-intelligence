@@ -21,7 +21,7 @@ jobs:
           mkdir -p smoke
 
           curl -fsSL "$BASE/" -o smoke/home.html
-          curl -fsSL "$BASE/unified-intelligence.html" -o smoke/advanced.html
+          curl -fsSL "$BASE/unified-intelligence-v12.html" -o smoke/advanced.html
 
           assert_contains() {
             local file="$1"
@@ -41,7 +41,7 @@ jobs:
           assert_contains smoke/home.html 'id="go"' 'SAFEPLATE question action'
           assert_contains smoke/home.html 'id="liveState"' 'Live recall status'
           assert_contains smoke/home.html 'id="results"' 'Answer results surface'
-          assert_contains smoke/home.html 'Open Advanced View' 'Evidence-layer link'
+          assert_contains smoke/home.html 'unified-intelligence-v12.html' 'Advanced View route'
 
           # Advanced View must resolve inside the same SAFEPLATE site and never return Netlify's 404 page.
           assert_contains smoke/advanced.html 'SAFEPLATE™' 'Advanced SAFEPLATE brand'
