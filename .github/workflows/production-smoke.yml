@@ -5,6 +5,11 @@ on:
   push:
     paths:
       - '.github/workflows/production-smoke.yml'
+      - 'netlify/functions/homepage.mjs'
+      - 'site/public-view-v1.html'
+      - 'site/ui-fixes.js'
+      - 'site/recall-entry-alert.js'
+      - 'site/unified-intelligence-v12.html'
   schedule:
     - cron: '12,42 * * * *'
 
@@ -33,7 +38,17 @@ jobs:
             fi
           }
 
-          # Current simplified public SAFEPLATE experience.
+          assert_absent() {
+            local file="$1"
+            local value="$2"
+            local label="$3"
+            if grep -Fq "$value" "$file"; then
+              echo "::error::$label unexpectedly found in $file"
+              return 1
+            fi
+          }
+
+          # Public SAFEPLATE surface.
           assert_contains smoke/home.html 'SAFEPLATE™' 'SAFEPLATE product name'
           assert_contains smoke/home.html 'by Function Media LLC' 'Function Media attribution'
           assert_contains smoke/home.html 'Know what’s going on with your food.' 'Public-view headline'
@@ -42,14 +57,21 @@ jobs:
           assert_contains smoke/home.html 'id="liveState"' 'Live recall status'
           assert_contains smoke/home.html 'id="results"' 'Answer results surface'
           assert_contains smoke/home.html 'unified-intelligence-v12.html' 'Advanced View route'
+          assert_contains smoke/home.html 'public-hero-1-confirmed.jpg' 'Confirmed approved photo set'
+          assert_contains smoke/home.html 'safeplate-mobile-surgical-fix' 'Mobile header containment fix'
+          assert_contains smoke/home.html 'safeplate-popup-retire' 'Recall popup retirement guard'
+          assert_absent smoke/home.html '/assets/public-hero-1.webp' 'Old public hero WEBP'
+          assert_absent smoke/home.html '/assets/public-hero-2.webp' 'Old public hero WEBP'
+          assert_absent smoke/home.html '/assets/public-hero-3.webp' 'Old public hero WEBP'
+          assert_absent smoke/home.html '/assets/public-hero-4.webp' 'Old public hero WEBP'
+          assert_absent smoke/home.html '/assets/public-hero-5.webp' 'Old public hero WEBP'
+          assert_absent smoke/home.html '/assets/safeplate-social.jpg' 'Old social-image fallback'
+          assert_absent smoke/home.html '/assets/safeplate-editorial.jpg' 'Old editorial-image fallback'
 
           # Advanced View must resolve inside the same SAFEPLATE site and never return Netlify's 404 page.
           assert_contains smoke/advanced.html 'SAFEPLATE™' 'Advanced SAFEPLATE brand'
           assert_contains smoke/advanced.html 'Watch a recall unfold.' 'Advanced Food Journey headline'
-          if grep -Fq 'Page not found' smoke/advanced.html; then
-            echo '::error::Advanced View returned Netlify 404 page'
-            exit 1
-          fi
+          assert_absent smoke/advanced.html 'Page not found' 'Netlify 404 page'
 
           curl -fsSL "$BASE/api/system-status" -o smoke/system-status.json
           curl -fsSL "$BASE/api/source-health" -o smoke/source-health.json
