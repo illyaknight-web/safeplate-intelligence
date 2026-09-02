@@ -13,8 +13,8 @@ async function pullCDC(){
   for(const q of queries){
     const url=`https://tools.cdc.gov/api/v2/resources/media?q=${encodeURIComponent(q)}&max=75`;
     const r=await fetchWithTimeout(url);if(!r.ok){notes.push(`${q}: HTTP ${r.status}`);continue}
-    const j=await r.json(),rows=rawRows(j);notes.push(`${q}: ${rows.length}`);
-    for(const m of rows){
+    const j=await r.json(),items=rawRows(j);notes.push(`${q}: ${items.length}`);
+    for(const m of items){
       const title=clean(m.name||m.title||m.description||''),summary=clean(m.description||m.summary||m.body||title),text=`${title} ${summary}`;
       if(!title||!FOOD_RX.test(text))continue;
       const id=`CDC-${m.id||fingerprint([title,m.lastUpdatedDate||m.datePublished||m.url])}`;
@@ -26,7 +26,7 @@ async function pullCDC(){
 }
 function merge(existing,incoming,now){const m=new Map((existing||[]).map(x=>[x.id,x]));for(const x of incoming){const old=m.get(x.id);m.set(x.id,old?{...old,...x,firstSeenAt:old.firstSeenAt||now,lastObservedAt:now,observationCount:(old.observationCount||1)+1}:{...x,firstSeenAt:now,lastObservedAt:now,observationCount:1})}return [...m.values()].sort((a,b)=>new Date(b.lastObservedAt||b.updatedAt||0)-new Date(a.lastObservedAt||a.updatedAt||0)).slice(0,1800)}
 
-export default async()=>{
+export async function runCDCRepair(){
   const checked=nowISO(),state=await getState();let health,next=state;
   try{
     const r=await pullCDC();
@@ -36,7 +36,8 @@ export default async()=>{
     health={id:'cdc_content',name:'CDC Content Services — Public Foodborne Content',family:'Federal',status:'DEGRADED',lastChecked:checked,note:String(e?.message||e||'CDC validation failed')};
     next={...state,meta:{...(state.meta||{}),cdcRepairLastSync:checked},sourceHealth:[...(state.sourceHealth||[]).filter(x=>x?.id!=='cdc_content'),health]};
   }
-  await saveState(next);return Response.json(health,{headers:{'cache-control':'no-store'}});
-};
+  await saveState(next);return health;
+}
 
-export const config={path:'/api/cdc-foodborne-repair',schedule:'9,39 * * * *'};
+export default async()=>Response.json(await runCDCRepair(),{headers:{'cache-control':'no-store'}});
+export const config={path:'/api/cdc-foodborne-repair'};
