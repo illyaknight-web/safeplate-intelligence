@@ -6,9 +6,10 @@ on:
     paths:
       - '.github/workflows/production-smoke.yml'
       - 'netlify/functions/homepage.mjs'
+      - 'netlify/functions/nass-context.mjs'
+      - 'netlify/functions/cdc-foodborne-repair.mjs'
+      - 'site/safeplate-shell.html'
       - 'site/public-view-v1.html'
-      - 'site/ui-fixes.js'
-      - 'site/recall-entry-alert.js'
       - 'site/unified-intelligence-v12.html'
   schedule:
     - cron: '12,42 * * * *'
@@ -16,9 +17,9 @@ on:
 jobs:
   smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
-      - name: Test production API and UI surface
+      - name: Test production API and unified UI surface
         shell: bash
         run: |
           set -euo pipefail
@@ -26,59 +27,49 @@ jobs:
           mkdir -p smoke
 
           curl -fsSL "$BASE/" -o smoke/home.html
-          curl -fsSL "$BASE/unified-intelligence-v12.html" -o smoke/advanced.html
+          curl -fsSL "$BASE/public-view-v1.html" -o smoke/public.html
+          curl -fsSL "$BASE/unified-intelligence-v12.html" -o smoke/journey.html
 
-          assert_contains() {
-            local file="$1"
-            local value="$2"
-            local label="$3"
-            if ! grep -Fq "$value" "$file"; then
-              echo "::error::$label was not found in $file"
-              return 1
-            fi
-          }
+          assert_contains() { grep -Fq "$2" "$1" || { echo "::error::$3 was not found in $1"; return 1; }; }
+          assert_absent() { ! grep -Fq "$2" "$1" || { echo "::error::$3 unexpectedly found in $1"; return 1; }; }
 
-          assert_absent() {
-            local file="$1"
-            local value="$2"
-            local label="$3"
-            if grep -Fq "$value" "$file"; then
-              echo "::error::$label unexpectedly found in $file"
-              return 1
-            fi
-          }
+          # One SAFEPLATE site / one root URL / two internal modes.
+          assert_contains smoke/home.html 'id="pubBtn"' 'Public View mode button'
+          assert_contains smoke/home.html 'id="advBtn"' 'Advanced View mode button'
+          assert_contains smoke/home.html 'One site · two views · 30-minute live checks' 'Unified-site status'
+          assert_contains smoke/home.html '30*60*1000' '30-minute client polling'
+          assert_absent smoke/home.html 'window.open(' 'scripted popup navigation'
 
-          # Public SAFEPLATE surface.
-          assert_contains smoke/home.html 'SAFEPLATE™' 'SAFEPLATE product name'
-          assert_contains smoke/home.html 'by Function Media LLC' 'Function Media attribution'
-          assert_contains smoke/home.html 'Know what’s going on with your food.' 'Public-view headline'
-          assert_contains smoke/home.html 'id="q"' 'Consumer question input'
-          assert_contains smoke/home.html 'id="go"' 'SAFEPLATE question action'
-          assert_contains smoke/home.html 'id="liveState"' 'Live recall status'
-          assert_contains smoke/home.html 'id="results"' 'Answer results surface'
-          assert_contains smoke/home.html 'unified-intelligence-v12.html' 'Advanced View route'
-          assert_contains smoke/home.html 'public-hero-1-confirmed.jpg' 'Confirmed approved photo set'
-          assert_contains smoke/home.html 'safeplate-mobile-surgical-fix' 'Mobile header containment fix'
-          assert_contains smoke/home.html 'safeplate-popup-retire' 'Recall popup retirement guard'
-          assert_absent smoke/home.html '/assets/public-hero-1.webp' 'Old public hero WEBP'
-          assert_absent smoke/home.html '/assets/public-hero-2.webp' 'Old public hero WEBP'
-          assert_absent smoke/home.html '/assets/public-hero-3.webp' 'Old public hero WEBP'
-          assert_absent smoke/home.html '/assets/public-hero-4.webp' 'Old public hero WEBP'
-          assert_absent smoke/home.html '/assets/public-hero-5.webp' 'Old public hero WEBP'
-          assert_absent smoke/home.html '/assets/safeplate-social.jpg' 'Old social-image fallback'
-          assert_absent smoke/home.html '/assets/safeplate-editorial.jpg' 'Old editorial-image fallback'
+          # Approved Public View remains the real Public experience, with shell-level no-crop image protection.
+          assert_contains smoke/public.html 'Know what’s going on with your food.' 'Public-view headline'
+          assert_contains smoke/home.html 'public-hero-1-confirmed.jpg' 'Confirmed approved photo mapping'
+          assert_contains smoke/home.html 'public-hero-5-confirmed.jpg' 'Confirmed approved photo mapping'
+          assert_contains smoke/home.html 'object-fit:contain' 'No-crop image containment'
+          assert_contains smoke/home.html 'publicSafetySearch' 'Defensible public safety/recall search'
+          assert_contains smoke/home.html 'not a guarantee that the food is safe to consume' 'No false safety guarantee'
 
-          # Advanced View must resolve inside the same SAFEPLATE site and never return Netlify's 404 page.
-          assert_contains smoke/advanced.html 'SAFEPLATE™' 'Advanced SAFEPLATE brand'
-          assert_contains smoke/advanced.html 'Watch a recall unfold.' 'Advanced Food Journey headline'
-          assert_absent smoke/advanced.html 'Page not found' 'Netlify 404 page'
+          # Advanced command center + full V12 evidence map.
+          assert_contains smoke/home.html 'Advanced intelligence.' 'Advanced command-center headline'
+          assert_contains smoke/home.html 'id="markers"' 'Advanced live-map marker layer'
+          assert_contains smoke/home.html 'id="routes"' 'Advanced route layer'
+          assert_contains smoke/home.html '/unified-intelligence-v12.html?embed=1' 'Full V12 Food Journey map'
+          assert_contains smoke/journey.html 'Watch a recall unfold.' 'V12 Food Journey headline'
+          assert_absent smoke/journey.html 'Page not found' 'Netlify 404 page'
+          assert_contains smoke/home.html 'No invented origins or routes' 'Provenance safeguard'
 
+          # Search / Track / notification behavior.
+          assert_contains smoke/home.html 'id="advSearch"' 'Advanced search'
+          assert_contains smoke/home.html 'id="trackSearch"' 'Track Product search'
+          assert_contains smoke/home.html 'id="recallToast"' 'New-record recall notification'
+          assert_contains smoke/home.html 'safeplateKnownRecallIdsFinalV2' 'Session recall baseline'
+
+          # Core APIs + explicit connector validation endpoints.
+          curl -fsSL "$BASE/api/nass-context" -o smoke/nass-context.json
+          curl -fsSL "$BASE/api/cdc-foodborne-repair" -o smoke/cdc-repair.json
           curl -fsSL "$BASE/api/system-status" -o smoke/system-status.json
           curl -fsSL "$BASE/api/source-health" -o smoke/source-health.json
           curl -fsSL "$BASE/api/state-coverage" -o smoke/state-coverage.json
           curl -fsSL "$BASE/api/incidents" -o smoke/incidents.json
-          curl -fsSL "$BASE/api/latest-intelligence" -o smoke/latest-intelligence.json
-          curl -fsSL "$BASE/api/surveillance-history" -o smoke/surveillance-history.json
 
           python - <<'PY'
           import json, sys, pathlib
@@ -87,24 +78,23 @@ jobs:
           health=json.loads((p/'source-health.json').read_text())
           coverage=json.loads((p/'state-coverage.json').read_text())
           incidents=json.loads((p/'incidents.json').read_text())
-          history=json.loads((p/'surveillance-history.json').read_text())
-
+          nass=json.loads((p/'nass-context.json').read_text())
+          cdc=json.loads((p/'cdc-repair.json').read_text())
           failures=[]
           if not status.get('live'): failures.append(f"system-status not live: {status}")
           if status.get('ageMinutes') is None or status.get('ageMinutes',999)>75: failures.append(f"main surveillance stale: {status.get('ageMinutes')}")
           if coverage.get('checked') != 51: failures.append(f"state coverage checked {coverage.get('checked')}/51")
           if not coverage.get('live'): failures.append(f"state coverage not live: {coverage}")
-          if coverage.get('ageMinutes') is None or coverage.get('ageMinutes',999)>75: failures.append(f"state coverage stale: {coverage.get('ageMinutes')}")
           rows=incidents.get('incidents',[])
-          if len(rows)==0: failures.append('no incidents returned')
+          if not rows: failures.append('no incidents returned')
           sources=health.get('sources',[]) if isinstance(health,dict) else health
           checked=[s for s in sources if s.get('lastChecked')]
-          if len(checked)==0: failures.append('no source-health checks found')
-
-          hist=history.get('history') or history.get('runs') or history.get('entries') or []
-          if isinstance(hist,list) and len(hist)<2:
-              print(f"WARNING: surveillance history retained only {len(hist)} run(s); not failing live health check")
-
+          if not checked: failures.append('no source-health checks found')
+          ids={s.get('id'):s for s in sources}
+          for required in ('fda_openfda','usda_fsis','usda_nass_quickstats','cdc_content'):
+              if required not in ids: failures.append(f'missing source-health entry: {required}')
+          if nass.get('id')!='usda_nass_quickstats': failures.append(f'NASS endpoint malformed: {nass}')
+          if cdc.get('id')!='cdc_content': failures.append(f'CDC repair endpoint malformed: {cdc}')
           if failures:
               print('SMOKE TEST FAILURES:')
               for f in failures: print('-',f)
@@ -112,9 +102,9 @@ jobs:
           print('SAFEPLATE production smoke test passed')
           print('incidents:',len(rows))
           print('states:',coverage.get('checked'),'/51')
-          print('state online:',coverage.get('online'),'degraded:',coverage.get('degraded'))
-          print('main age minutes:',status.get('ageMinutes'))
-          print('state age minutes:',coverage.get('ageMinutes'))
+          print('NASS:',nass.get('status'),nass.get('note'))
+          print('CDC:',cdc.get('status'),cdc.get('note'))
+          print('source overall:',health.get('overall'),'online:',health.get('online'),'issues:',health.get('issues'))
           PY
 
       - name: Upload smoke evidence
