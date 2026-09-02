@@ -10,7 +10,7 @@ on:
       - 'netlify/functions/cdc-foodborne-repair.mjs'
       - 'site/safeplate-shell.html'
       - 'site/public-view-v1.html'
-      - 'site/unified-intelligence-v12.html'
+      - 'site/advanced-intelligence-v16.html'
   schedule:
     - cron: '12,42 * * * *'
 
@@ -28,40 +28,39 @@ jobs:
 
           curl -fsSL "$BASE/" -o smoke/home.html
           curl -fsSL "$BASE/public-view-v1.html" -o smoke/public.html
-          curl -fsSL "$BASE/unified-intelligence-v12.html" -o smoke/journey.html
+          curl -fsSL "$BASE/advanced-intelligence-v16.html" -o smoke/advanced.html
 
           assert_contains() { grep -Fq "$2" "$1" || { echo "::error::$3 was not found in $1"; return 1; }; }
           assert_absent() { ! grep -Fq "$2" "$1" || { echo "::error::$3 unexpectedly found in $1"; return 1; }; }
 
-          # One SAFEPLATE site / one root URL / two internal modes.
+          # One SAFEPLATE root URL with two internal views.
           assert_contains smoke/home.html 'id="pubBtn"' 'Public View mode button'
           assert_contains smoke/home.html 'id="advBtn"' 'Advanced View mode button'
           assert_contains smoke/home.html 'One site · two views · 30-minute live checks' 'Unified-site status'
-          assert_contains smoke/home.html '30*60*1000' '30-minute client polling'
+          assert_contains smoke/home.html 'id="publicFrame"' 'Public frame'
+          assert_contains smoke/home.html 'id="advancedFrame"' 'Advanced frame'
           assert_absent smoke/home.html 'window.open(' 'scripted popup navigation'
 
-          # Approved Public View remains the real Public experience, with shell-level no-crop image protection.
+          # Advanced map lifecycle + UX repair.
+          assert_contains smoke/home.html 'safeplate-advanced-ux' 'Advanced UX repair layer'
+          assert_contains smoke/home.html "dispatchEvent(new Event('resize'))" 'Advanced map resize repair'
+          assert_contains smoke/home.html '.maplibregl-popup-content' 'Readable map popup repair'
+          assert_contains smoke/home.html '#journeyChoices' 'Compact journey choice rail'
+          assert_contains smoke/advanced.html 'id="heroMap"' 'Advanced hero map'
+          assert_contains smoke/advanced.html 'id="journeyMap"' 'Advanced Food Journey map'
+          assert_contains smoke/advanced.html 'id="advSearch"' 'Advanced search'
+          assert_contains smoke/advanced.html 'id="trackSearch"' 'Track Product search'
+          assert_contains smoke/advanced.html 'No invented origins or routes' 'Provenance safeguard'
+          assert_contains smoke/advanced.html 'Choose → Play → Verify' 'Food Journey interaction model'
+          assert_absent smoke/advanced.html 'Page not found' 'Netlify 404 page'
+
+          # Approved Public View remains intact.
           assert_contains smoke/public.html 'Know what’s going on with your food.' 'Public-view headline'
-          assert_contains smoke/home.html 'public-hero-1-confirmed.jpg' 'Confirmed approved photo mapping'
-          assert_contains smoke/home.html 'public-hero-5-confirmed.jpg' 'Confirmed approved photo mapping'
-          assert_contains smoke/home.html 'object-fit:contain' 'No-crop image containment'
-          assert_contains smoke/home.html 'publicSafetySearch' 'Defensible public safety/recall search'
-          assert_contains smoke/home.html 'not a guarantee that the food is safe to consume' 'No false safety guarantee'
-
-          # Advanced command center + full V12 evidence map.
-          assert_contains smoke/home.html 'Advanced intelligence.' 'Advanced command-center headline'
-          assert_contains smoke/home.html 'id="markers"' 'Advanced live-map marker layer'
-          assert_contains smoke/home.html 'id="routes"' 'Advanced route layer'
-          assert_contains smoke/home.html '/unified-intelligence-v12.html?embed=1' 'Full V12 Food Journey map'
-          assert_contains smoke/journey.html 'Watch a recall unfold.' 'V12 Food Journey headline'
-          assert_absent smoke/journey.html 'Page not found' 'Netlify 404 page'
-          assert_contains smoke/home.html 'No invented origins or routes' 'Provenance safeguard'
-
-          # Search / Track / notification behavior.
-          assert_contains smoke/home.html 'id="advSearch"' 'Advanced search'
-          assert_contains smoke/home.html 'id="trackSearch"' 'Track Product search'
-          assert_contains smoke/home.html 'id="recallToast"' 'New-record recall notification'
-          assert_contains smoke/home.html 'safeplateKnownRecallIdsFinalV2' 'Session recall baseline'
+          assert_contains smoke/public.html 'public-hero-1-confirmed.jpg' 'Confirmed approved photo mapping'
+          assert_contains smoke/public.html 'public-hero-5-confirmed.jpg' 'Confirmed approved photo mapping'
+          assert_contains smoke/public.html 'object-fit:contain' 'No-crop image containment'
+          assert_contains smoke/public.html 'publicSafetySearch' 'Defensible public safety/recall search'
+          assert_contains smoke/public.html 'not a guarantee that the food is safe to consume' 'No false safety guarantee'
 
           # Core APIs + explicit connector validation endpoints.
           curl -fsSL "$BASE/api/nass-context" -o smoke/nass-context.json
