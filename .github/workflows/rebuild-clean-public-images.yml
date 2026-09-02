@@ -1,0 +1,82 @@
+name: SAFEPLATE Rebuild Clean Public Images
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/rebuild-clean-public-images.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reconstruct approved original source
+        run: |
+          cat site/assets/approved-heroes-source.part{01..20} | tr -d '\n\r ' | base64 -d > /tmp/approved-source.webp
+          python - <<'PY'
+          from PIL import Image
+          p='/tmp/approved-source.webp'
+          im=Image.open(p); im.load()
+          assert im.size==(1536,1024), im.size
+          print('SOURCE DECODE OK', im.size, im.mode)
+          PY
+      - name: Export clean assets from original source
+        run: |
+          python - <<'PY'
+          from PIL import Image,ImageOps,ImageDraw
+          from pathlib import Path
+          import hashlib
+          src=Image.open('/tmp/approved-source.webp').convert('RGB')
+          out=Path('site/assets')
+          crops={
+            'public-hero-1-clean.jpg': src.crop((0,0,768,512)),
+            'public-hero-2-clean.jpg': src.crop((768,0,1536,512)),
+            'public-hero-3-clean.jpg': src.crop((0,512,512,1024)),
+            'public-hero-4-clean.jpg': src.crop((512,512,970,1024)),
+            'public-hero-5-clean.jpg': src.crop((970,512,1536,1024)),
+          }
+          for name,im in crops.items():
+            im.save(out/name,'JPEG',quality=94,subsampling=0,optimize=True)
+            test=Image.open(out/name); test.load()
+            assert test.width>=450 and test.height>=500
+            print(name,test.size,hashlib.sha256((out/name).read_bytes()).hexdigest())
+          # Contact sheet is CI evidence, not a site asset.
+          tiles=[]
+          for name in crops:
+            im=Image.open(out/name).convert('RGB')
+            tile=ImageOps.fit(im,(320,220),method=Image.Resampling.LANCZOS)
+            c=Image.new('RGB',(340,255),'white'); c.paste(tile,(10,10)); ImageDraw.Draw(c).text((10,235),name,fill='black'); tiles.append(c)
+          sheet=Image.new('RGB',(680,765),'white')
+          for i,t in enumerate(tiles): sheet.paste(t,((i%2)*340,(i//2)*255))
+          sheet.save('/tmp/safeplate-clean-contact.jpg',quality=90)
+          PY
+      - name: Full decode and truncation verification
+        run: |
+          python - <<'PY'
+          from PIL import Image,ImageFile
+          from pathlib import Path
+          ImageFile.LOAD_TRUNCATED_IMAGES=False
+          for p in sorted(Path('site/assets').glob('public-hero-*-clean.jpg')):
+            with Image.open(p) as im:
+              im.verify()
+            with Image.open(p) as im:
+              im.load()
+              assert im.getbbox() is not None
+              print('FULL RENDER OK',p,im.size)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: safeplate-clean-image-proof
+          path: /tmp/safeplate-clean-contact.jpg
+      - name: Commit clean assets
+        run: |
+          git config user.name 'SAFEPLATE Release Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add site/assets/public-hero-*-clean.jpg
+          git diff --cached --quiet && exit 0
+          git commit -m 'Rebuild SAFEPLATE public images from clean approved source'
+          git push
