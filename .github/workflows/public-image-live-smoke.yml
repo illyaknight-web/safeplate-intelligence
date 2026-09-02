@@ -1,0 +1,64 @@
+name: SAFEPLATE Public Image Live Smoke
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'netlify.toml'
+      - 'site/public-view-v1.html'
+      - 'site/safeplate-shell.html'
+      - '.github/workflows/public-image-live-smoke.yml'
+  schedule:
+    - cron: '18,48 * * * *'
+
+jobs:
+  image-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Verify live Public image assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://safeplate-intelligence.netlify.app'
+          mkdir -p smoke
+          urls=(
+            '/assets/public-main-v3.jpg'
+            '/assets/public-recall-v3.jpg'
+            '/assets/public-fresh-v3.jpg'
+            '/assets/public-store-v3.jpg'
+            '/assets/public-cook-v3.jpg'
+            '/assets/public-journey-v3.jpg'
+          )
+          i=0
+          for path in "${urls[@]}"; do
+            i=$((i+1))
+            out="smoke/image-${i}.bin"
+            headers="smoke/image-${i}.headers"
+            curl -fsSL --retry 4 --retry-delay 3 -D "$headers" "$BASE$path?integrity=20260902" -o "$out"
+            bytes=$(wc -c < "$out")
+            type=$(file -b --mime-type "$out")
+            magic=$(python - "$out" <<'PY'
+          import sys
+          b=open(sys.argv[1],'rb').read(12)
+          print('WEBP' if len(b)>=12 and b[:4]==b'RIFF' and b[8:12]==b'WEBP' else b.hex())
+          PY
+            )
+            echo "$path -> $bytes bytes | $type | $magic"
+            test "$bytes" -gt 100000 || { echo "::error::$path is too small: $bytes bytes"; exit 1; }
+            test "$magic" = 'WEBP' || { echo "::error::$path is not a valid WebP payload: $magic"; exit 1; }
+          done
+
+          curl -fsSL --retry 4 --retry-delay 3 "$BASE/public-view-v1.html?verify=20260902" -o smoke/public.html
+          grep -Fq 'Know what’s going on with your food.' smoke/public.html
+          grep -Fq 'People checking food recall alerts on phones' smoke/public.html
+          grep -Fq 'Woman holding a prepared food bowl' smoke/public.html
+          echo 'SAFEPLATE Public image live smoke PASSED'
+
+      - name: Upload image smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: safeplate-public-image-live-smoke
+          path: smoke/
+          retention-days: 14
