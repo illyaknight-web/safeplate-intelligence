@@ -7,6 +7,7 @@ on:
       - 'netlify.toml'
       - 'site/public-view-v1.html'
       - 'site/safeplate-shell.html'
+      - 'site/assets/*.jpg'
       - '.github/workflows/public-image-live-smoke.yml'
   schedule:
     - cron: '18,48 * * * *'
@@ -14,9 +15,9 @@ on:
 jobs:
   image-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     steps:
-      - name: Verify live Public image assets
+      - name: Verify live Public JPEG assets
         shell: bash
         run: |
           set -euo pipefail
@@ -30,30 +31,63 @@ jobs:
             '/assets/public-cook-v3.jpg'
             '/assets/public-journey-v3.jpg'
           )
-          i=0
-          for path in "${urls[@]}"; do
-            i=$((i+1))
-            out="smoke/image-${i}.bin"
-            headers="smoke/image-${i}.headers"
-            curl -fsSL --retry 4 --retry-delay 3 -D "$headers" "$BASE$path?integrity=20260902" -o "$out"
-            bytes=$(wc -c < "$out")
-            type=$(file -b --mime-type "$out")
-            magic=$(python - "$out" <<'PY'
-          import sys
-          b=open(sys.argv[1],'rb').read(12)
-          print('WEBP' if len(b)>=12 and b[:4]==b'RIFF' and b[8:12]==b'WEBP' else b.hex())
-          PY
-            )
-            echo "$path -> $bytes bytes | $type | $magic"
-            test "$bytes" -gt 100000 || { echo "::error::$path is too small: $bytes bytes"; exit 1; }
-            test "$magic" = 'WEBP' || { echo "::error::$path is not a valid WebP payload: $magic"; exit 1; }
-          done
 
-          curl -fsSL --retry 4 --retry-delay 3 "$BASE/public-view-v1.html?verify=20260902" -o smoke/public.html
+          # Netlify may still be publishing when a Git push starts this workflow.
+          # Retry the whole live check until the direct JPEG assets are visible.
+          passed=0
+          for attempt in 1 2 3 4 5 6 7 8; do
+            echo "Live image verification attempt $attempt"
+            failed=0
+            i=0
+            for path in "${urls[@]}"; do
+              i=$((i+1))
+              out="smoke/image-${i}.jpg"
+              headers="smoke/image-${i}.headers"
+              status=$(curl -sS --retry 2 --retry-delay 2 --max-redirs 0 -D "$headers" -o "$out" -w '%{http_code}' "$BASE$path?integrity=20260902-direct-jpeg") || status=000
+              bytes=$(wc -c < "$out" 2>/dev/null || echo 0)
+              type=$(file -b --mime-type "$out" 2>/dev/null || echo unknown)
+              read -r magic width height < <(python - "$out" <<'PY'
+          import sys
+          p=sys.argv[1]
+          try:
+              data=open(p,'rb').read()
+              magic='JPEG' if data[:3]==b'\xff\xd8\xff' else 'BAD'
+              w=h=0
+              i=2
+              while i+9 < len(data):
+                  if data[i] != 0xFF:
+                      i += 1; continue
+                  while i < len(data) and data[i] == 0xFF: i += 1
+                  if i >= len(data): break
+                  marker=data[i]; i += 1
+                  if marker in (0xD8,0xD9): continue
+                  if i+2 > len(data): break
+                  seg=int.from_bytes(data[i:i+2],'big')
+                  if seg < 2 or i+seg > len(data): break
+                  if marker in (0xC0,0xC1,0xC2,0xC3,0xC5,0xC6,0xC7,0xC9,0xCA,0xCB,0xCD,0xCE,0xCF):
+                      h=int.from_bytes(data[i+3:i+5],'big'); w=int.from_bytes(data[i+5:i+7],'big'); break
+                  i += seg
+              print(magic,w,h)
+          except Exception:
+              print('BAD',0,0)
+          PY
+              )
+              echo "$path -> HTTP $status | $bytes bytes | $type | $magic | ${width}x${height}"
+              if [ "$status" != '200' ] || [ "$type" != 'image/jpeg' ] || [ "$magic" != 'JPEG' ] || [ "$bytes" -lt 500000 ] || [ "$width" -lt 1000 ] || [ "$height" -lt 700 ]; then
+                failed=1
+              fi
+            done
+            if [ "$failed" -eq 0 ]; then passed=1; break; fi
+            sleep 15
+          done
+          test "$passed" -eq 1 || { echo '::error::Live Public JPEG integrity check failed'; exit 1; }
+
+          curl -fsS --retry 4 --retry-delay 3 "$BASE/public-view-v1.html?verify=20260902-direct-jpeg" -o smoke/public.html
           grep -Fq 'Know what’s going on with your food.' smoke/public.html
-          grep -Fq 'People checking food recall alerts on phones' smoke/public.html
-          grep -Fq 'Woman holding a prepared food bowl' smoke/public.html
-          echo 'SAFEPLATE Public image live smoke PASSED'
+          grep -Fq '/assets/public-main-v3.jpg' smoke/public.html
+          grep -Fq '/assets/public-recall-v3.jpg' smoke/public.html
+          ! grep -Fq 'public-hero-1.webp' smoke/public.html
+          echo 'SAFEPLATE Public direct-JPEG live smoke PASSED'
 
       - name: Upload image smoke evidence
         if: always()
