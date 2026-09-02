@@ -2,6 +2,74 @@
   publish = "site"
   functions = "netlify/functions"
 
+# Public View image recovery: old JPEG paths are retained for cached HTML,
+# but resolve to the intact approved WebP originals already stored in the repo.
+[[redirects]]
+  from = "/assets/public-main-v3.jpg"
+  to = "/assets/public-hero-5.webp"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/assets/public-recall-v3.jpg"
+  to = "/assets/public-hero-1.webp"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/assets/public-fresh-v3.jpg"
+  to = "/assets/public-hero-2.webp"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/assets/public-store-v3.jpg"
+  to = "/assets/public-hero-3.webp"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/assets/public-cook-v3.jpg"
+  to = "/assets/public-hero-4.webp"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/assets/public-journey-v3.jpg"
+  to = "/assets/public-hero-5.webp"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/assets/public-hero-1-confirmed.jpg"
+  to = "/assets/public-hero-1.webp"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/assets/public-hero-2-confirmed.jpg"
+  to = "/assets/public-hero-2.webp"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/assets/public-hero-3-confirmed.jpg"
+  to = "/assets/public-hero-3.webp"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/assets/public-hero-4-confirmed.jpg"
+  to = "/assets/public-hero-4.webp"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/assets/public-hero-5-confirmed.jpg"
+  to = "/assets/public-hero-5.webp"
+  status = 302
+  force = true
+
 # Explicitly route the public Advanced View URL to the Food Journey function.
 # This prevents /unified-intelligence.html from falling through to Netlify's 404 page.
 [[redirects]]
