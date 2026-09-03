@@ -112,7 +112,8 @@ function merge(existing,incoming,now,successfulSources){
 }
 
 async function pullFDA(){
- const key=process.env.FDA_API_KEY?`&api_key=${encodeURIComponent(process.env.FDA_API_KEY)}`:"";
+ const configuredKey=globalThis.Netlify?.env?.get?.("FDA_API_KEY")||process.env.FDA_API_KEY||"";
+ const key=configuredKey?`&api_key=${encodeURIComponent(configuredKey)}`:"";
  const url=`https://api.fda.gov/food/enforcement.json?limit=100&search=status:%22Ongoing%22${key}`;
  const r=await timeoutFetch(url,{accept:"application/json"});
  if(!r.ok)throw new Error(`FDA ${r.status}`);
@@ -230,7 +231,8 @@ function adverseSeverity(outcomes=[]){
  return"EMERGING";
 }
 async function pullFDAFoodEvents(){
- const key=process.env.FDA_API_KEY?`&api_key=${encodeURIComponent(process.env.FDA_API_KEY)}`:"";
+ const configuredKey=globalThis.Netlify?.env?.get?.("FDA_API_KEY")||process.env.FDA_API_KEY||"";
+ const key=configuredKey?`&api_key=${encodeURIComponent(configuredKey)}`:"";
  const url=`https://api.fda.gov/food/event.json?limit=100&sort=date_created:desc${key}`;
  const r=await timeoutFetch(url,{accept:"application/json"});
  if(!r.ok)throw new Error(`FDA food events ${r.status}`);

@@ -67,6 +67,8 @@ export function normalizeFDA(r){
     updatedAt:toISO(r.report_date||r.recall_initiation_date),
     verifiedAt:toISO(r.report_date||r.recall_initiation_date),
     recallDate:toISO(r.recall_initiation_date||r.report_date),
+    imageUrl:r.imageUrl||r.image_url||r.photoUrl||r.thumbnailUrl||null,
+    images:Array.isArray(r.images)?r.images:[],
     summary:r.reason_for_recall||"",
     lots:[],
     evidence:[
@@ -109,6 +111,8 @@ export function normalizeFSIS(r){
     updatedAt:toISO(r.field_recall_date||r.recall_date||new Date()),
     verifiedAt:toISO(r.field_recall_date||r.recall_date||new Date()),
     recallDate:toISO(r.field_recall_date||r.recall_date||new Date()),
+    imageUrl:r.imageUrl||r.image_url||r.photoUrl||r.thumbnailUrl||null,
+    images:Array.isArray(r.images)?r.images:[],
     summary:reason,
     lots:[],
     evidence:[

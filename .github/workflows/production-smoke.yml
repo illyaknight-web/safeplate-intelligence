@@ -11,6 +11,11 @@ on:
       - 'netlify/functions/system-status.mjs'
       - 'netlify/functions/nass-context.mjs'
       - 'netlify/functions/cdc-foodborne-repair.mjs'
+      - 'netlify/functions/noaa-cdo.mjs'
+      - 'netlify/functions/surveillance.mjs'
+      - 'netlify/functions/external-government-surveillance.mjs'
+      - 'netlify/functions/latest-intelligence.mjs'
+      - 'netlify/functions/lib/normalize.mjs'
       - 'site/safeplate-shell.html'
       - 'site/public-view-v1.html'
       - 'site/assets/recall-*.jpg'
@@ -80,8 +85,11 @@ jobs:
           assert_contains smoke/public.html 'object-fit:contain' 'No-crop hero treatment'
           assert_contains smoke/public.html 'id="q"' 'Public safety search input'
           assert_contains smoke/public.html 'id="go"' 'Public safety search action'
-          assert_contains smoke/public.html "['Recall date',x.recallDate]" 'Recall-date presentation'
+          assert_contains smoke/public.html "['Recall date',x.recallDate||verified?.recallDate]" 'Recall-date presentation'
           assert_contains smoke/public.html '/assets/recall-good-gather-mexican-street-corn-trail-mix.jpg' 'Verified product photograph'
+          assert_contains smoke/public.html '/assets/recall-taylor-diced-jalapenos.jpg' 'Verified Taylor product label'
+          assert_contains smoke/public.html 'id="recentAlertModal"' 'Recent recall popup'
+          assert_absent smoke/public.html 'Exact product image not published' 'Oversized missing-photo placeholder'
           assert_contains smoke/public.html 'not</b> a guarantee that the food is safe to consume' 'Truthful no-match safeguard'
 
           curl -fsSL "$BASE/api/nass-context" -o smoke/nass-context.json
@@ -90,6 +98,9 @@ jobs:
           curl -fsSL "$BASE/api/source-health" -o smoke/source-health.json
           curl -fsSL "$BASE/api/state-coverage" -o smoke/state-coverage.json
           curl -fsSL "$BASE/api/incidents" -o smoke/incidents.json
+          curl -fsSL "$BASE/api/surveillance-history" -o smoke/surveillance-history.json
+          curl -fsSL "$BASE/api/source-audit" -o smoke/source-audit.json
+          curl -fsSL "$BASE/api/latest-intelligence" -o smoke/latest-intelligence.json
 
           python - <<'PY'
           import json, os, pathlib
@@ -99,6 +110,7 @@ jobs:
           deployment=load('deployment-info.json'); status=load('system-status.json')
           health=load('source-health.json'); coverage=load('state-coverage.json')
           incidents=load('incidents.json'); nass=load('nass-context.json'); cdc=load('cdc-repair.json')
+          history=load('surveillance-history.json'); audit=load('source-audit.json'); latest=load('latest-intelligence.json')
           failures=[]
           if deployment.get('commit') != os.environ['GITHUB_SHA']: failures.append('deployed SHA differs from workflow SHA')
           if not status.get('live'): failures.append(f"system-status not live: {status}")
@@ -114,7 +126,14 @@ jobs:
               elif not ids[source_id].get('lastChecked'): failures.append(f'source has no lastChecked: {source_id}')
           if nass.get('id')!='usda_nass_quickstats': failures.append(f'NASS endpoint malformed: {nass}')
           if cdc.get('id')!='cdc_content': failures.append(f'CDC endpoint malformed: {cdc}')
-          report={'checkedAt':datetime.now(timezone.utc).isoformat(),'productionUrl':'https://safeplate-intelligence.netlify.app','expectedSha':os.environ['GITHUB_SHA'],'deployedSha':deployment.get('commit'),'system':status,'incidents':len(rows),'stateCoverage':{k:coverage.get(k) for k in ('scannerVersion','total','checked','online','degraded','lastSync')},'requiredSources':{k:{x:ids.get(k,{}).get(x) for x in ('status','lastChecked','note')} for k in required},'result':'FAIL' if failures else 'PASS','failures':failures}
+          if history.get('configuredCycleMinutes') != 30: failures.append(f"surveillance cycle is {history.get('configuredCycleMinutes')} minutes")
+          gaps=history.get('gaps',[])
+          if len(gaps)<2 or not all(g.get('withinTolerance') for g in gaps[-2:]): failures.append('recent surveillance history does not prove two clean 30-minute cycles')
+          audit_ids={s.get('id'):s for s in audit.get('sources',[])}
+          for source_id in ('usda_ams','uk_fsa_alerts','cfia_recalls'):
+              if audit_ids.get(source_id,{}).get('executionStatus')!='ONLINE': failures.append(f'{source_id} runtime validation is not ONLINE')
+          if not latest.get('latest'): failures.append('latest-intelligence returned no public records')
+          report={'checkedAt':datetime.now(timezone.utc).isoformat(),'productionUrl':'https://safeplate-intelligence.netlify.app','expectedSha':os.environ['GITHUB_SHA'],'deployedSha':deployment.get('commit'),'system':status,'incidents':len(rows),'stateCoverage':{k:coverage.get(k) for k in ('scannerVersion','total','checked','online','degraded','lastSync')},'surveillanceHistory':{'configuredCycleMinutes':history.get('configuredCycleMinutes'),'cycleCountRetained':history.get('cycleCountRetained'),'recentGaps':gaps[-2:]},'requiredSources':{k:{x:ids.get(k,{}).get(x) for x in ('status','lastChecked','note')} for k in required},'externalSources':{k:{x:audit_ids.get(k,{}).get(x) for x in ('executionStatus','lastChecked','note')} for k in ('usda_ams','uk_fsa_alerts','cfia_recalls')},'result':'FAIL' if failures else 'PASS','failures':failures}
           (p/'production-proof.json').write_text(json.dumps(report,indent=2)+'\n')
           if failures: raise SystemExit('SMOKE TEST FAILURES:\n- '+'\n- '.join(failures))
           print('SAFEPLATE production smoke test passed')

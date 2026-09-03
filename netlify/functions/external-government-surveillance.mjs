@@ -46,7 +46,7 @@ async function pullUKFSA(){
 }
 
 async function pullUSDAAMS(){
-  const key=process.env.USDA_AMS_API_KEY;
+  const key=globalThis.Netlify?.env?.get?.("USDA_AMS_API_KEY")||process.env.USDA_AMS_API_KEY;
   if(!key)throw new Error("USDA_AMS_API_KEY is not configured");
   const auth=`Basic ${Buffer.from(`${key}:`).toString('base64')}`;
   const url="https://marsapi.ams.usda.gov/services/v1.2/reports";

@@ -34,6 +34,8 @@ function publicItem(x, now){
     status: x.status || "",
     source: x.source || evidence?.source || "SAFEPLATE",
     sourceUrl: evidence?.url || null,
+    recallDate: x.recallDate || x.sourcePostedAt || null,
+    imageUrl: x.imageUrl || x.image_url || x.photoUrl || x.thumbnailUrl || null,
     summary: x.summary || evidence?.text || "",
     firstSeenAt: x.firstSeenAt || null,
     updatedAt: x.updatedAt || null,
