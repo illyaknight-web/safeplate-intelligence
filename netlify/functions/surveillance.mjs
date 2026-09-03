@@ -258,29 +258,6 @@ async function pullFDAFoodEvents(){
  }
  return rows;
 }
-async function pullCDCContent(){
- const url="https://tools.cdc.gov/api/v2/resources/media?q=foodborne%20outbreak&max=50";
- const r=await timeoutFetch(url,{accept:"application/json"});
- if(!r.ok)throw new Error(`CDC content ${r.status}`);
- const j=await r.json(),rows=[];
- for(const m of (j.results||[])){
-   const title=cleanText(m.name||m.title||m.description||"CDC foodborne outbreak content");
-   const id=`CDC-CONTENT-${m.id||fingerprint([title,m.lastUpdatedDate,m.url])}`;
-   const summary=cleanText(m.description||m.summary||title);
-   rows.push({
-     id,title,product:"Not yet resolved",company:"",hazard:"Foodborne outbreak / public-health signal",
-     severity:"WATCH",status:"DETECTED",category:"CDC public-health signal",
-     states:[],distribution:"",lat:null,lng:null,source:"CDC Content Services",
-     sourcePostedAt:m.lastUpdatedDate||m.datePublished||null,
-     updatedAt:m.lastUpdatedDate||m.datePublished||new Date().toISOString(),
-     verifiedAt:null,summary,lots:[],
-     evidence:[{type:"AGENCY",status:"DETECTED",source:"CDC Content Services",text:summary,url:m.url||"https://tools.cdc.gov/api"}],
-     entities:[{id:`event-${id}`,type:"Incident",name:title}],
-     links:[],workflowStep:1,rawSource:"cdc_content"
-   });
- }
- return rows;
-}
 async function pullNWSHazards(){
  const events=["Flood Warning","Extreme Heat Warning","Hurricane Warning","Tropical Storm Warning"];
  const urls=events.map(e=>`https://api.weather.gov/alerts/active?event=${encodeURIComponent(e)}`);
@@ -365,7 +342,6 @@ async function runSource(source){
  if(source.id==="usda_fsis"){const x=await pullFSIS();return {source,...x}};
  if(source.id==="fda_outbreaks"){const x=await pullFDAOutbreaks();return {source,...x}};
  if(source.id==="fda_food_events")return {source,rows:await pullFDAFoodEvents()};
- if(source.id==="cdc_content")return {source,rows:await pullCDCContent()};
  if(source.id==="nws_hazards")return {source,rows:await pullNWSHazards()};
  if(source.id==="trader_joes_recalls")return {source,rows:await pullTraderJoes()};
  if(source.id==="uk_fsa_alerts")return {source,rows:await pullUKFSA()};

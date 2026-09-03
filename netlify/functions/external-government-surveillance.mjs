@@ -16,15 +16,6 @@ const toks=v=>new Set(norm(v).split(" ").filter(x=>x.length>=5));
 const overlap=(a,b)=>{const A=toks(a),B=toks(b);if(!A.size||!B.size)return 0;let n=0;for(const x of A)if(B.has(x))n++;return n/Math.min(A.size,B.size)};
 const explicitUS=t=>/\b(?:united states(?: of america)?|u\.s\.|u\.s\b|usa\b|us market|american consumers|distributed in (?:the )?(?:united states|u\.s\.|usa)|sold in (?:the )?(?:united states|u\.s\.|usa)|import(?:ed|er|ation)? (?:into|to) (?:the )?(?:united states|u\.s\.|usa))\b/i.test(String(t||""));
 
-async function pullCDC(){
-  const url="https://tools.cdc.gov/api/v2/resources/media?q=foodborne%20outbreak&max=50";
-  const r=await fetchWithTimeout(url);if(!r.ok)throw new Error(`CDC Content Services HTTP ${r.status}`);
-  const j=await r.json(),raw=Array.isArray(j.results)?j.results:[];
-  const rows=raw.map(m=>{const title=clean(m.name||m.title||m.description||"CDC foodborne outbreak content"),summary=clean(m.description||m.summary||title),id=`CDC-${m.id||fingerprint([title,m.lastUpdatedDate])}`,sourceUrl=m.sourceUrl||m.targetUrl||m.url||url,date=toISO(m.lastUpdatedDate||m.datePublished);return {id,title,product:"Not yet resolved",company:"",hazard:"Foodborne outbreak / public-health signal",severity:"WATCH",status:"DETECTED",category:"CDC public-health signal",states:[],distribution:"",origin:null,lat:null,lng:null,source:"CDC Content Services",sourcePostedAt:date,updatedAt:date||nowISO(),verifiedAt:null,summary,lots:[],evidence:[{type:"AGENCY",status:"DETECTED",source:"CDC Content Services",text:summary,url:sourceUrl}],entities:[{id:`event-${id}`,type:"Incident",name:title}],links:[],workflowStep:1,rawSource:"cdc_content"}}).filter(x=>x.title.length>4);
-  if(!rows.length)throw new Error("CDC Content Services returned zero usable foodborne records");
-  return {rows:rows.slice(0,50),note:`${rows.length} usable CDC foodborne-content records retrieved`};
-}
-
 async function pullCFIA(){
   const url="https://recalls-rappels.canada.ca/en/feed/cfia-alerts-recalls";
   const r=await fetchWithTimeout(url,{accept:"application/rss+xml,application/xml,text/xml;q=0.9,*/*;q=0.8"});if(!r.ok)throw new Error(`CFIA feed HTTP ${r.status}`);
@@ -78,7 +69,10 @@ function applyUSRelevance(rows,existing){
 function mergeIncidents(existing,incoming,now){const m=new Map((existing||[]).map(x=>[x.id,x]));for(const x of incoming){const old=m.get(x.id);m.set(x.id,old?{...old,...x,firstSeenAt:old.firstSeenAt||now,lastObservedAt:now,observationCount:(old.observationCount||1)+1}:{...x,firstSeenAt:now,lastObservedAt:now,observationCount:1})}return [...m.values()].sort((a,b)=>new Date(b.lastObservedAt||b.updatedAt||0)-new Date(a.lastObservedAt||a.updatedAt||0)).slice(0,1800)}
 
 export default async()=>{
-  const started=nowISO(),tests=[['cdc_content','CDC Content Services — Foodborne Content','Federal',pullCDC],['usda_ams','USDA AMS MyMarketNews','Federal',pullUSDAAMS],['cfia_recalls','Canada Food Recalls & Safety Alerts','International',pullCFIA],['uk_fsa_alerts','UK Food Standards Agency Alerts','International',pullUKFSA]];
+  // CDC is owned by the dedicated cdc-foodborne-repair scheduled function. Keeping
+  // it out of this batch prevents the retired Content Services API from overwriting
+  // a successful current-outbreak-page health result one minute before each repair.
+  const started=nowISO(),tests=[['usda_ams','USDA AMS MyMarketNews','Federal',pullUSDAAMS],['cfia_recalls','Canada Food Recalls & Safety Alerts','International',pullCFIA],['uk_fsa_alerts','UK Food Standards Agency Alerts','International',pullUKFSA]];
   const results=await Promise.allSettled(tests.map(x=>x[3]()));let incoming=[],health=[];
   results.forEach((res,i)=>{const [id,name,family]=tests[i];if(res.status==='fulfilled'){incoming.push(...res.value.rows);health.push({id,name,family,status:'ONLINE',lastChecked:started,note:res.value.note})}else health.push({id,name,family,status:'DEGRADED',lastChecked:started,note:String(res.reason?.message||res.reason||'Unknown source error')})});
   const state=await getState();

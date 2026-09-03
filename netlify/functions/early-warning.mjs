@@ -2,7 +2,6 @@ import { getState, saveState } from "./lib/store.mjs";
 import * as cheerio from "cheerio";
 import crypto from "node:crypto";
 
-const SOURCE_IDS=["cdc_content","mn_health_food","wi_health_food"];
 const STOP=new Set("food foods outbreak outbreaks recall recalled investigation investigations active warning alert alerts product products linked possible public health illness illnesses case cases current update updated brand brands company official state states multistate detected verified signal signals department agriculture health release releases news consumers people person reported reports reporting affected advisory advice".split(" "));
 const HAZARD_STOP=new Set("salmonella listeria coli stec cyclospora botulism ebola hepatitis shigella vibrio".split(" "));
 const FOOD_RE=/\b(?:food|outbreak|recall|salmonella|listeria|e\.?\s*coli|stec|cyclospora|botulism|sprout|jalape[nñ]o|moringa|produce|lettuce|fruit|vegetable|dairy|cheese|meat|poultry|egg|seafood|formula|pepper|onion|cucumber|melon|berry|berries)\b/i;
@@ -30,19 +29,6 @@ function hazard(text=""){
 function signal({id,title,summary,source,url,state,postedAt,rawSource}){
   const hz=hazard(`${title} ${summary}`);
   return {id,title,product:title,company:"",hazard:hz,severity:/E\. coli|Listeria|Botul/i.test(hz)?"HIGH":"WATCH",status:"CORROBORATING",category:"Early-warning precursor signal",states:state?[state]:[],distribution:state||"",lat:null,lng:null,source,sourcePostedAt:postedAt,updatedAt:postedAt||new Date().toISOString(),verifiedAt:postedAt||new Date().toISOString(),summary:clean(summary).slice(0,2200),lots:[],evidence:[{type:"AGENCY",status:"VERIFIED",source,text:clean(summary).slice(0,2200),url}],entities:[{id:`event-${id}`,type:"Incident",name:title},...(state?[{id:`geo-${id}`,type:"Geography",name:state}]:[])],links:state?[[`event-${id}`,`geo-${id}`,"reported in"]]:[],workflowStep:1,rawSource,earlyWarningSignal:true};
-}
-
-async function pullCDC(){
-  const url="https://tools.cdc.gov/api/v2/resources/media?q=foodborne%20outbreak&max=50&sort=-dateModified";
-  const r=await fetchWithTimeout(url,{accept:"application/json"}); if(!r.ok)throw new Error(`CDC ${r.status}`);
-  const j=await r.json(),rows=[];
-  for(const m of (j.results||[])){
-    const title=clean(m.name||m.title||m.description||""); if(!title||!FOOD_RE.test(title+" "+clean(m.description)))continue;
-    const posted=m.lastUpdatedDate||m.dateModified||m.datePublished||null;
-    rows.push(signal({id:`CDC-EW-${m.id||hash(title+posted)}`,title,summary:clean(m.description||m.summary||title),source:"CDC Content Services",url:m.url||"https://tools.cdc.gov/api",state:null,postedAt:posted,rawSource:"cdc_content"}));
-  }
-  if(!rows.length)throw new Error("CDC early-warning query returned 0 foodborne records");
-  return {rows:rows.slice(0,50),note:`${rows.length} CDC foodborne public-health signals retrieved`};
 }
 
 async function pullMinnesota(){
@@ -100,7 +86,10 @@ function correlate(items,now){
 
 export async function runEarlyWarning(){
   const state=await getState(),now=new Date().toISOString();
-  const jobs=[{id:"cdc_content",name:"CDC Content Services",fn:pullCDC},{id:"mn_health_food",name:"Minnesota Health + Agriculture",fn:pullMinnesota},{id:"wi_health_food",name:"Wisconsin DHS",fn:pullWisconsin}];
+  // CDC current-investigation health is owned by cdc-foodborne-repair.mjs. This
+  // precursor job handles only source-specific state/local signals so it cannot
+  // overwrite CDC with a retired Content Services result.
+  const jobs=[{id:"mn_health_food",name:"Minnesota Health + Agriculture",fn:pullMinnesota},{id:"wi_health_food",name:"Wisconsin DHS",fn:pullWisconsin}];
   const results=await Promise.allSettled(jobs.map(x=>x.fn()));let incoming=[],events=[];
   const health=[...(state.sourceHealth||[])];
   for(let i=0;i<jobs.length;i++){

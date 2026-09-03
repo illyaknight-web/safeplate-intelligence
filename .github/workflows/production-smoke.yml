@@ -13,8 +13,10 @@ on:
       - 'netlify/functions/cdc-foodborne-repair.mjs'
       - 'netlify/functions/noaa-cdo.mjs'
       - 'netlify/functions/surveillance.mjs'
+      - 'netlify/functions/early-warning.mjs'
       - 'netlify/functions/external-government-surveillance.mjs'
       - 'netlify/functions/latest-intelligence.mjs'
+      - 'netlify/functions/lib/sources.mjs'
       - 'netlify/functions/lib/normalize.mjs'
       - 'site/safeplate-shell.html'
       - 'site/public-view-v1.html'
@@ -28,6 +30,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      - uses: actions/checkout@v4
+
       - name: Wait for this commit to reach production
         shell: bash
         run: |
@@ -105,6 +109,15 @@ jobs:
           assert_contains smoke/advanced.html 'humanRoot' 'Advanced singular/plural search normalization'
           assert_contains smoke/advanced.html 'Priority recalls and verified food alerts' 'Director-facing record prioritization'
           assert_contains smoke/advanced.html 'Roadmap — opt-in notifications are not active yet' 'Truthful Advanced alert roadmap'
+          assert_contains smoke/advanced.html 'Operational source portfolio' 'Advanced source portfolio'
+          assert_contains smoke/advanced.html 'SOURCE_EXPANSION' 'Advanced source expansion queue'
+          assert_contains smoke/advanced.html 'FDA Import Alerts' 'FDA import-control roadmap source'
+          assert_contains smoke/advanced.html 'NCBI Pathogen Detection' 'Laboratory genomics roadmap source'
+          assert_contains smoke/advanced.html 'Municipal pilot' 'Municipal inspection roadmap'
+          assert_contains netlify/functions/cdc-foodborne-repair.mjs 'https://www.cdc.gov/foodborne-outbreaks/outbreaks/index.html' 'Current CDC outbreak source'
+          assert_absent netlify/functions/cdc-foodborne-repair.mjs 'tools.cdc.gov/api/v2/resources/media' 'Retired CDC Content Services endpoint'
+          assert_absent netlify/functions/early-warning.mjs 'tools.cdc.gov/api/v2/resources/media' 'Retired CDC early-warning caller'
+          assert_absent netlify/functions/surveillance.mjs 'tools.cdc.gov/api/v2/resources/media' 'Retired CDC surveillance caller'
 
           curl -fsSL "$BASE/api/nass-context" -o smoke/nass-context.json
           curl -fsSL "$BASE/api/cdc-foodborne-repair" -o smoke/cdc-repair.json

@@ -1,39 +1,29 @@
 import { getState, saveState } from './lib/store.mjs';
-import { fingerprint } from './lib/normalize.mjs';
+import * as cheerio from 'cheerio';
 
 const clean=v=>String(v||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
 const nowISO=()=>new Date().toISOString();
-const fetchWithTimeout=async(url,ms=15000)=>{const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);try{return await fetch(url,{signal:c.signal,redirect:'follow',headers:{accept:'application/json','user-agent':'SAFEPLATE/1.0 (+https://safeplate-intelligence.netlify.app)'}})}finally{clearTimeout(t)}};
-const rawRows=j=>Array.isArray(j?.results)?j.results:Array.isArray(j?.results?.items)?j.results.items:Array.isArray(j?.items)?j.items:Array.isArray(j?.data)?j.data:Array.isArray(j?.data?.results)?j.data.results:[];
-const FOOD_RX=/foodborne|food safety|salmonella|listeria|e\.?\s*coli|norovirus|botulis|cyclospora|outbreak|recall/i;
+const fetchWithTimeout=async(url,ms=15000)=>{const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);try{return await fetch(url,{signal:c.signal,redirect:'follow',headers:{accept:'text/html,application/xhtml+xml,*/*;q=0.8','accept-language':'en-US,en;q=0.9','cache-control':'no-cache','user-agent':'Mozilla/5.0 (compatible; SAFEPLATE/1.0; +https://safeplate-intelligence.netlify.app)'}})}finally{clearTimeout(t)}};
+const CURRENT_URL='https://www.cdc.gov/foodborne-outbreaks/outbreaks/index.html';
 
 async function pullCDC(){
-  const queries=['foodborne outbreak','food safety outbreak','salmonella food','listeria food','E. coli food'];
-  const found=new Map(),notes=[];
-  for(const q of queries){
-    const url=`https://tools.cdc.gov/api/v2/resources/media?q=${encodeURIComponent(q)}&max=75`;
-    const r=await fetchWithTimeout(url);if(!r.ok){notes.push(`${q}: HTTP ${r.status}`);continue}
-    const j=await r.json(),items=rawRows(j);notes.push(`${q}: ${items.length}`);
-    for(const m of items){
-      const title=clean(m.name||m.title||m.description||''),summary=clean(m.description||m.summary||m.body||title),text=`${title} ${summary}`;
-      if(!title||!FOOD_RX.test(text))continue;
-      const id=`CDC-${m.id||fingerprint([title,m.lastUpdatedDate||m.datePublished||m.url])}`;
-      found.set(id,{id,title,product:'Not yet resolved',company:'',hazard:'Foodborne outbreak / public-health signal',severity:'WATCH',status:'DETECTED',category:'CDC public-health signal',states:[],distribution:'',origin:null,source:'CDC Content Services',sourcePostedAt:m.lastUpdatedDate||m.datePublished||null,updatedAt:m.lastUpdatedDate||m.datePublished||nowISO(),verifiedAt:null,summary,lots:[],evidence:[{type:'AGENCY',status:'DETECTED',source:'CDC Content Services',text:summary,url:m.sourceUrl||m.targetUrl||m.url||'https://tools.cdc.gov/api'}],entities:[{id:`event-${id}`,type:'Incident',name:title}],links:[],workflowStep:1,rawSource:'cdc_content'});
-    }
-  }
-  if(!found.size)throw new Error(`CDC multi-query validation returned zero usable foodborne records (${notes.join('; ')})`);
-  return {rows:[...found.values()].slice(0,120),note:`${found.size} usable CDC foodborne/public-health records retrieved using multiple bounded queries (${notes.join('; ')})`};
+  const r=await fetchWithTimeout(CURRENT_URL);if(!r.ok)throw new Error(`CDC Current Outbreaks HTTP ${r.status}`);
+  const html=await r.text(),$=cheerio.load(html),text=clean($('main').text()||$('body').text());
+  const count=(rx)=>Number((text.match(rx)||[])[1]||0);
+  const counts={campylobacter:count(/Campylobacter\s*:\s*(\d+)/i),ecoli:count(/E\.?\s*coli\s*:\s*(\d+)/i),listeria:count(/Listeria(?:\s+monocytogenes)?\s*:\s*(\d+)/i),salmonella:count(/Salmonella\s*:\s*(\d+)/i)};
+  const total=Object.values(counts).reduce((a,b)=>a+b,0),updated=(text.match(/Last updated:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i)||[])[1];
+  if(!total)throw new Error('CDC Current Outbreaks page returned no parsable active-investigation counts');
+  return {note:`CDC Current Outbreaks page validated; ${total} active multistate investigations — Campylobacter ${counts.campylobacter}, E. coli ${counts.ecoli}, Listeria ${counts.listeria}, Salmonella ${counts.salmonella} (${updated||'page date unavailable'}). Counts are source-health context; no product alert is created until CDC publishes one.`};
 }
-function merge(existing,incoming,now){const m=new Map((existing||[]).map(x=>[x.id,x]));for(const x of incoming){const old=m.get(x.id);m.set(x.id,old?{...old,...x,firstSeenAt:old.firstSeenAt||now,lastObservedAt:now,observationCount:(old.observationCount||1)+1}:{...x,firstSeenAt:now,lastObservedAt:now,observationCount:1})}return [...m.values()].sort((a,b)=>new Date(b.lastObservedAt||b.updatedAt||0)-new Date(a.lastObservedAt||a.updatedAt||0)).slice(0,1800)}
 
 export async function runCDCRepair(){
   const checked=nowISO(),state=await getState();let health,next=state;
   try{
     const r=await pullCDC();
-    health={id:'cdc_content',name:'CDC Content Services — Public Foodborne Content',family:'Federal',status:'ONLINE',lastChecked:checked,note:r.note};
-    next={...state,meta:{...(state.meta||{}),cdcRepairLastSync:checked},incidents:merge(state.incidents||[],r.rows,checked),sourceHealth:[...(state.sourceHealth||[]).filter(x=>x?.id!=='cdc_content'),health]};
+    health={id:'cdc_content',name:'CDC Current Multistate Foodborne Investigations',family:'Federal',status:'ONLINE',lastChecked:checked,note:r.note,url:CURRENT_URL};
+    next={...state,meta:{...(state.meta||{}),cdcRepairLastSync:checked},incidents:(state.incidents||[]).filter(x=>x?.rawSource!=='cdc_content'),sourceHealth:[...(state.sourceHealth||[]).filter(x=>x?.id!=='cdc_content'),health]};
   }catch(e){
-    health={id:'cdc_content',name:'CDC Content Services — Public Foodborne Content',family:'Federal',status:'DEGRADED',lastChecked:checked,note:String(e?.message||e||'CDC validation failed')};
+    health={id:'cdc_content',name:'CDC Current Multistate Foodborne Investigations',family:'Federal',status:'DEGRADED',lastChecked:checked,note:String(e?.message||e||'CDC validation failed'),url:CURRENT_URL};
     next={...state,meta:{...(state.meta||{}),cdcRepairLastSync:checked},sourceHealth:[...(state.sourceHealth||[]).filter(x=>x?.id!=='cdc_content'),health]};
   }
   await saveState(next);return health;
