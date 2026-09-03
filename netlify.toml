@@ -11,33 +11,39 @@
 # This prevents /unified-intelligence.html from falling through to Netlify's 404 page.
 [[redirects]]
   from = "/alerts"
-  to = "/.netlify/functions/homepage"
+  to = "/safeplate-shell.html"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/search"
-  to = "/.netlify/functions/homepage"
+  to = "/safeplate-shell.html"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/journey"
-  to = "/.netlify/functions/homepage"
+  to = "/safeplate-shell.html"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/intelligence"
-  to = "/.netlify/functions/homepage"
+  to = "/safeplate-shell.html"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/sources"
-  to = "/.netlify/functions/homepage"
+  to = "/safeplate-shell.html"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/system-status"
-  to = "/.netlify/functions/homepage"
+  to = "/safeplate-shell.html"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/unified-intelligence.html"
