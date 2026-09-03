@@ -1,6 +1,6 @@
 import { getState } from "./lib/store.mjs";
 
-const CURRENT_STATE_SCANNER_VERSION = "2.3";
+const CURRENT_STATE_SCANNER_VERSION = "2.4";
 
 async function kickStateScan(req, stateScanLastSync, scannerVersion){
   const age=stateScanLastSync?Math.floor((Date.now()-new Date(stateScanLastSync).getTime())/60000):9999;
