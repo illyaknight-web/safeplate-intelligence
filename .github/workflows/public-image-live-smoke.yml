@@ -7,6 +7,7 @@ on:
       - 'netlify.toml'
       - 'site/public-view-v1.html'
       - 'site/safeplate-shell.html'
+      - 'site/advanced-intelligence-v16.html'
       - 'site/assets/public-hero-*-release.jpg'
       - 'site/assets/public-image-manifest.json'
       - 'scripts/verify_public_release_images.py'
