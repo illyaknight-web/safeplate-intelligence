@@ -97,6 +97,8 @@ jobs:
           assert_contains smoke/public.html 'Food warnings on your phone.' 'Truthful mobile alert roadmap'
           assert_contains smoke/public.html 'id="foodInformation"' 'Public Food Information Booth'
           assert_contains smoke/public.html 'FOOD_GUIDES' 'Official food storage guide data'
+          assert_contains smoke/public.html "title:'Milk — plain or flavored'" 'USDA FoodKeeper milk guidance'
+          assert_contains smoke/public.html 'foodkeeper-app' 'USDA FoodKeeper complete-directory handoff'
           assert_contains smoke/public.html 'cold-food-storage-charts' 'Federal cold-storage source'
           assert_contains smoke/public.html 'selecting-and-serving-produce-safely' 'FDA produce-safety source'
           assert_contains smoke/advanced.html 'humanRoot' 'Advanced singular/plural search normalization'
