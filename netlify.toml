@@ -10,6 +10,36 @@
 # Explicitly route the public Advanced View URL to the Food Journey function.
 # This prevents /unified-intelligence.html from falling through to Netlify's 404 page.
 [[redirects]]
+  from = "/alerts"
+  to = "/.netlify/functions/homepage"
+  status = 200
+
+[[redirects]]
+  from = "/search"
+  to = "/.netlify/functions/homepage"
+  status = 200
+
+[[redirects]]
+  from = "/journey"
+  to = "/.netlify/functions/homepage"
+  status = 200
+
+[[redirects]]
+  from = "/intelligence"
+  to = "/.netlify/functions/homepage"
+  status = 200
+
+[[redirects]]
+  from = "/sources"
+  to = "/.netlify/functions/homepage"
+  status = 200
+
+[[redirects]]
+  from = "/system-status"
+  to = "/.netlify/functions/homepage"
+  status = 200
+
+[[redirects]]
   from = "/unified-intelligence.html"
   to = "/.netlify/functions/journey"
   status = 200

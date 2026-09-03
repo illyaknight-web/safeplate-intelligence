@@ -37,7 +37,7 @@ const publicRecord=x=>({
 
 export default async()=>{
  const s=await getState();
- const incidents=(s.incidents||[]).filter(x=>!spanish(x)&&foodRecord(x)&&isUSRelevant(x)).map(publicRecord);
+ const incidents=(s.incidents||[]).filter(x=>!x?.institutionalOnly&&!spanish(x)&&foodRecord(x)&&isUSRelevant(x)).map(publicRecord);
  return Response.json({meta:s.meta||{},incidents,investigations:s.investigations||[],changes:s.changes||[]},{headers:{"cache-control":"no-store"}})
 };
 export const config={path:"/api/incidents"};

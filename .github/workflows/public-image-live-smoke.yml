@@ -74,8 +74,11 @@ jobs:
           grep -Fq '/assets/recall-good-gather-mexican-street-corn-trail-mix.jpg' smoke/public.html
           grep -Fq '/assets/recall-taylor-diced-jalapenos.jpg' smoke/public.html
           grep -Fq "['Recall date',x.recallDate||verified?.recallDate]" smoke/public.html
-          grep -Fq 'id="recentAlertModal"' smoke/public.html
-          grep -Fq 'Recent recalls &amp; food alerts' smoke/public.html
+          grep -Fq 'id="alertStrip"' smoke/public.html
+          ! grep -Fq 'id="recentAlertModal"' smoke/public.html
+          grep -Fq 'searchBuckets' smoke/public.html
+          grep -Fq 'Related — not exact' smoke/public.html
+          grep -Fq 'id="results" aria-live="polite" hidden' smoke/public.html
           grep -Fq 'humanRoot' smoke/public.html
           grep -Fq 'Food warnings on your phone.' smoke/public.html
           grep -Fq 'id="foodInformation"' smoke/public.html

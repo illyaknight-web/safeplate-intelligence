@@ -16,6 +16,10 @@ on:
       - 'netlify/functions/early-warning.mjs'
       - 'netlify/functions/external-government-surveillance.mjs'
       - 'netlify/functions/latest-intelligence.mjs'
+      - 'netlify/functions/operational-food-sources.mjs'
+      - 'netlify/functions/operational-food-sources-scheduled.mjs'
+      - 'netlify/functions/operational-context.mjs'
+      - 'netlify/functions/state-scan-v2.mjs'
       - 'netlify/functions/lib/sources.mjs'
       - 'netlify/functions/lib/normalize.mjs'
       - 'site/safeplate-shell.html'
@@ -94,9 +98,13 @@ jobs:
           assert_contains smoke/public.html "['Recall date',x.recallDate||verified?.recallDate]" 'Recall-date presentation'
           assert_contains smoke/public.html '/assets/recall-good-gather-mexican-street-corn-trail-mix.jpg' 'Verified product photograph'
           assert_contains smoke/public.html '/assets/recall-taylor-diced-jalapenos.jpg' 'Verified Taylor product label'
-          assert_contains smoke/public.html 'id="recentAlertModal"' 'Recent recall popup'
+          assert_contains smoke/public.html 'id="alertStrip"' 'Persistent verified-alert strip'
+          assert_absent smoke/public.html 'id="recentAlertModal"' 'Automatic recall modal'
+          assert_contains smoke/public.html 'searchBuckets' 'Exact/related/historical search classification'
+          assert_contains smoke/public.html 'Related — not exact' 'Truthful related-match label'
+          assert_contains smoke/public.html 'id="results" aria-live="polite" hidden' 'Hidden initial answer panel'
           assert_absent smoke/public.html 'Exact product image not published' 'Oversized missing-photo placeholder'
-          assert_contains smoke/public.html 'not</b> a guarantee that the food is safe to consume' 'Truthful no-match safeguard'
+          assert_contains smoke/public.html 'not</b> a guarantee the food is safe' 'Truthful no-match safeguard'
           assert_contains smoke/public.html 'humanRoot' 'Human singular/plural search normalization'
           assert_contains smoke/public.html 'Food warnings on your phone.' 'Truthful mobile alert roadmap'
           assert_contains smoke/public.html 'id="foodInformation"' 'Public Food Information Booth'
@@ -114,13 +122,18 @@ jobs:
           assert_contains smoke/advanced.html 'FDA Import Alerts' 'FDA import-control roadmap source'
           assert_contains smoke/advanced.html 'NCBI Pathogen Detection' 'Laboratory genomics roadmap source'
           assert_contains smoke/advanced.html 'Municipal pilot' 'Municipal inspection roadmap'
+          assert_contains smoke/advanced.html 'id="ws-operations"' 'Institutional operational-context workspace'
           assert_contains netlify/functions/cdc-foodborne-repair.mjs 'https://www.cdc.gov/foodborne-outbreaks/outbreaks/index.html' 'Current CDC outbreak source'
           assert_absent netlify/functions/cdc-foodborne-repair.mjs 'tools.cdc.gov/api/v2/resources/media' 'Retired CDC Content Services endpoint'
           assert_absent netlify/functions/early-warning.mjs 'tools.cdc.gov/api/v2/resources/media' 'Retired CDC early-warning caller'
           assert_absent netlify/functions/surveillance.mjs 'tools.cdc.gov/api/v2/resources/media' 'Retired CDC surveillance caller'
+          assert_contains netlify/functions/state-scan-v2.mjs 'SCANNER_VERSION="2.4"' 'Direct state food-route scanner'
+          assert_contains netlify/functions/operational-food-sources.mjs 'institutionalOnly:true' 'Operational-context public segregation'
 
           curl -fsSL "$BASE/api/nass-context" -o smoke/nass-context.json
           curl -fsSL "$BASE/api/cdc-foodborne-repair" -o smoke/cdc-repair.json
+          curl -fsSL "$BASE/api/operational-food-sources" -o smoke/operational-food-sources.json
+          curl -fsSL "$BASE/api/operational-context" -o smoke/operational-context.json
           curl -fsSL "$BASE/api/system-status" -o smoke/system-status.json
           curl -fsSL "$BASE/api/source-health" -o smoke/source-health.json
           curl -fsSL "$BASE/api/state-coverage" -o smoke/state-coverage.json
@@ -147,7 +160,7 @@ jobs:
           if not rows: failures.append('no incidents returned')
           sources=health.get('sources',[]) if isinstance(health,dict) else health
           ids={s.get('id'):s for s in sources}
-          required=('fda_openfda','usda_fsis','usda_nass_quickstats','cdc_content')
+          required=('fda_openfda','usda_fsis','usda_nass_quickstats','cdc_content','fda_import_alerts','ncbi_pathogen_detection','nyc_food_inspections','chicago_food_inspections','sf_food_inspections')
           for source_id in required:
               if source_id not in ids: failures.append(f'missing source-health entry: {source_id}')
               elif not ids[source_id].get('lastChecked'): failures.append(f'source has no lastChecked: {source_id}')
