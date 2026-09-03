@@ -3,16 +3,16 @@ import * as cheerio from "cheerio";
 import crypto from "node:crypto";
 
 const STATES=["Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware","District of Columbia","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Carolina","North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington","West Virginia","Wisconsin","Wyoming"];
-const SCANNER_VERSION="2.4";
+const SCANNER_VERSION="2.5";
 // Direct, food-specific agency surfaces prevent a general state-directory outage or
 // bot challenge from erasing an otherwise valid jurisdiction check. Every route is
 // an official government page; alternates are tried only when the primary fails.
 const DIRECT_SURFACES={
- "California":["https://www.cdph.ca.gov/Programs/CEH/DFDCS/Pages/FDBPrograms/FoodSafetyProgram/FoodRecalls.aspx"],
+ "California":["https://pressreleases.cdfa.ca.gov/","https://www.cdph.ca.gov/Programs/CEH/DFDCS/Pages/FDBPrograms/FoodSafetyProgram/FoodRecalls.aspx"],
  "Delaware":["https://dhss.delaware.gov/dph/homepage/about/sections/hsp/licenses-and-permits/food-protection/food-safety/"],
  "Maine":["https://www.maine.gov/dhhs/mecdc/healthy-living/health-and-safety/food-safety/food-related-illnesses"],
- "Massachusetts":["https://www.mass.gov/info-details/food-safety-recalls-news-alerts","https://www.mass.gov/food-safety"],
- "Michigan":["https://www.michigan.gov/mdard/food-dairy/food-safety/recalls"],
+ "Massachusetts":["https://www.mass.gov/info-details/food-safety-recalls-news-alerts","https://www.mass.gov/food-safety","https://www.mass.gov/orgs/department-of-public-health"],
+ "Michigan":["https://www.michigan.gov/mdard/food-dairy/food-safety/recalls","https://www.michigan.gov/mdard/food-dairy/food-safety","https://www.michigan.gov/mdard"],
  "Montana":["https://dphhs.mt.gov/publichealth/EHFS/recalls"],
  "Nebraska":["https://nda.nebraska.gov/fscp/foods/recalls"],
  "Nevada":["https://agri.nv.gov/News/","https://www.dpbh.nv.gov/"],

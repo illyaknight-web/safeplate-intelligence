@@ -127,7 +127,7 @@ jobs:
           assert_absent netlify/functions/cdc-foodborne-repair.mjs 'tools.cdc.gov/api/v2/resources/media' 'Retired CDC Content Services endpoint'
           assert_absent netlify/functions/early-warning.mjs 'tools.cdc.gov/api/v2/resources/media' 'Retired CDC early-warning caller'
           assert_absent netlify/functions/surveillance.mjs 'tools.cdc.gov/api/v2/resources/media' 'Retired CDC surveillance caller'
-          assert_contains netlify/functions/state-scan-v2.mjs 'SCANNER_VERSION="2.4"' 'Direct state food-route scanner'
+          assert_contains netlify/functions/state-scan-v2.mjs 'SCANNER_VERSION="2.5"' 'Direct state food-route scanner'
           assert_contains netlify/functions/operational-food-sources.mjs 'institutionalOnly:true' 'Operational-context public segregation'
 
           curl -fsSL "$BASE/api/nass-context" -o smoke/nass-context.json
