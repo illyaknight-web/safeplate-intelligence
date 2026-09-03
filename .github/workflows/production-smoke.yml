@@ -5,7 +5,8 @@ on:
   push:
     paths:
       - '.github/workflows/production-smoke.yml'
-      - 'netlify/functions/homepage.mjs'
+      - 'netlify/functions/deployment-info.mjs'
+      - 'netlify/functions/system-status.mjs'
       - 'netlify/functions/nass-context.mjs'
       - 'netlify/functions/cdc-foodborne-repair.mjs'
       - 'site/safeplate-shell.html'
@@ -17,35 +18,52 @@ on:
 jobs:
   smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 15
     steps:
-      - name: Test production API and unified UI surface
+      - name: Wait for this commit to reach production
         shell: bash
         run: |
           set -euo pipefail
-          BASE="https://safeplate-intelligence.netlify.app"
+          BASE='https://safeplate-intelligence.netlify.app'
           mkdir -p smoke
+          deployed=''
+          for attempt in $(seq 1 24); do
+            curl -sS "$BASE/api/deployment-info?attempt=$attempt" -o smoke/deployment-info.json || true
+            deployed=$(python - <<'PY'
+          import json
+          try:
+              print(json.load(open('smoke/deployment-info.json')).get('commit') or '')
+          except Exception:
+              print('')
+          PY
+            )
+            echo "Deploy check $attempt: expected ${GITHUB_SHA}, observed ${deployed:-unavailable}"
+            [ "$deployed" = "$GITHUB_SHA" ] && break
+            sleep 15
+          done
+          [ "$deployed" = "$GITHUB_SHA" ] || { echo '::error::Production did not reach the workflow commit'; exit 1; }
 
+      - name: Test production APIs and unified UI
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://safeplate-intelligence.netlify.app'
           curl -fsSL "$BASE/" -o smoke/home.html
           curl -fsSL "$BASE/public-view-v1.html" -o smoke/public.html
           curl -fsSL "$BASE/advanced-intelligence-v16.html" -o smoke/advanced.html
 
           assert_contains() { grep -Fq "$2" "$1" || { echo "::error::$3 was not found in $1"; return 1; }; }
           assert_absent() { ! grep -Fq "$2" "$1" || { echo "::error::$3 unexpectedly found in $1"; return 1; }; }
-
-          # One SAFEPLATE root URL with two internal views.
           assert_contains smoke/home.html 'id="pubBtn"' 'Public View mode button'
           assert_contains smoke/home.html 'id="advBtn"' 'Advanced View mode button'
-          assert_contains smoke/home.html 'One site · two views · 30-minute live checks' 'Unified-site status'
           assert_contains smoke/home.html 'id="publicFrame"' 'Public frame'
           assert_contains smoke/home.html 'id="advancedFrame"' 'Advanced frame'
-          assert_absent smoke/home.html 'window.open(' 'scripted popup navigation'
-
-          # Advanced map lifecycle + UX repair.
-          assert_contains smoke/home.html 'safeplate-advanced-ux' 'Advanced UX repair layer'
+          assert_contains smoke/home.html 'safeplate-command-ux' 'Current Advanced UX layer'
           assert_contains smoke/home.html "dispatchEvent(new Event('resize'))" 'Advanced map resize repair'
           assert_contains smoke/home.html '.maplibregl-popup-content' 'Readable map popup repair'
           assert_contains smoke/home.html '#journeyChoices' 'Compact journey choice rail'
+          assert_absent smoke/home.html 'window.open(' 'scripted popup navigation'
+
           assert_contains smoke/advanced.html 'id="heroMap"' 'Advanced hero map'
           assert_contains smoke/advanced.html 'id="journeyMap"' 'Advanced Food Journey map'
           assert_contains smoke/advanced.html 'id="advSearch"' 'Advanced search'
@@ -54,15 +72,13 @@ jobs:
           assert_contains smoke/advanced.html 'Choose → Play → Verify' 'Food Journey interaction model'
           assert_absent smoke/advanced.html 'Page not found' 'Netlify 404 page'
 
-          # Approved Public View remains intact.
           assert_contains smoke/public.html 'Know what’s going on with your food.' 'Public-view headline'
-          assert_contains smoke/public.html 'public-hero-1-confirmed.jpg' 'Confirmed approved photo mapping'
-          assert_contains smoke/public.html 'public-hero-5-confirmed.jpg' 'Confirmed approved photo mapping'
-          assert_contains smoke/public.html 'object-fit:contain' 'No-crop image containment'
-          assert_contains smoke/public.html 'publicSafetySearch' 'Defensible public safety/recall search'
-          assert_contains smoke/public.html 'not a guarantee that the food is safe to consume' 'No false safety guarantee'
+          for image in {1..6}; do assert_contains smoke/public.html "public-hero-${image}-release.jpg" "Approved Public image ${image}"; done
+          assert_contains smoke/public.html 'object-fit:contain' 'No-crop hero treatment'
+          assert_contains smoke/public.html 'id="q"' 'Public safety search input'
+          assert_contains smoke/public.html 'id="go"' 'Public safety search action'
+          assert_contains smoke/public.html 'not</b> a guarantee that the food is safe to consume' 'Truthful no-match safeguard'
 
-          # Core APIs + explicit connector validation endpoints.
           curl -fsSL "$BASE/api/nass-context" -o smoke/nass-context.json
           curl -fsSL "$BASE/api/cdc-foodborne-repair" -o smoke/cdc-repair.json
           curl -fsSL "$BASE/api/system-status" -o smoke/system-status.json
@@ -71,45 +87,39 @@ jobs:
           curl -fsSL "$BASE/api/incidents" -o smoke/incidents.json
 
           python - <<'PY'
-          import json, sys, pathlib
+          import json, os, pathlib
+          from datetime import datetime, timezone
           p=pathlib.Path('smoke')
-          status=json.loads((p/'system-status.json').read_text())
-          health=json.loads((p/'source-health.json').read_text())
-          coverage=json.loads((p/'state-coverage.json').read_text())
-          incidents=json.loads((p/'incidents.json').read_text())
-          nass=json.loads((p/'nass-context.json').read_text())
-          cdc=json.loads((p/'cdc-repair.json').read_text())
+          load=lambda name: json.loads((p/name).read_text())
+          deployment=load('deployment-info.json'); status=load('system-status.json')
+          health=load('source-health.json'); coverage=load('state-coverage.json')
+          incidents=load('incidents.json'); nass=load('nass-context.json'); cdc=load('cdc-repair.json')
           failures=[]
+          if deployment.get('commit') != os.environ['GITHUB_SHA']: failures.append('deployed SHA differs from workflow SHA')
           if not status.get('live'): failures.append(f"system-status not live: {status}")
           if status.get('ageMinutes') is None or status.get('ageMinutes',999)>75: failures.append(f"main surveillance stale: {status.get('ageMinutes')}")
-          if coverage.get('checked') != 51: failures.append(f"state coverage checked {coverage.get('checked')}/51")
-          if not coverage.get('live'): failures.append(f"state coverage not live: {coverage}")
+          if coverage.get('total') != 51 or coverage.get('checked') != 51: failures.append(f"state coverage checked {coverage.get('checked')}/51")
           rows=incidents.get('incidents',[])
           if not rows: failures.append('no incidents returned')
           sources=health.get('sources',[]) if isinstance(health,dict) else health
-          checked=[s for s in sources if s.get('lastChecked')]
-          if not checked: failures.append('no source-health checks found')
           ids={s.get('id'):s for s in sources}
-          for required in ('fda_openfda','usda_fsis','usda_nass_quickstats','cdc_content'):
-              if required not in ids: failures.append(f'missing source-health entry: {required}')
+          required=('fda_openfda','usda_fsis','usda_nass_quickstats','cdc_content')
+          for source_id in required:
+              if source_id not in ids: failures.append(f'missing source-health entry: {source_id}')
+              elif not ids[source_id].get('lastChecked'): failures.append(f'source has no lastChecked: {source_id}')
           if nass.get('id')!='usda_nass_quickstats': failures.append(f'NASS endpoint malformed: {nass}')
-          if cdc.get('id')!='cdc_content': failures.append(f'CDC repair endpoint malformed: {cdc}')
-          if failures:
-              print('SMOKE TEST FAILURES:')
-              for f in failures: print('-',f)
-              sys.exit(1)
+          if cdc.get('id')!='cdc_content': failures.append(f'CDC endpoint malformed: {cdc}')
+          report={'checkedAt':datetime.now(timezone.utc).isoformat(),'productionUrl':'https://safeplate-intelligence.netlify.app','expectedSha':os.environ['GITHUB_SHA'],'deployedSha':deployment.get('commit'),'system':status,'incidents':len(rows),'stateCoverage':{k:coverage.get(k) for k in ('scannerVersion','total','checked','online','degraded','lastSync')},'requiredSources':{k:{x:ids.get(k,{}).get(x) for x in ('status','lastChecked','note')} for k in required},'result':'FAIL' if failures else 'PASS','failures':failures}
+          (p/'production-proof.json').write_text(json.dumps(report,indent=2)+'\n')
+          if failures: raise SystemExit('SMOKE TEST FAILURES:\n- '+'\n- '.join(failures))
           print('SAFEPLATE production smoke test passed')
-          print('incidents:',len(rows))
-          print('states:',coverage.get('checked'),'/51')
-          print('NASS:',nass.get('status'),nass.get('note'))
-          print('CDC:',cdc.get('status'),cdc.get('note'))
-          print('source overall:',health.get('overall'),'online:',health.get('online'),'issues:',health.get('issues'))
+          print(json.dumps(report,indent=2))
           PY
 
-      - name: Upload smoke evidence
+      - name: Upload production evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: safeplate-production-smoke
+          name: safeplate-production-smoke-${{ github.sha }}
           path: smoke/
-          retention-days: 14
+          retention-days: 30

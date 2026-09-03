@@ -1,0 +1,41 @@
+{
+  "version": "2026-09-03-public-release",
+  "images": [
+    {
+      "path": "/assets/public-hero-1-release.jpg",
+      "width": 1800,
+      "height": 1050,
+      "sha256": "486f795c831e88e7f35482fbb8fac6fcee29f650e50a838f1cae636647536c34"
+    },
+    {
+      "path": "/assets/public-hero-2-release.jpg",
+      "width": 1800,
+      "height": 1050,
+      "sha256": "2398e931268e03e5c7a2f9ba12be7520f31ed685ba702210fe9e98ea21c97397"
+    },
+    {
+      "path": "/assets/public-hero-3-release.jpg",
+      "width": 1200,
+      "height": 1500,
+      "sha256": "fee9fd8596a6a2f9e0fb5bf33562d076718aa33b50b5f4f57516366effed132b"
+    },
+    {
+      "path": "/assets/public-hero-4-release.jpg",
+      "width": 1200,
+      "height": 1500,
+      "sha256": "5629c4b71b6e288e11720454e937763aef9c0ede16e02e4fea784f199bcc6014"
+    },
+    {
+      "path": "/assets/public-hero-5-release.jpg",
+      "width": 1200,
+      "height": 1500,
+      "sha256": "74c85d37393581bd2173950aa8657ff4608daa896998e078882b8514c56a5985"
+    },
+    {
+      "path": "/assets/public-hero-6-release.jpg",
+      "width": 1200,
+      "height": 1500,
+      "sha256": "1d1947dcaebbbb514932797ad66fabd596016d6c6859419ca023a5762812bab2"
+    }
+  ]
+}

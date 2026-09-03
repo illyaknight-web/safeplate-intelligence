@@ -7,7 +7,9 @@ on:
       - 'netlify.toml'
       - 'site/public-view-v1.html'
       - 'site/safeplate-shell.html'
-      - 'site/assets/*.jpg'
+      - 'site/assets/public-hero-*-release.jpg'
+      - 'site/assets/public-image-manifest.json'
+      - 'scripts/verify_public_release_images.py'
       - '.github/workflows/public-image-live-smoke.yml'
   schedule:
     - cron: '18,48 * * * *'
@@ -15,84 +17,52 @@ on:
 jobs:
   image-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
-      - name: Verify live Public JPEG assets
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install image verifier
+        run: python -m pip install --disable-pip-version-check pillow
+
+      - name: Verify approved images on the deployed commit
         shell: bash
         run: |
           set -euo pipefail
           BASE='https://safeplate-intelligence.netlify.app'
-          mkdir -p smoke
-          urls=(
-            '/assets/public-main-v3.jpg'
-            '/assets/public-recall-v3.jpg'
-            '/assets/public-fresh-v3.jpg'
-            '/assets/public-store-v3.jpg'
-            '/assets/public-cook-v3.jpg'
-            '/assets/public-journey-v3.jpg'
-          )
-
-          # Netlify may still be publishing when a Git push starts this workflow.
-          # Retry the whole live check until the direct JPEG assets are visible.
-          passed=0
-          for attempt in 1 2 3 4 5 6 7 8; do
-            echo "Live image verification attempt $attempt"
-            failed=0
-            i=0
-            for path in "${urls[@]}"; do
-              i=$((i+1))
-              out="smoke/image-${i}.jpg"
-              headers="smoke/image-${i}.headers"
-              status=$(curl -sS --retry 2 --retry-delay 2 --max-redirs 0 -D "$headers" -o "$out" -w '%{http_code}' "$BASE$path?integrity=20260902-direct-jpeg") || status=000
-              bytes=$(wc -c < "$out" 2>/dev/null || echo 0)
-              type=$(file -b --mime-type "$out" 2>/dev/null || echo unknown)
-              read -r magic width height < <(python - "$out" <<'PY'
-          import sys
-          p=sys.argv[1]
+          mkdir -p smoke/assets
+          deployed=''
+          for attempt in $(seq 1 24); do
+            curl -sS "$BASE/api/deployment-info?attempt=$attempt" -o smoke/deployment-info.json || true
+            deployed=$(python - <<'PY'
+          import json
           try:
-              data=open(p,'rb').read()
-              magic='JPEG' if data[:3]==b'\xff\xd8\xff' else 'BAD'
-              w=h=0
-              i=2
-              while i+9 < len(data):
-                  if data[i] != 0xFF:
-                      i += 1; continue
-                  while i < len(data) and data[i] == 0xFF: i += 1
-                  if i >= len(data): break
-                  marker=data[i]; i += 1
-                  if marker in (0xD8,0xD9): continue
-                  if i+2 > len(data): break
-                  seg=int.from_bytes(data[i:i+2],'big')
-                  if seg < 2 or i+seg > len(data): break
-                  if marker in (0xC0,0xC1,0xC2,0xC3,0xC5,0xC6,0xC7,0xC9,0xCA,0xCB,0xCD,0xCE,0xCF):
-                      h=int.from_bytes(data[i+3:i+5],'big'); w=int.from_bytes(data[i+5:i+7],'big'); break
-                  i += seg
-              print(magic,w,h)
+              print(json.load(open('smoke/deployment-info.json')).get('commit') or '')
           except Exception:
-              print('BAD',0,0)
+              print('')
           PY
-              )
-              echo "$path -> HTTP $status | $bytes bytes | $type | $magic | ${width}x${height}"
-              if [ "$status" != '200' ] || [ "$type" != 'image/jpeg' ] || [ "$magic" != 'JPEG' ] || [ "$bytes" -lt 500000 ] || [ "$width" -lt 1000 ] || [ "$height" -lt 700 ]; then
-                failed=1
-              fi
-            done
-            if [ "$failed" -eq 0 ]; then passed=1; break; fi
+            )
+            echo "Deploy check $attempt: expected ${GITHUB_SHA}, observed ${deployed:-unavailable}"
+            [ "$deployed" = "$GITHUB_SHA" ] && break
             sleep 15
           done
-          test "$passed" -eq 1 || { echo '::error::Live Public JPEG integrity check failed'; exit 1; }
+          [ "$deployed" = "$GITHUB_SHA" ] || { echo '::error::Production did not reach the workflow commit'; exit 1; }
 
-          curl -fsS --retry 4 --retry-delay 3 "$BASE/public-view-v1.html?verify=20260902-direct-jpeg" -o smoke/public.html
+          curl -fsS "$BASE/assets/public-image-manifest.json?sha=$GITHUB_SHA" -o smoke/manifest.json
+          for image in {1..6}; do curl -fsS "$BASE/assets/public-hero-${image}-release.jpg?sha=$GITHUB_SHA" -o "smoke/assets/public-hero-${image}-release.jpg"; done
+          python scripts/verify_public_release_images.py --manifest smoke/manifest.json --assets smoke/assets --report smoke/image-proof.json
+
+          curl -fsS "$BASE/public-view-v1.html?sha=$GITHUB_SHA" -o smoke/public.html
           grep -Fq 'Know what’s going on with your food.' smoke/public.html
-          grep -Fq '/assets/public-main-v3.jpg' smoke/public.html
-          grep -Fq '/assets/public-recall-v3.jpg' smoke/public.html
-          ! grep -Fq 'public-hero-1.webp' smoke/public.html
-          echo 'SAFEPLATE Public direct-JPEG live smoke PASSED'
+          for image in {1..6}; do grep -Fq "/assets/public-hero-${image}-release.jpg" smoke/public.html; done
+          ! grep -Eq 'public-(main|recall|fresh|store|cook|journey)-v3|public-hero-[1-5]-confirmed|public-hero-[1-5]\.webp' smoke/public.html
+          echo 'SAFEPLATE approved Public image smoke PASSED'
 
-      - name: Upload image smoke evidence
+      - name: Upload image evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: safeplate-public-image-live-smoke
+          name: safeplate-public-image-smoke-${{ github.sha }}
           path: smoke/
-          retention-days: 14
+          retention-days: 30
