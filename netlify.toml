@@ -1,4 +1,5 @@
 [build]
+  command = "node scripts/write-deployment-info.mjs"
   publish = "site"
   functions = "netlify/functions"
 

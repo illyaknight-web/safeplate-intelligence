@@ -5,6 +5,8 @@ on:
   push:
     paths:
       - '.github/workflows/production-smoke.yml'
+      - 'netlify.toml'
+      - 'scripts/write-deployment-info.mjs'
       - 'netlify/functions/deployment-info.mjs'
       - 'netlify/functions/system-status.mjs'
       - 'netlify/functions/nass-context.mjs'
@@ -28,7 +30,7 @@ jobs:
           mkdir -p smoke
           deployed=''
           for attempt in $(seq 1 24); do
-            curl -sS "$BASE/api/deployment-info?attempt=$attempt" -o smoke/deployment-info.json || true
+            curl -sS "$BASE/deployment.json?attempt=$attempt" -o smoke/deployment-info.json || true
             deployed=$(python - <<'PY'
           import json
           try:

@@ -10,6 +10,7 @@ on:
       - 'site/assets/public-hero-*-release.jpg'
       - 'site/assets/public-image-manifest.json'
       - 'scripts/verify_public_release_images.py'
+      - 'scripts/write-deployment-info.mjs'
       - '.github/workflows/public-image-live-smoke.yml'
   schedule:
     - cron: '18,48 * * * *'
@@ -34,7 +35,7 @@ jobs:
           mkdir -p smoke/assets
           deployed=''
           for attempt in $(seq 1 24); do
-            curl -sS "$BASE/api/deployment-info?attempt=$attempt" -o smoke/deployment-info.json || true
+            curl -sS "$BASE/deployment.json?attempt=$attempt" -o smoke/deployment-info.json || true
             deployed=$(python - <<'PY'
           import json
           try:
