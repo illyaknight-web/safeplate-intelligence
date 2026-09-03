@@ -13,6 +13,7 @@ on:
       - 'netlify/functions/cdc-foodborne-repair.mjs'
       - 'site/safeplate-shell.html'
       - 'site/public-view-v1.html'
+      - 'site/assets/recall-*.jpg'
       - 'site/advanced-intelligence-v16.html'
   schedule:
     - cron: '12,42 * * * *'
@@ -79,6 +80,8 @@ jobs:
           assert_contains smoke/public.html 'object-fit:contain' 'No-crop hero treatment'
           assert_contains smoke/public.html 'id="q"' 'Public safety search input'
           assert_contains smoke/public.html 'id="go"' 'Public safety search action'
+          assert_contains smoke/public.html "['Recall date',x.recallDate]" 'Recall-date presentation'
+          assert_contains smoke/public.html '/assets/recall-good-gather-mexican-street-corn-trail-mix.jpg' 'Verified product photograph'
           assert_contains smoke/public.html 'not</b> a guarantee that the food is safe to consume' 'Truthful no-match safeguard'
 
           curl -fsSL "$BASE/api/nass-context" -o smoke/nass-context.json

@@ -9,6 +9,7 @@ on:
       - 'site/safeplate-shell.html'
       - 'site/advanced-intelligence-v16.html'
       - 'site/assets/public-hero-*-release.jpg'
+      - 'site/assets/recall-*.jpg'
       - 'site/assets/public-image-manifest.json'
       - 'scripts/verify_public_release_images.py'
       - 'scripts/write-deployment-info.mjs'
@@ -54,10 +55,22 @@ jobs:
           curl -fsS "$BASE/assets/public-image-manifest.json?sha=$GITHUB_SHA" -o smoke/manifest.json
           for image in {1..6}; do curl -fsS "$BASE/assets/public-hero-${image}-release.jpg?sha=$GITHUB_SHA" -o "smoke/assets/public-hero-${image}-release.jpg"; done
           python scripts/verify_public_release_images.py --manifest smoke/manifest.json --assets smoke/assets --report smoke/image-proof.json
+          curl -fsS "$BASE/assets/recall-good-gather-mexican-street-corn-trail-mix.jpg?sha=$GITHUB_SHA" -o smoke/assets/recall-good-gather-mexican-street-corn-trail-mix.jpg
+          python - <<'PY'
+          from PIL import Image
+          p='smoke/assets/recall-good-gather-mexican-street-corn-trail-mix.jpg'
+          with Image.open(p) as image:
+              image.verify()
+          with Image.open(p) as image:
+              assert image.size == (600, 600), image.size
+          PY
 
           curl -fsS "$BASE/public-view-v1.html?sha=$GITHUB_SHA" -o smoke/public.html
           grep -Fq 'Know what’s going on with your food.' smoke/public.html
           for image in {1..6}; do grep -Fq "/assets/public-hero-${image}-release.jpg" smoke/public.html; done
+          grep -Fq '/assets/recall-good-gather-mexican-street-corn-trail-mix.jpg' smoke/public.html
+          grep -Fq "['Recall date',x.recallDate]" smoke/public.html
+          grep -Fq '.pic img{width:100%;height:100%;display:block;object-fit:contain' smoke/public.html
           ! grep -Eq 'public-(main|recall|fresh|store|cook|journey)-v3|public-hero-[1-5]-confirmed|public-hero-[1-5]\.webp' smoke/public.html
           echo 'SAFEPLATE approved Public image smoke PASSED'
 
