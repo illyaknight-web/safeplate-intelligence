@@ -91,6 +91,11 @@ jobs:
           assert_contains smoke/public.html 'id="recentAlertModal"' 'Recent recall popup'
           assert_absent smoke/public.html 'Exact product image not published' 'Oversized missing-photo placeholder'
           assert_contains smoke/public.html 'not</b> a guarantee that the food is safe to consume' 'Truthful no-match safeguard'
+          assert_contains smoke/public.html 'humanRoot' 'Human singular/plural search normalization'
+          assert_contains smoke/public.html 'Food warnings on your phone.' 'Truthful mobile alert roadmap'
+          assert_contains smoke/advanced.html 'humanRoot' 'Advanced singular/plural search normalization'
+          assert_contains smoke/advanced.html 'Priority recalls and verified food alerts' 'Director-facing record prioritization'
+          assert_contains smoke/advanced.html 'Roadmap — opt-in notifications are not active yet' 'Truthful Advanced alert roadmap'
 
           curl -fsSL "$BASE/api/nass-context" -o smoke/nass-context.json
           curl -fsSL "$BASE/api/cdc-foodborne-repair" -o smoke/cdc-repair.json

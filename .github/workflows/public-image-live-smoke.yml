@@ -76,6 +76,8 @@ jobs:
           grep -Fq "['Recall date',x.recallDate||verified?.recallDate]" smoke/public.html
           grep -Fq 'id="recentAlertModal"' smoke/public.html
           grep -Fq 'Recent recalls &amp; food alerts' smoke/public.html
+          grep -Fq 'humanRoot' smoke/public.html
+          grep -Fq 'Food warnings on your phone.' smoke/public.html
           ! grep -Fq 'Exact product image not published' smoke/public.html
           grep -Fq '.pic img{width:100%;height:100%;display:block;object-fit:contain' smoke/public.html
           ! grep -Eq 'public-(main|recall|fresh|store|cook|journey)-v3|public-hero-[1-5]-confirmed|public-hero-[1-5]\.webp' smoke/public.html
