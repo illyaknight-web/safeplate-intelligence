@@ -82,6 +82,7 @@ jobs:
           grep -Fq 'FOOD_GUIDES' smoke/public.html
           grep -Fq "title:'Milk — plain or flavored'" smoke/public.html
           grep -Fq 'foodkeeper-app' smoke/public.html
+          grep -Fq 'GUIDE_NOISE' smoke/public.html
           grep -Fq 'cold-food-storage-charts' smoke/public.html
           grep -Fq 'selecting-and-serving-produce-safely' smoke/public.html
           ! grep -Fq 'Exact product image not published' smoke/public.html
