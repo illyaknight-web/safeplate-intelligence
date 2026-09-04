@@ -26,6 +26,18 @@ on:
       - 'site/public-view-v1.html'
       - 'site/assets/recall-*.jpg'
       - 'site/advanced-intelligence-v16.html'
+      - 'site/booth.html'
+      - 'site/booth.js'
+      - 'site/booth-upgrades.js'
+      - 'site/shell-v2.js'
+      - 'site/widget.html'
+      - 'site/safeplate-widget.js'
+      - 'netlify/functions/concern-report.mjs'
+      - 'netlify/functions/pantry-records.mjs'
+      - 'netlify/functions/agency-export.mjs'
+      - 'netlify/functions/integration-status.mjs'
+      - 'netlify/functions/recall-service.mjs'
+      - 'netlify/functions/feed-monitor.mjs'
   schedule:
     - cron: '12,42 * * * *'
 
@@ -67,6 +79,8 @@ jobs:
           curl -fsSL "$BASE/" -o smoke/home.html
           curl -fsSL "$BASE/public-view-v1.html" -o smoke/public.html
           curl -fsSL "$BASE/advanced-intelligence-v16.html" -o smoke/advanced.html
+          curl -fsSL "$BASE/booth" -o smoke/booth.html
+          curl -fsSL "$BASE/shell-v2.js" -o smoke/shell-v2.js
 
           assert_contains() { grep -Fq "$2" "$1" || { echo "::error::$3 was not found in $1"; return 1; }; }
           assert_absent() { ! grep -Fq "$2" "$1" || { echo "::error::$3 unexpectedly found in $1"; return 1; }; }
@@ -74,6 +88,10 @@ jobs:
           assert_contains smoke/home.html 'id="advBtn"' 'Advanced View mode button'
           assert_contains smoke/home.html 'id="publicFrame"' 'Public frame'
           assert_contains smoke/home.html 'id="advancedFrame"' 'Advanced frame'
+          assert_contains smoke/home.html '/shell-v2.js' 'Three-view shell upgrade'
+          assert_contains smoke/shell-v2.js "boothBtn" 'Booth peer tab'
+          assert_contains smoke/shell-v2.js "repeat(3,1fr)" 'Three equal view tabs'
+          assert_contains smoke/booth.html '/booth-upgrades.js' 'Booth scanner and secure workflow upgrade'
           assert_contains smoke/home.html 'safeplate-command-ux' 'Current Advanced UX layer'
           assert_contains smoke/home.html "dispatchEvent(new Event('resize'))" 'Advanced map resize repair'
           assert_contains smoke/home.html '.maplibregl-popup-content' 'Readable map popup repair'
@@ -127,7 +145,7 @@ jobs:
           assert_absent netlify/functions/cdc-foodborne-repair.mjs 'tools.cdc.gov/api/v2/resources/media' 'Retired CDC Content Services endpoint'
           assert_absent netlify/functions/early-warning.mjs 'tools.cdc.gov/api/v2/resources/media' 'Retired CDC early-warning caller'
           assert_absent netlify/functions/surveillance.mjs 'tools.cdc.gov/api/v2/resources/media' 'Retired CDC surveillance caller'
-          assert_contains netlify/functions/state-scan-v2.mjs 'SCANNER_VERSION="2.5"' 'Direct state food-route scanner'
+          assert_contains netlify/functions/state-scan-v2.mjs 'SCANNER_VERSION="2.6"' 'Direct state food-route scanner'
           assert_contains netlify/functions/operational-food-sources.mjs 'institutionalOnly:true' 'Operational-context public segregation'
 
           curl -fsSL "$BASE/api/nass-context" -o smoke/nass-context.json
@@ -141,6 +159,10 @@ jobs:
           curl -fsSL "$BASE/api/surveillance-history" -o smoke/surveillance-history.json
           curl -fsSL "$BASE/api/source-audit" -o smoke/source-audit.json
           curl -fsSL "$BASE/api/latest-intelligence" -o smoke/latest-intelligence.json
+          curl -fsSL "$BASE/api/feed-monitor" -o smoke/feed-monitor.json
+          curl -fsSL "$BASE/api/integration-status" -o smoke/integration-status.json
+          curl -fsSL "$BASE/api/recall-service?channel=school&limit=5" -o smoke/school-recall-service.json
+          curl -fsSL "$BASE/api/agency-export?format=json" -o smoke/agency-export.json
 
           python - <<'PY'
           import json, os, pathlib
@@ -151,6 +173,8 @@ jobs:
           health=load('source-health.json'); coverage=load('state-coverage.json')
           incidents=load('incidents.json'); nass=load('nass-context.json'); cdc=load('cdc-repair.json')
           history=load('surveillance-history.json'); audit=load('source-audit.json'); latest=load('latest-intelligence.json')
+          feed_monitor=load('feed-monitor.json'); integrations=load('integration-status.json')
+          school_service=load('school-recall-service.json'); agency_export=load('agency-export.json')
           failures=[]
           if deployment.get('commit') != os.environ['GITHUB_SHA']: failures.append('deployed SHA differs from workflow SHA')
           if not status.get('live'): failures.append(f"system-status not live: {status}")
@@ -173,6 +197,10 @@ jobs:
           for source_id in ('usda_ams','uk_fsa_alerts','cfia_recalls'):
               if audit_ids.get(source_id,{}).get('executionStatus')!='ONLINE': failures.append(f'{source_id} runtime validation is not ONLINE')
           if not latest.get('latest'): failures.append('latest-intelligence returned no public records')
+          if not isinstance(feed_monitor.get('alerts'),list): failures.append('feed monitor malformed')
+          if not integrations.get('integrations'): failures.append('integration status returned no rows')
+          if 'records' not in school_service: failures.append('shared school recall service malformed')
+          if 'records' not in agency_export: failures.append('agency export malformed')
           report={'checkedAt':datetime.now(timezone.utc).isoformat(),'productionUrl':'https://safeplate-intelligence.netlify.app','expectedSha':os.environ['GITHUB_SHA'],'deployedSha':deployment.get('commit'),'system':status,'incidents':len(rows),'stateCoverage':{k:coverage.get(k) for k in ('scannerVersion','total','checked','online','degraded','lastSync')},'surveillanceHistory':{'configuredCycleMinutes':history.get('configuredCycleMinutes'),'cycleCountRetained':history.get('cycleCountRetained'),'recentGaps':gaps[-2:]},'requiredSources':{k:{x:ids.get(k,{}).get(x) for x in ('status','lastChecked','note')} for k in required},'externalSources':{k:{x:audit_ids.get(k,{}).get(x) for x in ('executionStatus','lastChecked','note')} for k in ('usda_ams','uk_fsa_alerts','cfia_recalls')},'result':'FAIL' if failures else 'PASS','failures':failures}
           (p/'production-proof.json').write_text(json.dumps(report,indent=2)+'\n')
           if failures: raise SystemExit('SMOKE TEST FAILURES:\n- '+'\n- '.join(failures))
