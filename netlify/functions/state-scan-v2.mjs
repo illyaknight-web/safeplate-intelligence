@@ -3,7 +3,7 @@ import * as cheerio from "cheerio";
 import crypto from "node:crypto";
 
 const STATES=["Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware","District of Columbia","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Carolina","North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington","West Virginia","Wisconsin","Wyoming"];
-const SCANNER_VERSION="2.5";
+const SCANNER_VERSION="2.6";
 // Direct, food-specific agency surfaces prevent a general state-directory outage or
 // bot challenge from erasing an otherwise valid jurisdiction check. Every route is
 // an official government page; alternates are tried only when the primary fails.
@@ -29,7 +29,7 @@ const clean=v=>String(v||"").replace(/\s+/g," ").trim();
 const slug=v=>clean(v).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
 const idslug=v=>clean(v).toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"");
 const hash=v=>crypto.createHash("sha256").update(String(v)).digest("hex").slice(0,20);
-async function fetchPage(url,ms=9000){const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);try{return await fetch(url,{signal:c.signal,redirect:"follow",headers:{accept:"text/html,application/xhtml+xml,*/*;q=0.8","accept-language":"en-US,en;q=0.9","cache-control":"no-cache","user-agent":`Mozilla/5.0 (compatible; SAFEPLATE-StateScan/${SCANNER_VERSION}; +https://safeplate-intelligence.netlify.app)`}})}finally{clearTimeout(t)}}
+async function fetchPage(url,ms=9000){const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);try{return await fetch(url,{signal:c.signal,redirect:"follow",headers:{accept:"text/html,application/xhtml+xml,*/*;q=0.8","accept-language":"en-US,en;q=0.9","cache-control":"no-cache","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128.0 Safari/537.36"}})}finally{clearTimeout(t)}}
 function governmentish(url){try{const h=new URL(url).hostname.toLowerCase();return h.endsWith(".gov")||h.includes(".gov.")||h.endsWith(".us")||h.endsWith(".state.us")}catch{return false}}
 async function resolveHealthAgency(state){
  const directory=`https://www.usa.gov/states/${slug(state)}`;
