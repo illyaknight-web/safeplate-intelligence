@@ -8,6 +8,7 @@ on:
       - 'site/public-view-v1.html'
       - 'site/safeplate-shell.html'
       - 'site/advanced-intelligence-v16.html'
+      - 'site/shell-v2.js'
       - 'site/assets/public-hero-*-release.jpg'
       - 'site/assets/recall-*.jpg'
       - 'site/assets/public-image-manifest.json'
