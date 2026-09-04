@@ -24,6 +24,7 @@ const isUSRelevant=x=>{
  if(!INTERNATIONAL_SOURCES.has(x?.rawSource))return true;
  return ["VERIFIED","CORROBORATED"].includes(String(x?.usRelevanceStatus||"").toUpperCase());
 };
+const clinicalMetadata=x=>{const t=`${x?.title||''} ${x?.hazard||''} ${x?.summary||''} ${x?.pathogen||''}`.toLowerCase(),groups=[];if(/listeria/.test(t))groups.push('pregnant','older_adult','immunocompromised','infant');if(/salmonella|e\.?\s*coli|stec|campylobacter|botul/.test(t))groups.push('older_adult','immunocompromised','infant');if(/formula|infant|baby food/.test(t))groups.push('infant');if(/undeclared|allergen|peanut|tree nut|milk|egg|wheat|soy|sesame|shellfish/.test(t))groups.push('food_allergy');const pathogen=/listeria/.test(t)?'Listeria':/salmonella/.test(t)?'Salmonella':/e\.?\s*coli|stec/.test(t)?'E. coli/STEC':/campylobacter/.test(t)?'Campylobacter':/botul/.test(t)?'Botulism':null;return {vulnerable_population_risk:[...new Set(groups)],clinical_guidance:pathogen?{pathogen,summary:'Symptoms and severity vary. This is safety information, not a diagnosis.',urgentCare:'Seek urgent medical care for severe dehydration, bloody diarrhea, persistent high fever, confusion, breathing difficulty, weakness/paralysis, pregnancy with fever or flu-like symptoms, or symptoms in an infant, older adult, or immunocompromised person.',poisonControl:'United States Poison Control: 1-800-222-1222',emergency:'Call 911 for a life-threatening emergency.'}:null}}
 const publicRecord=x=>({
  ...x,
  title:clean(x.title||x.product||"Food safety record"),
@@ -37,7 +38,9 @@ const publicRecord=x=>({
  tefap_commodity_flag:Boolean(x.tefap_commodity_flag)||/\b(?:tefap|the emergency food assistance program|usda foods?|commodity distribution)\b/i.test(`${x.distribution||""} ${x.summary||""}`),
  upc:x.upc||x.identifiers?.find?.(v=>/^\d{8,14}$/.test(String(v)))||null,
  gtin:x.gtin||x.identifiers?.find?.(v=>/^\d{14}$/.test(String(v)))||null,
- last_synced:x.last_synced||x.lastObservedAt||x.updatedAt||null
+ last_synced:x.last_synced||x.lastObservedAt||x.updatedAt||null,
+ ...clinicalMetadata(x),
+ authority_notice:'SAFEPLATE aggregates official records and is not FDA, USDA, CDC, or a medical provider. Verify consequential decisions at the linked official source.'
 });
 
 export default async()=>{
