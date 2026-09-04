@@ -16,6 +16,18 @@
   force = true
 
 [[redirects]]
+  from = "/foodbank"
+  to = "/booth.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/widget"
+  to = "/widget.html"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/alerts"
   to = "/safeplate-shell.html"
   status = 200
@@ -67,6 +79,19 @@
   for = "/booth*"
   [headers.values]
     Permissions-Policy = "geolocation=(), camera=(self), microphone=()"
+
+[[headers]]
+  for = "/widget.html"
+  [headers.values]
+    X-Frame-Options = "ALLOWALL"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data: https:; frame-ancestors *; object-src 'none'; base-uri 'self'"
+    Access-Control-Allow-Origin = "*"
+
+[[headers]]
+  for = "/safeplate-widget.js"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Cache-Control = "public, max-age=300, must-revalidate"
 
 [[headers]]
   for = "/*"
