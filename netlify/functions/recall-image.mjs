@@ -10,6 +10,6 @@ export default async (req)=>{
     const type=r.headers.get('content-type')||'image/jpeg';
     if(!type.startsWith('image/'))return new Response('Invalid image response',{status:502});
     const body=await r.arrayBuffer();
-    return new Response(body,{status:200,headers:{'Content-Type':type,'Cache-Control':'public, max-age=86400, s-maxage=604800','Access-Control-Allow-Origin':'*'}});
+    return new Response(body,{status:200,headers:{'Content-Type':type,'Cache-Control':'public, max-age=86400, s-maxage=604800'}});
   }catch(e){return new Response('Image proxy error',{status:500});}
 };
