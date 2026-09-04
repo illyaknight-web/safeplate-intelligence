@@ -32,12 +32,17 @@ const publicRecord=x=>({
  summary:clean(x.summary||""),
  hazard:clean(x.hazard||""),
  category:clean(x.category||""),
- evidence:(x.evidence||[]).map(e=>({...e,text:clean(e.text||e.summary||""),summary:clean(e.summary||""),source:clean(e.source||e.type||"")}))
+ evidence:(x.evidence||[]).map(e=>({...e,text:clean(e.text||e.summary||""),summary:clean(e.summary||""),source:clean(e.source||e.type||"")})),
+ distribution_channel:Array.isArray(x.distribution_channel)?x.distribution_channel:[/\b(?:tefap|food bank|food pantry|usda foods?|commodity)\b/i.test(`${x.distribution||""} ${x.summary||""}`)?"foodbank_tefap":/\b(?:school|cafeteria|child nutrition)\b/i.test(`${x.distribution||""} ${x.summary||""}`)?"school":"retail"],
+ tefap_commodity_flag:Boolean(x.tefap_commodity_flag)||/\b(?:tefap|the emergency food assistance program|usda foods?|commodity distribution)\b/i.test(`${x.distribution||""} ${x.summary||""}`),
+ upc:x.upc||x.identifiers?.find?.(v=>/^\d{8,14}$/.test(String(v)))||null,
+ gtin:x.gtin||x.identifiers?.find?.(v=>/^\d{14}$/.test(String(v)))||null,
+ last_synced:x.last_synced||x.lastObservedAt||x.updatedAt||null
 });
 
 export default async()=>{
  const s=await getState();
  const incidents=(s.incidents||[]).filter(x=>!x?.institutionalOnly&&!spanish(x)&&foodRecord(x)&&isUSRelevant(x)).map(publicRecord);
- return Response.json({meta:s.meta||{},incidents,investigations:s.investigations||[],changes:s.changes||[]},{headers:{"cache-control":"no-store"}})
+ return Response.json({meta:{...(s.meta||{}),last_synced:s.meta?.lastSuccessfulRun||s.meta?.surveillanceLastSync||incidents[0]?.last_synced||null},incidents,investigations:s.investigations||[],changes:s.changes||[]},{headers:{"cache-control":"public, max-age=0, must-revalidate","netlify-cdn-cache-control":"public, durable, max-age=60, stale-while-revalidate=120"}})
 };
 export const config={path:"/api/incidents"};
