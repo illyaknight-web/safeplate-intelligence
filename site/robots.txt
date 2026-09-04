@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://safeplate-intelligence.netlify.app/sitemap.xml
-# production deploy sync 2026-08-27-2
+# production deploy sync 2026-09-04
