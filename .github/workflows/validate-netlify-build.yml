@@ -1,0 +1,22 @@
+name: Validate Netlify Build
+
+on:
+  push:
+    branches: [validate-f5e8c50]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci --ignore-scripts
+      - name: Validate Netlify configuration and build
+        run: npx --yes netlify-cli@latest build
+        env:
+          COMMIT_REF: f5e8c50ff06ba8b3162e237095c3a625201384dc
+          CONTEXT: production
+          URL: https://safeplate-intelligence.netlify.app
