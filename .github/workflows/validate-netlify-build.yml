@@ -14,6 +14,10 @@ jobs:
         with:
           node-version: '24'
       - run: npm ci --ignore-scripts
+      - name: Link validation workspace to SAFEPLATE site
+        run: |
+          mkdir -p .netlify
+          printf '{"siteId":"f70d0c21-1110-47dd-9ad9-6687da93a6e5"}\n' > .netlify/state.json
       - name: Validate Netlify configuration and build
         run: npx --yes netlify-cli@latest build
         env:
