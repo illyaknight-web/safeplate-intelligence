@@ -1,0 +1,1 @@
+(()=>{const s=document.currentScript,o=document.createElement('iframe');o.title='SAFEPLATE food recall lookup';o.src=new URL('/widget.html',s.src).href;o.loading='lazy';o.style.cssText='width:100%;max-width:680px;height:270px;border:0;border-radius:18px';s.parentNode.insertBefore(o,s.nextSibling)})();
