@@ -1,0 +1,5 @@
+import { getStore } from '@netlify/blobs';
+import { getUser } from '@netlify/identity';
+import { json } from './lib/public-safety.mjs';
+export default async function(req){const user=await getUser();if(!user)return json({error:'Staff sign-in required'},401);const store=getStore({name:'safeplate-pantry-records'}),{blobs}=await store.list({prefix:`staff/${user.id}/`});const rows=[];for(const b of blobs)rows.push(await store.get(b.key,{type:'json'}));const screened=rows.length,pounds=rows.reduce((n,x)=>n+(Number(x.quantity)||0),0),held=rows.filter(x=>/hold|destroy|return|recalled/i.test(x.disposition||'')).length;return json({generatedAt:new Date().toISOString(),period:{from:new URL(req.url).searchParams.get('from')||null,to:new URL(req.url).searchParams.get('to')||null},metrics:{itemsScreened:screened,quantityOrPoundsRecorded:pounds,recordsHeldOrEscalated:held},language:{caution:'“Recalls averted” is not claimed. This report documents screening and recorded dispositions only.'},records:rows})}
+export const config={path:'/api/funder-report'};
