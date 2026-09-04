@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - '.github/workflows/production-smoke.yml'
+      - '.github/workflows/public-image-live-smoke.yml'
       - 'netlify.toml'
       - 'scripts/write-deployment-info.mjs'
       - 'netlify/functions/deployment-info.mjs'

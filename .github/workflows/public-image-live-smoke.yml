@@ -4,6 +4,8 @@ on:
   workflow_dispatch:
   push:
     paths:
+      - '.github/workflows/production-smoke.yml'
+      - '.github/workflows/public-image-live-smoke.yml'
       - 'netlify.toml'
       - 'site/public-view-v1.html'
       - 'site/safeplate-shell.html'
@@ -15,7 +17,6 @@ on:
       - 'site/assets/public-image-manifest.json'
       - 'scripts/verify_public_release_images.py'
       - 'scripts/write-deployment-info.mjs'
-      - '.github/workflows/public-image-live-smoke.yml'
   schedule:
     - cron: '18,48 * * * *'
 
