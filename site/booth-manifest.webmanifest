@@ -1,0 +1,9 @@
+{
+  "name": "SAFEPLATE Booth Mode",
+  "short_name": "SAFEPLATE Booth",
+  "start_url": "/booth",
+  "display": "standalone",
+  "background_color": "#faf7ef",
+  "theme_color": "#07552f",
+  "description": "Low-bandwidth food recall lookup for food banks and community distribution sites."
+}
