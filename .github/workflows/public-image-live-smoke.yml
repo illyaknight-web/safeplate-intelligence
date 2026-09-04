@@ -8,6 +8,7 @@ on:
       - 'site/public-view-v1.html'
       - 'site/safeplate-shell.html'
       - 'site/advanced-intelligence-v16.html'
+      - 'site/advanced-extension.js'
       - 'site/shell-v2.js'
       - 'site/assets/public-hero-*-release.jpg'
       - 'site/assets/recall-*.jpg'
@@ -70,6 +71,7 @@ jobs:
           PY
 
           curl -fsS "$BASE/public-view-v1.html?sha=$GITHUB_SHA" -o smoke/public.html
+          curl -fsS "$BASE/advanced-extension.js?sha=$GITHUB_SHA" -o smoke/advanced-extension.js
           grep -Fq 'Know what’s going on with your food.' smoke/public.html
           for image in {1..6}; do grep -Fq "/assets/public-hero-${image}-release.jpg" smoke/public.html; done
           grep -Fq '/assets/recall-good-gather-mexican-street-corn-trail-mix.jpg' smoke/public.html
@@ -90,7 +92,9 @@ jobs:
           grep -Fq 'cold-food-storage-charts' smoke/public.html
           grep -Fq 'selecting-and-serving-produce-safely' smoke/public.html
           ! grep -Fq 'Exact product image not published' smoke/public.html
-          grep -Fq '.pic img{width:100%;height:100%;display:block;object-fit:contain' smoke/public.html
+          grep -Fq '.pic img{width:100%;height:100%;object-fit:cover' smoke/public.html
+          grep -Fq '.pic{height:260px' smoke/public.html
+          grep -Fq 'safeplate-static-map-sizing-repair' smoke/advanced-extension.js
           ! grep -Eq 'public-(main|recall|fresh|store|cook|journey)-v3|public-hero-[1-5]-confirmed|public-hero-[1-5]\.webp' smoke/public.html
           echo 'SAFEPLATE approved Public image smoke PASSED'
 

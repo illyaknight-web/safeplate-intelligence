@@ -1,4 +1,8 @@
 (()=>{'use strict';
+const mapRepair=document.createElement('style');
+mapRepair.id='safeplate-static-map-sizing-repair';
+mapRepair.textContent='#heroMap,#journeyMap{position:absolute!important;inset:0!important;width:100%!important;height:100%!important}#heroMap>svg,#journeyMap>svg{display:block!important;width:100%!important;height:100%!important;opacity:1!important}';
+document.head.appendChild(mapRepair);
 const modules=document.querySelector('.modules'),shell=document.querySelector('.shell');
 if(!modules||!shell||document.getElementById('ws-trends'))return;
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));

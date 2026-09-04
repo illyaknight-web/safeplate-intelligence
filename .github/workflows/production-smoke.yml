@@ -26,6 +26,7 @@ on:
       - 'site/public-view-v1.html'
       - 'site/assets/recall-*.jpg'
       - 'site/advanced-intelligence-v16.html'
+      - 'site/advanced-extension.js'
       - 'site/booth.html'
       - 'site/booth.js'
       - 'site/booth-upgrades.js'
@@ -104,6 +105,7 @@ jobs:
           assert_contains smoke/advanced.html 'id="trackSearch"' 'Track Product search'
           assert_contains smoke/advanced.html 'No invented origins or routes' 'Provenance safeguard'
           assert_contains smoke/advanced.html 'Choose → Play → Verify' 'Food Journey interaction model'
+          assert_contains site/advanced-extension.js 'safeplate-static-map-sizing-repair' 'Visible static U.S. fallback sizing'
           assert_contains smoke/advanced.html 'id="journeyPlay"' 'One-click Food Journey control'
           assert_contains smoke/advanced.html '1 of 3 · Upstream evidence' 'Guided Food Journey sequence'
           assert_absent smoke/advanced.html 'Page not found' 'Netlify 404 page'
@@ -111,6 +113,7 @@ jobs:
           assert_contains smoke/public.html 'Know what’s going on with your food.' 'Public-view headline'
           for image in {1..6}; do assert_contains smoke/public.html "public-hero-${image}-release.jpg" "Approved Public image ${image}"; done
           assert_contains smoke/public.html 'object-fit:contain' 'No-crop hero treatment'
+          assert_contains smoke/public.html '.pic img{width:100%;height:100%;object-fit:cover' 'Full-bleed feature-card photographs'
           assert_contains smoke/public.html 'id="q"' 'Public safety search input'
           assert_contains smoke/public.html 'id="go"' 'Public safety search action'
           assert_contains smoke/public.html "['Recall date',x.recallDate||verified?.recallDate]" 'Recall-date presentation'
