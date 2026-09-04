@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/illyaknight-web/safeplate-intelligence/blob/main/contracts/safeplate-veriscope-batch-v1.schema.json",
+  "title": "SAFEPLATE to VERISCOPE shadow batch v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["cycle_id", "mode", "contract_version", "producer", "created_at", "records"],
+  "properties": {
+    "cycle_id": {"type": "string", "format": "uuid"},
+    "mode": {"const": "SHADOW"},
+    "contract_version": {"const": "safeplate.veriscope.batch.v1"},
+    "producer": {"const": "SAFEPLATE"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "records": {"type": "array", "maxItems": 250, "items": {"$ref": "#/$defs/record"}}
+  },
+  "$defs": {
+    "record": {
+      "type": "object",
+      "required": ["safeplate_record_id", "schema_version", "record_type", "intelligence_class", "source", "product", "evidence", "lineage"],
+      "properties": {
+        "safeplate_record_id": {"type": "string", "maxLength": 180},
+        "schema_version": {"const": "safeplate.veriscope.record.v1"},
+        "record_type": {"type": "string"},
+        "intelligence_class": {"enum": ["OFFICIAL", "CORRELATED", "EMERGING"]},
+        "source": {"type": "string"},
+        "source_record_id": {"type": "string"},
+        "source_url": {"type": ["string", "null"], "format": "uri"},
+        "published_at": {"type": ["string", "null"]},
+        "retrieved_at": {"type": ["string", "null"]},
+        "updated_at": {"type": ["string", "null"]},
+        "organization": {"type": "object"},
+        "facility": {"type": ["object", "null"]},
+        "product": {"type": "object"},
+        "lot": {"type": "array"},
+        "distribution": {"type": "object"},
+        "hazard": {"type": "string"},
+        "status": {"type": "string"},
+        "evidence": {"type": "array", "maxItems": 25},
+        "lineage": {"type": "object"}
+      }
+    }
+  }
+}

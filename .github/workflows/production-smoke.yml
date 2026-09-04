@@ -37,6 +37,10 @@ on:
       - 'netlify/functions/pantry-records.mjs'
       - 'netlify/functions/agency-export.mjs'
       - 'netlify/functions/integration-status.mjs'
+      - 'netlify/functions/veriscope-bridge-scheduled.mjs'
+      - 'netlify/functions/veriscope-bridge-status.mjs'
+      - 'netlify/functions/lib/veriscope-bridge.mjs'
+      - 'contracts/safeplate-veriscope-batch-v1.schema.json'
       - 'netlify/functions/recall-service.mjs'
       - 'netlify/functions/feed-monitor.mjs'
   schedule:
@@ -148,7 +152,14 @@ jobs:
           assert_absent netlify/functions/cdc-foodborne-repair.mjs 'tools.cdc.gov/api/v2/resources/media' 'Retired CDC Content Services endpoint'
           assert_absent netlify/functions/early-warning.mjs 'tools.cdc.gov/api/v2/resources/media' 'Retired CDC early-warning caller'
           assert_absent netlify/functions/surveillance.mjs 'tools.cdc.gov/api/v2/resources/media' 'Retired CDC surveillance caller'
-          assert_contains netlify/functions/state-scan-v2.mjs 'SCANNER_VERSION="2.6"' 'Direct state food-route scanner'
+          assert_contains netlify/functions/state-scan-v2.mjs 'SCANNER_VERSION="2.7"' 'Direct state food-route scanner'
+          assert_contains netlify/functions/state-scan-v2.mjs 'article-sitemap.xml' 'Arkansas official sitemap recovery route'
+          assert_contains netlify/functions/state-scan-v2.mjs 'department-of-public-health/news' 'Massachusetts official news recovery route'
+          assert_contains netlify/functions/veriscope-bridge-scheduled.mjs "schedule:'*/15 * * * *'" 'Independent 15-minute VERISCOPE shadow cycle'
+          assert_contains netlify/functions/lib/veriscope-bridge.mjs "mode:'SHADOW'" 'VERISCOPE shadow-mode safety boundary'
+          assert_contains netlify/functions/lib/veriscope-bridge.mjs "VERISCOPE_BRIDGE_ENABLED" 'VERISCOPE bridge kill switch'
+          assert_contains netlify/functions/lib/veriscope-bridge.mjs 'previous_hash' 'Tamper-evident VERISCOPE audit chain'
+          assert_contains netlify/functions/feed-monitor.mjs 'SCHEMA_CHANGE' 'Feed schema-change alerting'
           assert_contains netlify/functions/operational-food-sources.mjs 'institutionalOnly:true' 'Operational-context public segregation'
 
           curl -fsSL "$BASE/api/nass-context" -o smoke/nass-context.json
@@ -166,6 +177,7 @@ jobs:
           curl -fsSL "$BASE/api/integration-status" -o smoke/integration-status.json
           curl -fsSL "$BASE/api/recall-service?channel=school&limit=5" -o smoke/school-recall-service.json
           curl -fsSL "$BASE/api/agency-export?format=json" -o smoke/agency-export.json
+          curl -fsSL "$BASE/api/veriscope-bridge-status" -o smoke/veriscope-bridge-status.json
 
           python - <<'PY'
           import json, os, pathlib
@@ -178,6 +190,7 @@ jobs:
           history=load('surveillance-history.json'); audit=load('source-audit.json'); latest=load('latest-intelligence.json')
           feed_monitor=load('feed-monitor.json'); integrations=load('integration-status.json')
           school_service=load('school-recall-service.json'); agency_export=load('agency-export.json')
+          veriscope=load('veriscope-bridge-status.json')
           failures=[]
           if deployment.get('commit') != os.environ['GITHUB_SHA']: failures.append('deployed SHA differs from workflow SHA')
           if not status.get('live'): failures.append(f"system-status not live: {status}")
@@ -204,6 +217,8 @@ jobs:
           if not integrations.get('integrations'): failures.append('integration status returned no rows')
           if 'records' not in school_service: failures.append('shared school recall service malformed')
           if 'records' not in agency_export: failures.append('agency export malformed')
+          if veriscope.get('mode') != 'SHADOW': failures.append('VERISCOPE bridge is not isolated in shadow mode')
+          if 'SAFEPLATE remains operational' not in veriscope.get('failureIsolation',''): failures.append('VERISCOPE failure-isolation statement missing')
           report={'checkedAt':datetime.now(timezone.utc).isoformat(),'productionUrl':'https://safeplate-intelligence.netlify.app','expectedSha':os.environ['GITHUB_SHA'],'deployedSha':deployment.get('commit'),'system':status,'incidents':len(rows),'stateCoverage':{k:coverage.get(k) for k in ('scannerVersion','total','checked','online','degraded','lastSync')},'surveillanceHistory':{'configuredCycleMinutes':history.get('configuredCycleMinutes'),'cycleCountRetained':history.get('cycleCountRetained'),'recentGaps':gaps[-2:]},'requiredSources':{k:{x:ids.get(k,{}).get(x) for x in ('status','lastChecked','note')} for k in required},'externalSources':{k:{x:audit_ids.get(k,{}).get(x) for x in ('executionStatus','lastChecked','note')} for k in ('usda_ams','uk_fsa_alerts','cfia_recalls')},'result':'FAIL' if failures else 'PASS','failures':failures}
           (p/'production-proof.json').write_text(json.dumps(report,indent=2)+'\n')
           if failures: raise SystemExit('SMOKE TEST FAILURES:\n- '+'\n- '.join(failures))
