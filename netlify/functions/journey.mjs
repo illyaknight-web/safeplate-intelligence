@@ -1,6 +1,6 @@
 export default async (req) => {
   const origin = new URL(req.url).origin;
-  const r = await fetch(`${origin}/unified-intelligence-v12.html`, { headers: { accept: "text/html" } });
+  const r = await fetch(`${origin}/advanced-intelligence-v16.html`, { headers: { accept: "text/html" } });
   if (!r.ok) return new Response("SAFEPLATE Food Journey unavailable", { status: 502 });
 
   let html = await r.text();
