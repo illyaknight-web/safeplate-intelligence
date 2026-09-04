@@ -44,11 +44,27 @@ function parseStates(v=""){
 
 function cleanPlace(parts){return parts.map(v=>String(v||"").trim()).filter(Boolean).join(", ")}
 
+function identifiers(r={}){
+  const text=[r.product_description,r.field_product_items,r.product_items,r.code_info,r.more_code_info].filter(Boolean).join(" ");
+  const upc=[...text.matchAll(/\b(?:UPC|GTIN)\s*[:#-]?\s*([0-9][0-9\s-]{7,17})\b/gi)].map(m=>m[1].replace(/\D/g,"")).filter(v=>v.length>=8&&v.length<=14);
+  return [...new Set(upc)];
+}
+
+function channelMetadata(text=""){
+  const t=String(text).toLowerCase(),channels=[];
+  if(/\b(?:tefap|the emergency food assistance program|usda foods?|commodity distribution|food bank|food pantry)\b/.test(t))channels.push("foodbank_tefap");
+  if(/\b(?:school|school district|cafeteria|child nutrition|national school lunch)\b/.test(t))channels.push("school");
+  if(/\b(?:hospital|nursing home|institution|restaurant|food service)\b/.test(t))channels.push("institutional");
+  if(/\b(?:retail|store|supermarket|grocery|consumer|sold at|distributed to)\b/.test(t)||!channels.length)channels.push("retail");
+  return {distribution_channel:[...new Set(channels)],tefap_commodity_flag:channels.includes("foodbank_tefap")};
+}
+
 export function normalizeFDA(r){
   const id=`FDA-${r.recall_number||fingerprint([r.recalling_firm,r.product_description,r.recall_initiation_date])}`;
   const text=[r.reason_for_recall,r.product_description].filter(Boolean).join(" ");
   const distribution=r.distribution_pattern||"";
   const firmPlace=cleanPlace([r.city,r.state,r.country]);
+  const ids=identifiers(r),program=channelMetadata(`${distribution} ${r.product_description||""} ${r.reason_for_recall||""}`);
   return {
     id,
     title:r.product_description||"FDA food enforcement record",
@@ -67,6 +83,11 @@ export function normalizeFDA(r){
     updatedAt:toISO(r.report_date||r.recall_initiation_date),
     verifiedAt:toISO(r.report_date||r.recall_initiation_date),
     recallDate:toISO(r.recall_initiation_date||r.report_date),
+    last_synced:new Date().toISOString(),
+    upc:ids[0]||null,
+    gtin:ids.find(v=>v.length===14)||null,
+    identifiers:ids,
+    ...program,
     imageUrl:r.imageUrl||r.image_url||r.photoUrl||r.thumbnailUrl||null,
     images:Array.isArray(r.images)?r.images:[],
     summary:r.reason_for_recall||"",
@@ -94,6 +115,7 @@ export function normalizeFSIS(r){
   const distribution=r.field_states||r.states||r.distribution||"";
   const establishment=r.field_establishment||r.establishment||"";
   const id=`FSIS-${String(rid).replace(/\s+/g,"-")}`;
+  const ids=identifiers(r),program=channelMetadata(`${distribution} ${r.field_product_items||r.product_items||""} ${reason}`);
   return {
     id,title,
     product:r.field_product_items||r.product_items||title,
@@ -111,6 +133,11 @@ export function normalizeFSIS(r){
     updatedAt:toISO(r.field_recall_date||r.recall_date||new Date()),
     verifiedAt:toISO(r.field_recall_date||r.recall_date||new Date()),
     recallDate:toISO(r.field_recall_date||r.recall_date||new Date()),
+    last_synced:new Date().toISOString(),
+    upc:ids[0]||null,
+    gtin:ids.find(v=>v.length===14)||null,
+    identifiers:ids,
+    ...program,
     imageUrl:r.imageUrl||r.image_url||r.photoUrl||r.thumbnailUrl||null,
     images:Array.isArray(r.images)?r.images:[],
     summary:reason,
