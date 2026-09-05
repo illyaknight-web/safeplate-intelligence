@@ -12,7 +12,7 @@ boothBtn.addEventListener('click',()=>{pub.className='viewFrame inactive';adv.cl
 if(location.pathname==='/booth')boothBtn.click();
 addEventListener('popstate',()=>{if(location.pathname==='/booth')boothBtn.click();else hideBooth()});
 
-/* Surgical public-recall patch — preserve Public, Booth and Advanced exactly as shipped. */
+/* Recovery-candidate recall rendering. Production remains frozen. */
 const proxy=u=>'/.netlify/functions/recall-image?url='+encodeURIComponent(u);
 const CURRENT_RECALLS=[
  {date:'September 3, 2026',title:'Great Value Organic Triple Berry Blend',reason:'Possible E. coli O145 contamination',image:proxy('https://i5.walmartimages.com/asr/3f94e1f8-bc6c-4648-83d6-a4cc27a51aed.96c84f4ae3ec722e2fa9f222bf08a224.jpeg'),alt:'Great Value Organic Triple Berry Blend 10 oz package',url:'https://www.fda.gov/safety/recalls-market-withdrawals-safety-alerts/frutas-y-hortalizas-del-sur-sa-expands-recall-include-one-lot-great-value-frozen-organic-triple'},
@@ -40,7 +40,7 @@ function patchPublicRecalls(){
       }`;
     d.head.appendChild(st);
   }
-  const render=()=>{box.innerHTML=CURRENT_RECALLS.map(r=>`<article class="alertItem"><img src="${r.image}" alt="${r.alt}" loading="eager" decoding="async"><div><small>Recall date · ${r.date}</small><b>${r.title}</b><div style="margin-top:6px;color:#5a665d;font-size:11px;line-height:1.35">${r.reason}</div><a href="${r.url}" target="_blank" rel="noopener">Verify at official source</a></div></article>`).join('')};
+  const render=()=>{box.innerHTML=CURRENT_RECALLS.map(r=>`<article class="alertItem"><img src="${r.image}" alt="${r.alt}" loading="eager" decoding="async" onerror="this.style.display='none';this.nextElementSibling.hidden=false"><div class="alertThumbMissing" hidden>Official product photo unavailable</div><div><small>Recall date · ${r.date}</small><b>${r.title}</b><div style="margin-top:6px;color:#5a665d;font-size:11px;line-height:1.35">${r.reason}</div><a href="${r.url}" target="_blank" rel="noopener">Verify at official source</a></div></article>`).join('')};
   render();
   if(!dialog.dataset.safeplateCurrentFive){dialog.dataset.safeplateCurrentFive='1';new MutationObserver(()=>{if(!dialog.hidden){render();const items=dialog.querySelector('.alertItems');if(items)items.scrollTop=0}}).observe(dialog,{attributes:true,attributeFilter:['hidden']})}
  }catch(e){console.warn('SAFEPLATE current-recall patch skipped',e)}
