@@ -13,7 +13,7 @@ const buttons={
 if(!switcher||Object.values(frames).some(x=>!x)||Object.values(buttons).some(x=>!x))return;
 
 const style=document.createElement('style');
-style.textContent='.viewSwitch{grid-template-columns:repeat(3,minmax(0,1fr))!important}.headerMeta{font-size:0}.headerMeta:before{content:"One site · three views · 30-minute live checks";font-size:10px}@media(max-width:760px){.brand{padding-right:0!important}.headerMeta{display:none!important}.viewSwitch button{font-size:12px!important;padding:12px 5px!important}}';
+style.textContent='.viewSwitch{grid-template-columns:repeat(3,1fr)!important}.headerMeta{font-size:0}.headerMeta:before{content:"One site · three views · 30-minute live checks";font-size:10px}@media(max-width:760px){.brand{padding-right:0!important}.headerMeta{display:none!important}.viewSwitch button{font-size:12px!important;padding:12px 5px!important}}';
 document.head.appendChild(style);
 
 function childHeaderless(frame){
