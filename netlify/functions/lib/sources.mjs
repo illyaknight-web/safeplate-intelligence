@@ -1,5 +1,6 @@
 export const SOURCE_REGISTRY = [
   {id:"fda_openfda",name:"FDA openFDA Food Enforcement",family:"Federal",kind:"api",active:true,authority:true,url:"https://api.fda.gov/food/enforcement.json"},
+  {id:"fda_recall_announcements",name:"FDA Current Food Recall Announcements",family:"Federal",kind:"official-web-data",active:true,authority:true,url:"https://www.fda.gov/food/recalls-outbreaks-emergencies/recalls-foods-dietary-supplements",note:"Current FDA food recall announcements, including official product photographs when published; complements enforcement data that can lag company announcements."},
   {id:"fda_outbreaks",name:"FDA Active Foodborne Outbreak Investigations",family:"Federal",kind:"web",active:true,authority:true,url:"https://www.fda.gov/food/outbreaks-foodborne-illness/investigations-foodborne-illness-outbreaks"},
   {id:"fda_food_events",name:"FDA Food Adverse Events",family:"Federal",kind:"api",active:true,authority:true,url:"https://api.fda.gov/food/event.json",note:"Optional FDA_API_KEY increases rate limits"},
   {id:"usda_fsis",name:"USDA FSIS Recall / Public Health Alerts",family:"Federal",kind:"api+bridge",active:true,authority:true,url:"https://www.fsis.usda.gov/fsis/api/recall/v/1"},

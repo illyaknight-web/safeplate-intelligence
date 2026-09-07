@@ -121,6 +121,33 @@ async function pullFDA(){
  return (j.results||[]).map(normalizeFDA);
 }
 
+export async function pullFDARecallAnnouncements(){
+ const listing="https://www.fda.gov/food/recalls-outbreaks-emergencies/recalls-foods-dietary-supplements";
+ const r=await timeoutFetch(listing,{accept:"text/html,application/xhtml+xml,*/*;q=0.8"});
+ if(!r.ok)throw new Error(`FDA recall announcements ${r.status}`);
+ const $=cheerio.load(await r.text()),links=[];
+ $("article.lcds-card h3 a[href]").each((_,a)=>{
+   const href=$(a).attr("href"),title=cleanText($(a).text());
+   if(!href||!title||!/recall/i.test(title))return;
+   const url=new URL(href,listing).toString();if(!links.some(x=>x.url===url))links.push({url,title});
+ });
+ if(!links.length)throw new Error("FDA recall-announcement listing returned no recall cards; page structure may have changed");
+ const records=await Promise.all(links.slice(0,8).map(async item=>{
+   const detail=await timeoutFetch(item.url,{accept:"text/html,application/xhtml+xml,*/*;q=0.8"});
+   if(!detail.ok)throw new Error(`FDA recall detail ${detail.status}`);
+   const $$=cheerio.load(await detail.text());
+   const description=label=>cleanText($$("dt").filter((_,el)=>cleanText($$(el).text()).toLowerCase().startsWith(label.toLowerCase())).first().next("dd").text());
+   const date=description("Company Announcement Date")||cleanText($$("time").first().attr("datetime"));
+   const company=description("Company Name"),brand=description("Brand Name"),product=description("Product Description")||item.title,reason=description("Reason for Announcement");
+   const announcement=cleanText($$("#recall-announcement").text())||cleanText($$("main").text()).slice(0,5000);
+   const images=[];
+   $$("#recall-photos img").each((_,img)=>{const raw=$$(img).attr("src")||$$(img).attr("data-src");if(!raw)return;const url=new URL(raw,item.url).toString();if(!images.some(x=>x.url===url))images.push({url,caption:cleanText($$(img).attr("alt"))||"Official FDA product photograph",source:"U.S. Food and Drug Administration",verified:true})});
+   const normalized=normalizeFDA({recall_number:`ANN-${fingerprint([item.url])}`,recalling_firm:company,product_description:[brand,product].filter(Boolean).join(" — "),reason_for_recall:reason||item.title,distribution_pattern:announcement,status:"Ongoing",report_date:date,recall_initiation_date:date,imageUrl:images[0]?.url||null,images});
+   return {...normalized,title:item.title,product:[brand,product].filter(Boolean).join(" — ")||item.title,company,brand,hazard:normalized.hazard,summary:reason||announcement.slice(0,1200),source:"FDA Recall Announcement",rawSource:"fda_recall_announcements",sourceUrl:item.url,imageUrl:images[0]?.url||null,images,evidence:[...(normalized.evidence||[]).map(e=>e.type==="AGENCY"?{...e,source:"U.S. Food and Drug Administration",url:item.url,text:reason||item.title}:e),...(images.length?[{type:"PRODUCT_IMAGE",status:"VERIFIED",source:"U.S. Food and Drug Administration",text:`${images.length} official product photograph${images.length===1?"":"s"} published with the recall announcement.`,url:item.url}]:[])]};
+ }));
+ return {rows:records,note:`${records.length} current official FDA food recall announcements retrieved; ${records.reduce((n,x)=>n+(x.images?.length||0),0)} official product photographs indexed`};
+}
+
 async function pullFSIS(){
  const apiUrl="https://www.fsis.usda.gov/fsis/api/recall/v/1";
  try{
@@ -339,6 +366,7 @@ async function pullUKFSA(){
 
 async function runSource(source){
  if(source.id==="fda_openfda")return {source,rows:await pullFDA()};
+ if(source.id==="fda_recall_announcements")return {source,...await pullFDARecallAnnouncements()};
  if(source.id==="usda_fsis"){const x=await pullFSIS();return {source,...x}};
  if(source.id==="fda_outbreaks"){const x=await pullFDAOutbreaks();return {source,...x}};
  if(source.id==="fda_food_events")return {source,rows:await pullFDAFoodEvents()};
