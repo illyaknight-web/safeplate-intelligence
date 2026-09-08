@@ -1,4 +1,4 @@
-name: Fix Public current recall dialog
+name: Stabilize current recall presentation
 on:
   push:
     paths:
@@ -7,43 +7,109 @@ on:
 permissions:
   contents: write
 jobs:
-  repair-public-recalls:
+  stabilize-recalls:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Remove photo-only recall gate and preserve 45-day rule
+
+      - name: Make recall service the single current-recall authority
         run: |
           python - <<'PY'
           from pathlib import Path
+
+          # Main embedded shell: use the 45-day backend recall service, show every
+          # returned current recall, and emphasize only the actual food/product.
+          p=Path('site/shell-v2.js')
+          s=p.read_text()
+
+          old="const p=frame.contentWindow.fetch('/api/recall-photo?mode=meta&source='+encodeURIComponent(u),{cache:'no-store'}).then(async r=>r.ok?await r.json():null).catch(()=>null);"
+          new="const p=String(x?.rawSource||'')==='fda_recall_announcements'?frame.contentWindow.fetch('/api/recall-photo?mode=meta&source='+encodeURIComponent(u),{cache:'no-store'}).then(async r=>r.ok?await r.json():null).catch(()=>null):Promise.resolve(null);"
+          if old not in s: raise SystemExit('shell officialMeta fragment not found')
+          s=s.replace(old,new)
+
+          old="mark.style.cssText='font-weight:900;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px';"
+          new="mark.style.cssText='color:#a63a2a;font-weight:900;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px';"
+          if old not in s: raise SystemExit('shell emphasis style fragment not found')
+          s=s.replace(old,new)
+
+          old="context.style.cssText='display:block;color:#a63a2a;font-weight:400;line-height:1.28;margin-top:3px';appendEmphasizedTitle(context,title,[store,food]);"
+          new="context.style.cssText='display:block;color:#17221b;font-weight:400;line-height:1.28;margin-top:3px';appendEmphasizedTitle(context,title,[food]);"
+          if old not in s: raise SystemExit('shell title emphasis fragment not found')
+          s=s.replace(old,new)
+
+          old="async function refresh(){try{const r=await frame.contentWindow.fetch('/api/incidents',{cache:'no-store'});if(!r.ok)throw Error(String(r.status));const j=await r.json(),rows=Array.isArray(j)?j:(j.incidents||j.items||j.records||[]),candidates=rows.filter(x=>isRecallEvent(x)&&!/(terminated|resolved|closed|retracted)/i.test(String(x?.status||''))).sort((a,b)=>sourceRecordTime(b)-sourceRecordTime(a)).slice(0,18);"
+          new="async function refresh(){try{const r=await frame.contentWindow.fetch('/api/recall-service?q=current&limit=100',{cache:'no-store'});if(!r.ok)throw Error(String(r.status));const j=await r.json(),rows=Array.isArray(j)?j:(j.records||[]),candidates=rows.filter(x=>isRecallEvent(x)&&!/(terminated|resolved|closed|retracted)/i.test(String(x?.status||''))).sort((a,b)=>sourceRecordTime(b)-sourceRecordTime(a));"
+          if old not in s: raise SystemExit('shell recall fetch fragment not found')
+          s=s.replace(old,new)
+
+          old="const selected=current.slice(0,6);"
+          new="const selected=current;"
+          if old not in s: raise SystemExit('shell six-record cap not found')
+          s=s.replace(old,new)
+
+          p.write_text(s)
+
+          # Native Public View: remove the six-card cap as well so the direct view
+          # cannot disagree with the embedded view.
           p=Path('site/public-view-v1.html')
           s=p.read_text()
-          replacements={
-            "(raw.startsWith('state_')&&productImage(x)&&/\\brecall\\b/i.test(t))":"(raw.startsWith('state_')&&/\\brecall\\b/i.test(t))",
-            "async function openPicturedRecallDialog(auto=false){await load();const box=document.getElementById('currentRecallItems'),current=rows.filter(x=>isCurrent(x)&&isRecallEvent(x)&&productImage(x)).sort((a,b)=>recordDate(b)-recordDate(a)).slice(0,6);box.innerHTML=current.length?current.map(recallDialogItem).join(''):'<div class=\"notice\"><strong>No current recall with a verified product photograph is available.</strong><br>SAFEPLATE will not use a generic or invented image for an exact recalled product.</div>';document.getElementById('currentRecallDialog').hidden=false;if(auto)sessionStorage.setItem('safeplate-recall-window-seen','1')}":"async function openCurrentRecallDialog(auto=false){await load();const box=document.getElementById('currentRecallItems'),current=rows.filter(x=>isCurrent(x)&&isRecallEvent(x)).sort((a,b)=>recordDate(b)-recordDate(a)).slice(0,6);box.innerHTML=current.length?current.map(recallDialogItem).join(''):'<div class=\"notice\"><strong>No current verified recall records are available.</strong><br>SAFEPLATE will not substitute unrelated or historical records.</div>';document.getElementById('currentRecallDialog').hidden=false;if(auto)sessionStorage.setItem('safeplate-recall-window-seen','1')}",
-            "document.getElementById('alertStripOpen').onclick=()=>openPicturedRecallDialog();":"document.getElementById('alertStripOpen').onclick=()=>openCurrentRecallDialog();",
-            "setTimeout(()=>openPicturedRecallDialog(true),700)":"setTimeout(()=>openCurrentRecallDialog(true),700)",
-            "current federal recall record":"current verified recall record"
-          }
-          for old,new in replacements.items():
-              if old not in s:
-                  raise SystemExit(f'Expected source fragment missing; refusing unsafe edit: {old[:90]}')
-              s=s.replace(old,new)
+          old="current=rows.filter(x=>isCurrent(x)&&isRecallEvent(x)).sort((a,b)=>recordDate(b)-recordDate(a)).slice(0,6);"
+          new="current=rows.filter(x=>isCurrent(x)&&isRecallEvent(x)).sort((a,b)=>recordDate(b)-recordDate(a));"
+          if old not in s: raise SystemExit('native Public six-record cap not found')
+          s=s.replace(old,new)
           p.write_text(s)
           PY
-      - name: Verify meeting-critical recall behavior
+
+      - name: Verify source rules before commit
         run: |
-          grep -q 'now-45\*864e5' site/public-view-v1.html
+          grep -Fq "/api/recall-service?q=current&limit=100" site/shell-v2.js
+          ! grep -Fq "const selected=current.slice(0,6)" site/shell-v2.js
+          grep -Fq "appendEmphasizedTitle(context,title,[food])" site/shell-v2.js
+          grep -Fq "color:#a63a2a;font-weight:900;text-decoration:underline" site/shell-v2.js
+          grep -Fq 'now-45*864e5' site/shell-v2.js
+          grep -Fq 'now-45*864e5' site/public-view-v1.html
           ! grep -q 'Date.now()-400\*864e5' site/public-view-v1.html
-          ! grep -q 'openPicturedRecallDialog' site/public-view-v1.html
-          grep -q 'openCurrentRecallDialog' site/public-view-v1.html
-          ! grep -Fq "isRecallEvent(x)&&productImage(x)" site/public-view-v1.html
-          ! grep -Fq "raw.startsWith('state_')&&productImage(x)" site/public-view-v1.html
-          grep -Fq 'Official product image not published' site/public-view-v1.html
           ! grep -qi 'good & gather mexican street corn trail mix' site/public-view-v1.html
-      - name: Commit source fix
+          grep -Fq 'Official package image unavailable' site/shell-v2.js
+
+      - name: Commit authoritative current-recall display
         run: |
           git config user.name 'SAFEPLATE release repair'
           git config user.email 'actions@users.noreply.github.com'
-          git add site/public-view-v1.html
-          git commit -m 'Show all current verified recalls regardless of photo availability'
+          git add site/shell-v2.js site/public-view-v1.html
+          git commit -m 'Use authoritative current recall service and show full recall set'
           git push
+
+      - name: Wait for production promotion
+        run: sleep 55
+
+      - name: Verify live source health and 30-minute ingestion
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --retry 3 --retry-delay 3 https://safeplate-intelligence.netlify.app/api/source-health -o /tmp/source-health.json
+          curl --fail --silent --show-error --retry 3 --retry-delay 3 'https://safeplate-intelligence.netlify.app/api/recall-service?q=current&limit=100' -o /tmp/recalls.json
+          curl --fail --silent --show-error --retry 3 --retry-delay 3 https://safeplate-intelligence.netlify.app/api/nass-context -o /tmp/nass.json
+          curl --fail --silent --show-error --retry 3 --retry-delay 3 https://safeplate-intelligence.netlify.app/api/operational-food-sources -o /tmp/food-sources.json
+          python - <<'PY'
+          import json, datetime
+          h=json.load(open('/tmp/source-health.json'))
+          r=json.load(open('/tmp/recalls.json'))
+          print('SOURCE HEALTH:', json.dumps(h, indent=2)[:14000])
+          print('CURRENT RECALL COUNT:', r.get('count'))
+          print('CURRENT RECALL TITLES:', [x.get('title') or x.get('product') for x in r.get('records',[])])
+          print('NASS ENDPOINT:', json.dumps(json.load(open('/tmp/nass.json')), indent=2)[:4000])
+          print('OPERATIONAL FOOD SOURCES ENDPOINT:', json.dumps(json.load(open('/tmp/food-sources.json')), indent=2)[:4000])
+
+          last=h.get('lastSync')
+          if not last: raise SystemExit('No surveillance lastSync reported')
+          dt=datetime.datetime.fromisoformat(last.replace('Z','+00:00'))
+          age=(datetime.datetime.now(datetime.timezone.utc)-dt).total_seconds()/60
+          if age>75: raise SystemExit(f'Surveillance is stale: {age:.1f} minutes')
+
+          src={x.get('id'):x for x in h.get('sources',[])}
+          for sid in ('fda_openfda','fda_recall_announcements','usda_fsis'):
+              if sid not in src: raise SystemExit(f'Missing live source-health record: {sid}')
+              if src[sid].get('status')!='ONLINE': raise SystemExit(f'{sid} not ONLINE: {src[sid]}')
+          if not isinstance(r.get('records'),list): raise SystemExit('Recall service did not return records array')
+          print(f'PASS: surveillance last sync {age:.1f} minutes ago; FDA/openFDA, FDA announcements, and FSIS are ONLINE; current recall service returned {len(r["records"])} records.')
+          PY
