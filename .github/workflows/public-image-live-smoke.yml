@@ -75,8 +75,8 @@ jobs:
           curl -fsS "$BASE/advanced-extension.js?sha=$GITHUB_SHA" -o smoke/advanced-extension.js
           grep -Fq 'Know what’s going on with your food.' smoke/public.html
           for image in {1..6}; do grep -Fq "/assets/public-hero-${image}-release.jpg" smoke/public.html; done
-          grep -Fq '/assets/recall-good-gather-mexican-street-corn-trail-mix.jpg' smoke/public.html
           grep -Fq '/assets/recall-taylor-diced-jalapenos.jpg' smoke/public.html
+          grep -Fq 'Official package image unavailable' smoke/public.html
           grep -Fq "['Recall date',x.recallDate||x.recall_initiation_date||verified?.recallDate]" smoke/public.html
           grep -Fq 'id="alertStrip"' smoke/public.html
           ! grep -Fq 'id="recentAlertModal"' smoke/public.html
