@@ -1,0 +1,51 @@
+name: One-time Public recall repair
+on:
+  push:
+    paths:
+      - '.github/workflows/one-time-public-recall-repair.yml'
+permissions:
+  contents: write
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Make Public View the sole recall presenter
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('site/public-view-v1.html')
+          s=p.read_text()
+
+          old="function isRecallEvent(x){const raw=String(x.rawSource||''),t=`${x.title||''} ${x.summary||''} ${x.category||''}`;return !/\\bretract(?:s|ed|ion)?\\b/i.test(t)&&(['fda_openfda','usda_fsis','cfia_recalls','uk_fsa_alerts'].includes(raw)||(raw.startsWith('state_')&&/\\brecall\\b/i.test(t)))}"
+          new="function isRecallEvent(x){const raw=String(x.rawSource||''),t=`${x.title||''} ${x.summary||''} ${x.category||''}`;return !/\\bretract(?:s|ed|ion)?\\b/i.test(t)&&(['fda_openfda','fda_recall_announcements','usda_fsis','cfia_recalls','uk_fsa_alerts'].includes(raw)||(raw.startsWith('state_')&&/\\brecall\\b/i.test(t)))}"
+          if old not in s: raise SystemExit('isRecallEvent source fragment not found')
+          s=s.replace(old,new)
+
+          old="function dateInfo(x){const verified=PRODUCT_IMAGES.find(v=>v.rx.test(title(x)));const candidates=[['Recall date',x.recallDate||verified?.recallDate],['Announcement date',x.announcedDate||x.sourcePostedAt],['Record date',x.verifiedAt||x.updatedAt]];for(const [label,value] of candidates){if(!value)continue;const d=new Date(value);if(!isNaN(d))return{label,value:d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric',timeZone:'UTC'})}}return{label:'Recall date',value:'Not published by source'}}"
+          new="function dateInfo(x){const verified=PRODUCT_IMAGES.find(v=>v.rx.test(title(x)));const candidates=[['Recall date',x.recallDate||x.recall_initiation_date||verified?.recallDate],['Announcement date',x.announcedDate||x.sourcePostedAt||x.publicationDate||x.publishedAt],['Recall date',x.report_date||x.reportDate||x.date]];for(const [label,value] of candidates){if(!value)continue;const d=new Date(value);if(!isNaN(d))return{label,value:d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric',timeZone:'UTC'})}}return{label:'Recall date',value:'Not published by source'}}"
+          if old not in s: raise SystemExit('dateInfo source fragment not found')
+          s=s.replace(old,new)
+
+          old="function recallDialogItem(x){const img=productImage(x),d=dateInfo(x),u=source(x),visual=img?`<img src=\"${esc(img.src)}\" alt=\"${esc(img.alt)}\">`:`<div class=\"alertThumbMissing\">Official product image not published</div>`;return `<article class=\"alertItem\">${visual}<div><small>${esc(d.label)} · ${esc(d.value)}</small><b>${esc(title(x))}</b>${u?`<a href=\"${esc(u)}\" target=\"_blank\" rel=\"noopener\">Verify at official source</a>`:''}</div></article>`}"
+          new="function recallFoodName(x){const explicit=String(x.product||x.product_description||x.productName||x.product_name||'').trim();if(explicit&&explicit.length<=220)return explicit;const t=String(x.title||'').trim(),patterns=[/\\brecall(?:s|ing)?\\s+(?:of\\s+)?(.+?)(?:\\s+because\\b|\\s+due\\s+to\\b|\\s+for\\s+(?:possible|potential)\\b|$)/i,/\\brecall\\s+of\\s+(.+?)(?:\\s+because\\b|\\s+due\\s+to\\b|$)/i,/^(.+?)\\s+recall notice\\b/i];for(const rx of patterns){const m=t.match(rx);if(m?.[1])return m[1].replace(/^(?:a|an|the|to include)\\s+/i,'').trim()}return t}function recallDialogItem(x){const img=productImage(x),d=dateInfo(x),u=source(x),visual=img?`<img src=\"${esc(img.src)}\" alt=\"${esc(img.alt)}\">`:`<div class=\"alertThumbMissing\">Official product image not published</div>`,food=recallFoodName(x),company=String(x.company||x.recalling_firm||x.recallingFirm||x.brand||'').trim(),prefix=company&&food.toLowerCase().indexOf(company.toLowerCase())<0?`<span style=\"display:block;color:#17221b;font-weight:700;margin-bottom:2px\">${esc(company)}</span>`:'';return `<article class=\"alertItem\">${visual}<div><small>${esc(d.label)} · ${esc(d.value)}</small>${prefix}<span style=\"display:block;color:#a63a2a;font-weight:900;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px;line-height:1.2\">${esc(food)}</span>${u?`<a href=\"${esc(u)}\" target=\"_blank\" rel=\"noopener\">Verify at official source</a>`:''}</div></article>`}"
+          if old not in s: raise SystemExit('recallDialogItem source fragment not found')
+          s=s.replace(old,new)
+
+          p.write_text(s)
+          PY
+      - name: Verify only source-dated current recalls are rendered
+        run: |
+          grep -Fq "'fda_recall_announcements'" site/public-view-v1.html
+          grep -Fq 'now-45*864e5' site/public-view-v1.html
+          ! grep -Fq "['Record date',x.verifiedAt||x.updatedAt]" site/public-view-v1.html
+          grep -Fq 'function recallFoodName' site/public-view-v1.html
+          grep -Fq 'color:#a63a2a;font-weight:900;text-decoration:underline' site/public-view-v1.html
+          ! grep -Fq 'Date.now()-400*864e5' site/public-view-v1.html
+      - name: Commit repaired Public View
+        run: |
+          git config user.name 'SAFEPLATE surgical repair'
+          git config user.email 'actions@users.noreply.github.com'
+          git add site/public-view-v1.html
+          git commit -m 'Restore stable Public recall presentation and source dates'
+          git push
