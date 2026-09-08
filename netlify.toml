@@ -69,6 +69,33 @@
   status = 302
   force = true
 
+# Meeting-critical HTML and controller scripts must always revalidate so a device
+# cannot continue running an older routing, recall, or scanner build after deploy.
+[[headers]]
+  for = "/safeplate-shell.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/public-view-v1.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/booth.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/shell-v2.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/booth-upgrades.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
 [[headers]]
   for = "/booth-sw.js"
   [headers.values]
