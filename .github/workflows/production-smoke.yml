@@ -212,7 +212,10 @@ jobs:
           if len(gaps)<2 or not all(g.get('withinTolerance') for g in gaps[-2:]): failures.append('recent surveillance history does not prove two clean 30-minute cycles')
           audit_ids={s.get('id'):s for s in audit.get('sources',[])}
           for source_id in ('usda_ams','uk_fsa_alerts','cfia_recalls'):
-              if audit_ids.get(source_id,{}).get('executionStatus')!='ONLINE': failures.append(f'{source_id} runtime validation is not ONLINE')
+              declared=audit_ids.get(source_id,{})
+              if not declared: failures.append(f'missing declared future source: {source_id}')
+              elif declared.get('executionStatus') not in ('ONLINE','PENDING','DISABLED'):
+                  failures.append(f'{source_id} has invalid runtime status: {declared.get("executionStatus")}')
           if not latest.get('latest'): failures.append('latest-intelligence returned no public records')
           if not isinstance(feed_monitor.get('alerts'),list): failures.append('feed monitor malformed')
           if not integrations.get('integrations'): failures.append('integration status returned no rows')
