@@ -14,9 +14,13 @@ const INTERNATIONAL_SOURCES=new Set(["cfia_recalls","uk_fsa_alerts"]);
 const foodTerms=/\b(food|foods|salmonella|listeria|e\.?\s*coli|campylobacter|botul|allergen|undeclared|milk|egg|peanut|soy|wheat|sesame|fish|shellfish|meat|beef|pork|chicken|turkey|produce|fruit|vegetable|berry|berries|blueberr|lettuce|cheese|dairy|seafood|shrimp|tuna|rice|flour|bread|snack|cereal|sauce|spice|frozen|ready-to-eat|rte|grocery|ingredient|produce|poultry)\b/i;
 const foodEvents=/\b(recall|recalled|public health alert|food alert|food safety|outbreak|contamination|adulterat|misbrand|undeclared allergen|possible recall|potential recall|investigation)\b/i;
 const reject=/\b(advisory board|committee meeting|hearing screening|interpreters for the deaf|breast cancer|opioid|mental health|behavioral health|medicaid|public meeting|screening program)\b/i;
-const foodRecord=x=>{
+// FDA's broad recall surfaces can occasionally leak drug/device notices into
+// the food announcement stream. Keep those out of every public food view even
+// when the upstream record was misclassified as `category: Food`.
+const nonFoodProduct=/\b(injection|injectable|tablet|capsule|syringe|vial|ophthalmic|medical device|catheter|implant|epinephrine|pharmaceutical|sterility assurance)\b/i;
+export const foodRecord=x=>{
  const t=`${x?.title||""} ${x?.product||""} ${x?.summary||""} ${x?.category||""} ${x?.hazard||""} ${x?.pathogen||""} ${x?.company||""} ${x?.source||""}`;
- if(reject.test(t)) return false;
+ if(reject.test(t)||nonFoodProduct.test(t)) return false;
  if(FOOD_SOURCES.has(x?.rawSource)) return true;
  return foodTerms.test(t)&&foodEvents.test(t);
 };
