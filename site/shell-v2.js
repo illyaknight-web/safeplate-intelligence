@@ -11,6 +11,7 @@ const buttons={
   advanced:document.getElementById('advBtn')
 };
 if(!switcher||Object.values(frames).some(x=>!x)||Object.values(buttons).some(x=>!x))return;
+frames.booth.setAttribute('allow','camera');
 
 const style=document.createElement('style');
 style.textContent='.viewSwitch{grid-template-columns:repeat(3,1fr)!important}.headerMeta{font-size:0}.headerMeta:before{content:"One site · three views · 30-minute live checks";font-size:10px}@media(max-width:760px){.brand{padding-right:0!important}.headerMeta{display:none!important}.viewSwitch button{font-size:12px!important;padding:12px 5px!important}}';
@@ -20,11 +21,11 @@ function patchPublicRecallModal(frame){
   if(frame!==frames.public)return;
   try{
     const d=frame.contentDocument;
-    if(!d?.body||d.documentElement.dataset.safeplateRecallFreshnessPatch==='1')return;
+    if(!d?.body||d.documentElement.dataset.safeplateRecallFreshnessPatch==='2')return;
     const dialog=d.getElementById('currentRecallDialog');
     const box=d.getElementById('currentRecallItems');
     if(!dialog||!box)return;
-    d.documentElement.dataset.safeplateRecallFreshnessPatch='1';
+    d.documentElement.dataset.safeplateRecallFreshnessPatch='2';
 
     const array=v=>Array.isArray(v)?v:[];
     const parseDate=value=>{
@@ -43,27 +44,52 @@ function patchPublicRecallModal(frame){
       const status=String(x?.status||'').toLowerCase();
       return !/(terminated|resolved|closed|retracted)/.test(status)&&recordTime(x)>Date.now()-400*864e5;
     };
+    const GENERIC=/^(u\.?s\.? food and drug administration|food and drug administration|recall webpage|recalls webpage|recall page|food recall|food recalls|recall announcement|recalls and outbreaks)$/i;
+    const displayTitle=x=>{
+      const candidates=[x?.product,x?.product_description,x?.brand&&x?.title?`${x.brand} — ${x.title}`:null,x?.title,x?.company];
+      return candidates.map(v=>String(v||'').trim()).find(v=>v&&!GENERIC.test(v))||'';
+    };
     const isRecallEvent=x=>{
       const raw=String(x?.rawSource||'');
-      const text=`${x?.title||''} ${x?.summary||''} ${x?.category||''}`;
+      const text=`${x?.title||''} ${x?.product||''} ${x?.summary||''} ${x?.category||''}`;
       if(/\bretract(?:s|ed|ion)?\b/i.test(text))return false;
+      if(!displayTitle(x))return false;
       return ['fda_openfda','fda_recall_announcements','usda_fsis','cfia_recalls','uk_fsa_alerts'].includes(raw)||(raw.startsWith('state_')&&/\brecall\b/i.test(text));
     };
-    const title=x=>x?.product||x?.title||'Food recall';
     const source=x=>[x?.url,x?.sourceUrl,x?.source_url,x?.link,...array(x?.evidence).map(e=>e?.url)].find(v=>/^https?:\/\//i.test(String(v||'')));
-    const image=x=>[x?.imageUrl,x?.image_url,x?.photoUrl,x?.thumbnailUrl,...array(x?.images),...array(x?.evidence).flatMap(e=>[e?.imageUrl,e?.image_url,e?.photoUrl])].find(v=>/^https:\/\//i.test(String(v||'')));
+    const imageCandidate=v=>{
+      if(!v)return null;
+      if(typeof v==='string')return /^https:\/\//i.test(v)?v:null;
+      if(typeof v==='object'){
+        const u=v.url||v.src||v.imageUrl||v.image_url||v.photoUrl||v.thumbnailUrl;
+        return /^https:\/\//i.test(String(u||''))?u:null;
+      }
+      return null;
+    };
+    const image=x=>[
+      x?.imageUrl,x?.image_url,x?.photoUrl,x?.thumbnailUrl,
+      ...array(x?.images),
+      ...array(x?.photos),
+      ...array(x?.evidence).flatMap(e=>[e?.imageUrl,e?.image_url,e?.photoUrl,e?.thumbnailUrl,...array(e?.images)])
+    ].map(imageCandidate).find(Boolean)||null;
     const formatDate=x=>{
       const t=recordTime(x);
       return t?new Date(t).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric',timeZone:'UTC'}):'Date not published by source';
     };
     const renderItem=x=>{
+      const title=displayTitle(x);
       const article=d.createElement('article');article.className='alertItem';
       const img=image(x);
-      if(img){const el=d.createElement('img');el.src=img;el.alt=title(x)+' product or label image';article.appendChild(el)}
-      else{const missing=d.createElement('div');missing.className='alertThumbMissing';missing.textContent='Official product image not published';article.appendChild(missing)}
+      if(img){
+        const el=d.createElement('img');el.src=img;el.alt=title+' recalled package or product image';el.loading='eager';
+        el.onerror=()=>{const missing=d.createElement('div');missing.className='alertThumbMissing';missing.textContent='Official package image unavailable';el.replaceWith(missing)};
+        article.appendChild(el);
+      }else{
+        const missing=d.createElement('div');missing.className='alertThumbMissing';missing.textContent='Official package image unavailable';article.appendChild(missing);
+      }
       const body=d.createElement('div');
       const small=d.createElement('small');small.textContent='Recall date · '+formatDate(x);body.appendChild(small);
-      const strong=d.createElement('b');strong.textContent=title(x);body.appendChild(strong);
+      const strong=d.createElement('b');strong.textContent=title;body.appendChild(strong);
       const u=source(x);if(u){const a=d.createElement('a');a.href=u;a.target='_blank';a.rel='noopener';a.textContent='Verify at official source';body.appendChild(a)}
       article.appendChild(body);return article;
     };
@@ -73,11 +99,13 @@ function patchPublicRecallModal(frame){
         if(!r.ok)throw Error(String(r.status));
         const j=await r.json();
         const rows=(Array.isArray(j)?j:(j.incidents||j.items||j.records||[]));
-        const current=rows.filter(x=>isCurrent(x)&&isRecallEvent(x)).sort((a,b)=>recordTime(b)-recordTime(a)).slice(0,6);
+        const current=rows.filter(x=>isCurrent(x)&&isRecallEvent(x)).sort((a,b)=>recordTime(b)-recordTime(a));
+        const pictured=current.filter(image),unpictured=current.filter(x=>!image(x));
+        const selected=[...pictured.slice(0,6),...unpictured.slice(0,Math.max(0,6-pictured.length))].sort((a,b)=>recordTime(b)-recordTime(a)).slice(0,6);
         box.replaceChildren();
-        if(!current.length){const note=d.createElement('div');note.className='notice';note.innerHTML='<strong>No current verified recall records are available.</strong><br>SAFEPLATE will not substitute unrelated or historical records.';box.appendChild(note)}
-        else current.forEach(x=>box.appendChild(renderItem(x)));
-        const count=d.getElementById('alertStripCount');if(count)count.textContent=`${current.length} newest verified federal recall record${current.length===1?'':'s'} shown`;
+        if(!selected.length){const note=d.createElement('div');note.className='notice';note.innerHTML='<strong>No current verified recall records are available.</strong><br>SAFEPLATE will not substitute unrelated or historical records.';box.appendChild(note)}
+        else selected.forEach(x=>box.appendChild(renderItem(x)));
+        const count=d.getElementById('alertStripCount');if(count)count.textContent=`${current.length} current verified recall record${current.length===1?'':'s'} · ${pictured.length} with official package images`;
       }catch(e){console.warn('SAFEPLATE recent-recall refresh skipped',e)}
     }
     const observer=new MutationObserver(()=>{if(!dialog.hidden)refresh()});
