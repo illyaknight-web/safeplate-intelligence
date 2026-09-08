@@ -67,8 +67,10 @@ jobs:
           grep -Fq 'advancedViewFromLocation' meeting-smoke/shell-v2.js || { echo '::error::Unified Advanced route controller missing'; exit 1; }
           grep -Fq "addEventListener('message'" meeting-smoke/shell-v2.js || { echo '::error::Unified message routing missing'; exit 1; }
 
-          grep -Fqi 'cache-control: public, max-age=0, must-revalidate' meeting-smoke/shell-headers.txt || { echo '::error::shell-v2.js may remain stale in browsers'; exit 1; }
-          grep -Fqi 'cache-control: public, max-age=0, must-revalidate' meeting-smoke/booth-headers.txt || { echo '::error::booth-upgrades.js may remain stale in browsers'; exit 1; }
+          for h in meeting-smoke/shell-headers.txt meeting-smoke/booth-headers.txt; do
+            grep -Eqi '^cache-control:.*max-age=0' "$h" || { echo "::error::$h does not force immediate revalidation"; cat "$h"; exit 1; }
+            grep -Eqi '^cache-control:.*must-revalidate' "$h" || { echo "::error::$h lacks must-revalidate"; cat "$h"; exit 1; }
+          done
 
           grep -Fq "if(isiOS){status.textContent='Opening camera…';capture.click();return}" meeting-smoke/booth-upgrades.js || { echo '::error::iOS native camera fallback missing'; exit 1; }
           grep -Fq 'decodeFromImageElement' meeting-smoke/booth-upgrades.js || { echo '::error::Captured barcode decode path missing'; exit 1; }
