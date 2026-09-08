@@ -33,7 +33,8 @@ function patchPublicRecallModal(frame){
     const parseDate=value=>{if(value==null||value==='')return 0;const s=String(value).trim();if(/^\d{8}$/.test(s))return Date.UTC(Number(s.slice(0,4)),Number(s.slice(4,6))-1,Number(s.slice(6,8)));const t=new Date(s).getTime();return Number.isFinite(t)?t:0};
     const sourceRecordTime=x=>{for(const value of [x.recallDate,x.recall_initiation_date,x.announcedDate,x.sourcePostedAt,x.publicationDate,x.publishedAt,x.report_date,x.reportDate,x.date]){const t=parseDate(value);if(t)return t}return 0};
     const GENERIC=/^(u\.?s\.? food and drug administration|food and drug administration|recall webpage|recalls webpage|recall page|food recall|food recalls|recall announcement|recalls and outbreaks)$/i;
-    const displayTitle=x=>[x?.product,x?.product_description,x?.brand&&x?.title?`${x.brand} — ${x.title}`:null,x?.title,x?.company].map(v=>String(v||'').trim()).find(v=>v&&!GENERIC.test(v))||'';
+    const cleanTitle=v=>String(v||'').replace(/^Brand Name\(s\)\s*/i,'').replace(/\s*[—-]\s*Product Description\s*/i,' — ').replace(/^Product Description\s*/i,'').replace(/\s+/g,' ').trim();
+    const displayTitle=x=>[x?.product,x?.product_description,x?.brand&&x?.title?`${x.brand} — ${x.title}`:null,x?.title,x?.company].map(cleanTitle).find(v=>v&&!GENERIC.test(v))||'';
     const isRecallEvent=x=>{const raw=String(x?.rawSource||''),text=`${x?.title||''} ${x?.product||''} ${x?.summary||''} ${x?.category||''}`;if(/\bretract(?:s|ed|ion)?\b/i.test(text)||!displayTitle(x))return false;return ['fda_openfda','fda_recall_announcements','usda_fsis','cfia_recalls','uk_fsa_alerts'].includes(raw)||(raw.startsWith('state_')&&/\brecall\b/i.test(text))};
     const source=x=>[x?.url,x?.sourceUrl,x?.source_url,x?.link,...array(x?.evidence).map(e=>e?.url)].find(v=>/^https?:\/\//i.test(String(v||'')));
     const isFDA=x=>{try{return /(^|\.)fda\.gov$/i.test(new URL(source(x)).hostname)}catch{return false}};
