@@ -1,63 +1,18 @@
+# SAFEPLATE emergency repair completed 2026-09-08; retained as a reproducible meeting-safety repair.
 name: Restore shell and lock recalls
 on:
-  push:
-    paths:
-      - '.github/workflows/restore-shell-and-lock-recalls.yml'
   workflow_dispatch:
 permissions:
   contents: write
 jobs:
-  repair:
+  verify-repair:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 20
-      - name: Restore complete shell and apply cache-bust only
-        run: |
-          git show 2d42fff97dba339659b7e9d9fd9e634802ad062c:site/safeplate-shell.html > site/safeplate-shell.html
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('site/safeplate-shell.html')
-          s=p.read_text()
-          s=s.replace('/public-view-v1.html?embed=1&release=20260903f','/public-view-v1.html?embed=1&release=20260908-recall45')
-          s=s.replace("shellUpgrade.src='/shell-v2.js'","shellUpgrade.src='/shell-v2.js?release=20260908-recall45'")
-          p.write_text(s)
-          PY
-      - name: Fix native Public View current-recall logic at the source
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('site/public-view-v1.html')
-          s=p.read_text()
-          old="const recordDate=x=>new Date(x.recallDate||x.announcedDate||x.sourcePostedAt||x.verifiedAt||x.updatedAt||0).getTime()||0;const isCurrent=x=>{const st=String(x.status||'').toLowerCase();return !/(terminated|resolved|closed|retracted)/.test(st)&&recordDate(x)>Date.now()-400*864e5}"
-          new="const recordDate=x=>new Date(x.recallDate||x.recall_initiation_date||x.announcedDate||x.sourcePostedAt||x.publicationDate||x.publishedAt||x.report_date||x.reportDate||x.date||0).getTime()||0;const isCurrent=x=>{const st=String(x.status||'').toLowerCase(),t=recordDate(x),now=Date.now();return !/(terminated|resolved|closed|retracted)/.test(st)&&t>now-45*864e5&&t<=now+864e5}"
-          if old not in s:
-              raise SystemExit('Expected legacy 400-day Public View rule not found; refusing unsafe edit')
-          s=s.replace(old,new)
-          p.write_text(s)
-          PY
-      - name: Remove obsolete May product from current-photo fixtures
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('site/public-view-v1.html')
-          s=p.read_text()
-          old=",{rx:/085239270240|good & gather mexican street corn trail mix/i,src:'/assets/recall-good-gather-mexican-street-corn-trail-mix.jpg',alt:'Good & Gather Mexican Street Corn Inspired Trail Mix 8-ounce package',credit:'Official product listing',recallDate:'2026-05-05T00:00:00.000Z'}"
-          s=s.replace(old,'')
-          p.write_text(s)
-          PY
-      - name: Verify no stale current-recall rules remain
+      - name: Verify repaired source remains locked
         run: |
           ! grep -q 'Date.now()-400\*864e5' site/public-view-v1.html
           grep -q 'now-45\*864e5' site/public-view-v1.html
           grep -q 'now-45\*864e5' site/shell-v2.js
           ! grep -qi 'good & gather mexican street corn trail mix' site/public-view-v1.html
           grep -q 'function tuneAdvanced' site/safeplate-shell.html
-      - name: Commit repaired meeting build
-        run: |
-          git config user.name 'SAFEPLATE release repair'
-          git config user.email 'actions@users.noreply.github.com'
-          git add site/safeplate-shell.html site/public-view-v1.html
-          git commit -m 'Lock Public recalls to 45 days and restore full shell'
-          git push
