@@ -58,12 +58,14 @@ jobs:
           curl -fsSI "$BASE/shell-v2.js" -o meeting-smoke/shell-headers.txt
           curl -fsSI "$BASE/booth-upgrades.js" -o meeting-smoke/booth-headers.txt
 
-          grep -Fq "safeplateRecallFreshnessPatch==='11'" meeting-smoke/shell-v2.js || { echo '::error::Recall freshness controller is not release 11'; exit 1; }
+          grep -Fq "safeplateRecallFreshnessPatch==='12'" meeting-smoke/shell-v2.js || { echo '::error::Recall freshness controller is not release 12'; exit 1; }
           grep -Fq 'sourceRecordTime' meeting-smoke/shell-v2.js || { echo '::error::Authoritative source-date recall logic missing'; exit 1; }
           grep -Fq '45*864e5' meeting-smoke/shell-v2.js || { echo '::error::45-day recent-recall window missing'; exit 1; }
           ! grep -Fq '400*864e5' meeting-smoke/shell-v2.js || { echo '::error::Legacy 400-day recall window returned'; exit 1; }
           grep -Fq 'Official package image unavailable' meeting-smoke/shell-v2.js || { echo '::error::Truthful package-image fallback missing'; exit 1; }
           grep -Fq 'Verify at official source' meeting-smoke/shell-v2.js || { echo '::error::Official-source verification link missing'; exit 1; }
+          grep -Fq 'advancedViewFromLocation' meeting-smoke/shell-v2.js || { echo '::error::Unified Advanced route controller missing'; exit 1; }
+          grep -Fq "addEventListener('message'" meeting-smoke/shell-v2.js || { echo '::error::Unified message routing missing'; exit 1; }
 
           grep -Fqi 'cache-control: public, max-age=0, must-revalidate' meeting-smoke/shell-headers.txt || { echo '::error::shell-v2.js may remain stale in browsers'; exit 1; }
           grep -Fqi 'cache-control: public, max-age=0, must-revalidate' meeting-smoke/booth-headers.txt || { echo '::error::booth-upgrades.js may remain stale in browsers'; exit 1; }
