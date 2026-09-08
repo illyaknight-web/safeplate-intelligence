@@ -121,7 +121,7 @@ jobs:
           assert_contains smoke/public.html '.pic img{width:100%;height:100%;object-fit:cover' 'Full-bleed feature-card photographs'
           assert_contains smoke/public.html 'id="q"' 'Public safety search input'
           assert_contains smoke/public.html 'id="go"' 'Public safety search action'
-          assert_contains smoke/public.html "['Recall date',x.recallDate||verified?.recallDate]" 'Recall-date presentation'
+          assert_contains smoke/public.html "['Recall date',x.recallDate||x.recall_initiation_date||verified?.recallDate]" 'Recall-date presentation'
           assert_contains smoke/public.html '/assets/recall-good-gather-mexican-street-corn-trail-mix.jpg' 'Verified product photograph'
           assert_contains smoke/public.html '/assets/recall-taylor-diced-jalapenos.jpg' 'Verified Taylor product label'
           assert_contains smoke/public.html 'id="alertStrip"' 'Persistent verified-alert strip'
