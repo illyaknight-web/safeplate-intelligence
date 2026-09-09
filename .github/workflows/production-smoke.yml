@@ -40,6 +40,9 @@ on:
       - 'netlify/functions/integration-status.mjs'
       - 'netlify/functions/veriscope-bridge-scheduled.mjs'
       - 'netlify/functions/veriscope-bridge-status.mjs'
+      - 'netlify/functions/veriscope-reviewed-findings.mjs'
+      - 'netlify/functions/lib/veriscope-findings.mjs'
+      - 'tests/veriscope-findings.test.mjs'
       - 'netlify/functions/lib/veriscope-bridge.mjs'
       - 'contracts/safeplate-veriscope-batch-v1.schema.json'
       - 'netlify/functions/recall-service.mjs'
@@ -58,6 +61,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          node --test tests/veriscope-findings.test.mjs
           BASE='https://safeplate-intelligence.netlify.app'
           mkdir -p smoke
           deployed=''
@@ -160,6 +164,8 @@ jobs:
           assert_contains netlify/functions/lib/veriscope-bridge.mjs "mode:'SHADOW'" 'VERISCOPE shadow-mode safety boundary'
           assert_contains netlify/functions/lib/veriscope-bridge.mjs "VERISCOPE_BRIDGE_ENABLED" 'VERISCOPE bridge kill switch'
           assert_contains netlify/functions/lib/veriscope-bridge.mjs 'previous_hash' 'Tamper-evident VERISCOPE audit chain'
+          assert_contains netlify/functions/veriscope-reviewed-findings.mjs "path:'/api/veriscope/reviewed-findings'" 'Reviewed-finding return endpoint'
+          assert_contains netlify/functions/lib/veriscope-findings.mjs 'HUMAN_APPROVAL_REQUIRED' 'Reviewed-finding human gate'
           assert_contains netlify/functions/feed-monitor.mjs 'SCHEMA_CHANGE' 'Feed schema-change alerting'
           assert_contains netlify/functions/operational-food-sources.mjs 'institutionalOnly:true' 'Operational-context public segregation'
 
