@@ -7,12 +7,12 @@
 # Do not redirect, rewrite, rotate, or substitute these paths.
 # The Public HTML owns one immutable image source per slot.
 
-# Explicitly route the public Advanced View URL to the Food Journey function.
-# This prevents /unified-intelligence.html from falling through to Netlify's 404 page.
+# Direct Booth links start at the SAFEPLATE Public experience.
+# Booth itself remains available inside the three-view shell via /booth.html?embed=1.
 [[redirects]]
   from = "/booth"
-  to = "/booth.html"
-  status = 200
+  to = "/"
+  status = 302
   force = true
 
 [[redirects]]
