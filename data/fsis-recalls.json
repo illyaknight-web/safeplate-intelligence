@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-09-09T07:31:02Z",
+  "capturedAt": "2026-09-09T08:30:37Z",
   "authority": "USDA Food Safety and Inspection Service",
   "sourceType": "Official USDA/FSIS GovDelivery RSS (USFSIS_1: News Releases - Recent Updates)",
   "sourceUrl": "https://public.govdelivery.com/topics/USFSIS_1/feed.rss",
@@ -233,13 +233,13 @@
   "attempts": [
     {
       "url": "https://www.fsis.usda.gov/fsis/api/recall/v/1",
-      "http": 403,
-      "error": "HTTP Error 403: Forbidden"
+      "http": null,
+      "error": "URLError(gaierror(-3, 'Temporary failure in name resolution'))"
     },
     {
       "url": "https://www.fsis.usda.gov/RSS/usdarss.xml",
-      "http": 403,
-      "error": "HTTP Error 403: Forbidden"
+      "http": null,
+      "error": "URLError(OSError(101, 'Network is unreachable'))"
     },
     {
       "url": "http://www.fsis.usda.gov/RSS/usdarss.xml",
