@@ -36,18 +36,25 @@ function metadata(html,source){
 }
 export default async req=>{
   try{
-    const params=new URL(req.url).searchParams,q=params.get('source'),mode=params.get('mode')||'image';
+    const params=new URL(req.url).searchParams,q=params.get('source'),image=params.get('image'),mode=params.get('mode')||'image';
     if(!q)return new Response('Missing source',{status:400});
     const source=new URL(q);
     if(source.protocol!=='https:'||!/(^|\.)fda\.gov$/i.test(source.hostname))return new Response('Unsupported source',{status:403});
-    const page=await fetch(source,{headers:{'User-Agent':'SAFEPLATE/1.0 Function Media LLC','Accept':'text/html,application/xhtml+xml'},redirect:'follow'});
+    if(image){
+      const asset=new URL(image);
+      if(asset.protocol!=='https:'||!/(^|\.)fda\.gov$/i.test(asset.hostname)||!asset.pathname.startsWith('/files/'))return new Response('Unsupported image',{status:403});
+      const r=await fetch(asset,{headers:{'User-Agent':'Mozilla/5.0 (compatible; SAFEPLATE/1.1; +https://safeplate-intelligence.netlify.app/)','Accept':'image/avif,image/webp,image/apng,image/*,*/*;q=0.8','Referer':source.toString()},redirect:'follow'}),type=r.headers.get('content-type')||'';
+      if(!r.ok||!type.startsWith('image/'))return new Response('Official package image unavailable',{status:502});
+      return new Response(await r.arrayBuffer(),{status:200,headers:{'Content-Type':type,'Cache-Control':'public, max-age=1800, s-maxage=21600'}});
+    }
+    const page=await fetch(source,{headers:{'User-Agent':'Mozilla/5.0 (compatible; SAFEPLATE/1.1; +https://safeplate-intelligence.netlify.app/)','Accept':'text/html,application/xhtml+xml'},redirect:'follow'});
     if(!page.ok)return new Response('Official source unavailable',{status:502});
     const html=await page.text(),meta=metadata(html,source.toString());
     if(mode==='meta')return Response.json({...meta,source:source.toString()},{headers:{'Cache-Control':'public, max-age=300, s-maxage=1800'}});
     const candidates=imageCandidates(html,source.toString());
     for(const u of candidates.slice(0,16)){
       try{
-        const r=await fetch(u,{headers:{'User-Agent':'SAFEPLATE/1.0 Function Media LLC','Accept':'image/avif,image/webp,image/apng,image/*,*/*;q=0.8','Referer':source.toString()},redirect:'follow'});
+        const r=await fetch(u,{headers:{'User-Agent':'Mozilla/5.0 (compatible; SAFEPLATE/1.1; +https://safeplate-intelligence.netlify.app/)','Accept':'image/avif,image/webp,image/apng,image/*,*/*;q=0.8','Referer':source.toString()},redirect:'follow'});
         const type=r.headers.get('content-type')||'';
         if(r.ok&&type.startsWith('image/'))return new Response(await r.arrayBuffer(),{status:200,headers:{'Content-Type':type,'Cache-Control':'public, max-age=1800, s-maxage=21600'}})
       }catch{}
