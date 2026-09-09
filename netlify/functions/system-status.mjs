@@ -18,7 +18,7 @@ async function kickStateScan(req, stateScanLastSync, scannerVersion){
 
 export default async(req)=>{
  const s=await getState(),sources=s.sourceHealth||[];
- const lastSync=s.meta?.lastSync||null,earlyWarningLastSync=s.meta?.earlyWarningLastSync||null,stateScanLastSync=s.meta?.stateScanLastSync||null;
+ const lastSync=s.meta?.lastSync||null,criticalLastSync=s.meta?.lastCriticalSync||null,earlyWarningLastSync=s.meta?.earlyWarningLastSync||null,stateScanLastSync=s.meta?.stateScanLastSync||null;
  const ageMinutes=lastSync?Math.floor((Date.now()-new Date(lastSync).getTime())/60000):null;
  const earlyWarningAgeMinutes=earlyWarningLastSync?Math.floor((Date.now()-new Date(earlyWarningLastSync).getTime())/60000):null;
  const stateScanAgeMinutes=stateScanLastSync?Math.floor((Date.now()-new Date(stateScanLastSync).getTime())/60000):null;
@@ -30,7 +30,7 @@ export default async(req)=>{
  const scannerVersion=coverage.scannerVersion||s.meta?.stateScanVersion||null;
  const stateScanDispatched=await kickStateScan(req,stateScanLastSync,scannerVersion);
  return Response.json({
-   live:fresh&&checked>0,stale:Boolean(lastSync)&&!fresh,lastSync,ageMinutes,cycleMinutes:30,incidents:(s.incidents||[]).length,investigations:(s.investigations||[]).length,sourcesOnline:online,sourceIssues:degraded,sourcesChecked:checked,stateScanDispatched,
+   live:fresh&&checked>0,stale:Boolean(lastSync)&&!fresh,lastSync,ageMinutes,cycleMinutes:30,criticalSources:{lastSync:criticalLastSync,cycleMinutes:15,ageMinutes:criticalLastSync?Math.floor((Date.now()-new Date(criticalLastSync).getTime())/60000):null},incidents:(s.incidents||[]).length,investigations:(s.investigations||[]).length,sourcesOnline:online,sourceIssues:degraded,sourcesChecked:checked,stateScanDispatched,reviewQueue:(s.reviewQueue||[]).length,recentMaterialChanges:(s.changeEvents||[]).filter(x=>x.type==='MATERIAL_UPDATE'&&Date.now()-new Date(x.time).getTime()<864e5).length,
    earlyWarning:{live:earlyWarningFresh&&precursorSources.some(x=>x.status==="ONLINE"),lastSync:earlyWarningLastSync,ageMinutes:earlyWarningAgeMinutes,cycleMinutes:30,sourcesOnline:precursorSources.filter(x=>x.status==="ONLINE").length,sourceIssues:precursorSources.filter(x=>["DEGRADED","OFFLINE"].includes(x.status)).length,sourcesChecked:precursorSources.filter(x=>x.lastChecked).length},
    stateSurveillance:{live:stateScanFresh&&coverage.checked===51&&scannerVersion===CURRENT_STATE_SCANNER_VERSION,scannerVersion,lastSync:stateScanLastSync,ageMinutes:stateScanAgeMinutes,cycleMinutes:30,jurisdictionsTotal:51,jurisdictionsChecked:coverage.checked||0,jurisdictionsOnline:coverage.online||0,jurisdictionIssues:coverage.degraded||0,stateSignals:coverage.signals||0,healthEntries:stateSources.length}
  },{headers:{"cache-control":"no-store"}})

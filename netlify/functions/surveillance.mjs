@@ -2,6 +2,7 @@
 import { getState,saveState } from "./lib/store.mjs";
 import { SOURCE_REGISTRY } from "./lib/sources.mjs";
 import { normalizeFDA,normalizeFSIS,fingerprint } from "./lib/normalize.mjs";
+import { enrichRecord,materialChanges,buildReviewQueue,linkRelatedRecords } from "./lib/intelligence.mjs";
 import * as cheerio from "cheerio";
 import crypto from "node:crypto";
 
@@ -55,6 +56,7 @@ function contentForHash(x){
 function merge(existing,incoming,now,successfulSources){
  const m=new Map((existing||[]).map(x=>[x.id,x]));
  let added=0,changed=0,unchanged=0;
+ const changeEvents=[];
 
  for(const raw of incoming){
    const incomingHash=stableHash(contentForHash(raw));
@@ -66,6 +68,7 @@ function merge(existing,incoming,now,successfulSources){
        contentHash:incomingHash,observationCount:1
      });
      added++;
+     changeEvents.push({time:now,recordId:raw.id,type:"NEW_RECORD",source:raw.source||raw.rawSource||null,changes:[]});
      continue;
    }
    if(old.contentHash===incomingHash){
@@ -76,6 +79,7 @@ function merge(existing,incoming,now,successfulSources){
      });
      unchanged++;
    } else {
+     const changes=materialChanges(old,raw);
      m.set(raw.id,{
        ...old,...raw,
        firstSeenAt:old.firstSeenAt||now,
@@ -85,6 +89,7 @@ function merge(existing,incoming,now,successfulSources){
        observationCount:(old.observationCount||1)+1
      });
      changed++;
+     changeEvents.push({time:now,recordId:raw.id,type:"MATERIAL_UPDATE",source:raw.source||raw.rawSource||null,changes});
    }
  }
 
@@ -108,7 +113,7 @@ function merge(existing,incoming,now,successfulSources){
    }
  }
 
- return {items:[...m.values()].sort(newest).slice(0,1200),added,changed,unchanged};
+ return {items:[...m.values()].sort(newest).slice(0,1200),added,changed,unchanged,changeEvents};
 }
 
 async function pullFDA(){
@@ -377,20 +382,23 @@ async function runSource(source){
  return {source,rows:[]};
 }
 
-export async function runSurveillance(){
+export async function runSurveillance({sourceIds=null,cycleType="full"}={}){
  const state=await getState(),now=new Date().toISOString();
+ const previousHealth=new Map((state.sourceHealth||[]).filter(Boolean).map(x=>[x.id,x]));
  const health=SOURCE_REGISTRY.filter(Boolean).map(s=>({
-   id:s.id,name:s.name,family:s.family,status:"PENDING",lastChecked:null,
-   note:s.note||(s.active?"Awaiting check":"Connector pending")
+   ...previousHealth.get(s.id),id:s.id,name:s.name,family:s.family,status:previousHealth.get(s.id)?.status||"PENDING",lastChecked:previousHealth.get(s.id)?.lastChecked||null,
+   note:previousHealth.get(s.id)?.note||s.note||(s.active?"Awaiting check":"Connector pending")
  }));
- const active=SOURCE_REGISTRY.filter(Boolean).filter(s=>s.active);
- const results=await Promise.allSettled(active.map(runSource));
+ const selected=sourceIds?new Set(sourceIds):null;
+ const active=SOURCE_REGISTRY.filter(Boolean).filter(s=>s.active&&(!selected||selected.has(s.id)));
+ const results=await Promise.allSettled(active.map(async source=>{const started=Date.now(),value=await runSource(source);return {...value,responseTimeMs:Date.now()-started}}));
 
  let incoming=[],events=[],successfulSources=new Set();
 
  for(let i=0;i<results.length;i++){
    const source=active[i],h=health.find(x=>x.id===source.id),result=results[i];
    h.lastChecked=now;
+   h.totalChecks=(h.totalChecks||0)+1;
    if(result.status==="fulfilled"){
      successfulSources.add(source.id);
      if(result.value.climate){
@@ -402,21 +410,32 @@ export async function runSurveillance(){
        incoming.push(...rows);h.status="ONLINE";h.note=result.value.note||`${rows.length} records retrieved`;
        events.push({time:now,title:`${source.name} checked`,detail:h.note});
      }
+     h.lastSuccess=now;h.consecutiveFailures=0;h.recordsRetrieved=(result.value.rows||[]).length;h.responseTimeMs=result.value.responseTimeMs||null;
    }else{
      h.status="DEGRADED";h.note=String(result.reason?.message||result.reason||"Unknown source error");
+     h.consecutiveFailures=(h.consecutiveFailures||0)+1;h.lastFailure=now;
      events.push({time:now,title:`SOURCE DEGRADED — ${source.name}`,detail:h.note});
    }
  }
 
- const merged=merge(state.incidents||[],incoming,now,successfulSources);
+ incoming=incoming.map(enrichRecord);
+ const merged=merge((state.incidents||[]).map(enrichRecord),incoming,now,successfulSources);
+ merged.items=linkRelatedRecords(merged.items);
+ const decided=new Set((state.reviewDecisions||[]).map(x=>x.recordId));
+ const reviewQueue=buildReviewQueue(merged.items).filter(x=>!decided.has(x.id));
+ const byId=new Map(merged.items.map(x=>[x.id,x]));
+ const alertCandidates=merged.changeEvents.flatMap(event=>{const record=byId.get(event.recordId);if(!record||['RESOLVED','RETRACTED'].includes(String(record.status||'').toUpperCase())||record.contextOnly||!['CRITICAL','HIGH','WATCH'].includes(String(record.severity||'').toUpperCase()))return[];return [{id:`${event.type}:${event.recordId}:${now}`,createdAt:now,type:event.type,recordId:event.recordId,title:record.title||record.product,severity:record.severity,states:record.distributionNormalized?.states||[],zips:record.distributionNormalized?.zips||[],nationwide:Boolean(record.distributionNormalized?.nationwide),canonicalProductId:record.canonicalProductId,deliveryStatus:'PENDING_PROVIDER_CONFIGURATION'}]});
  const next={
    ...state,
-   meta:{...(state.meta||{}),lastSync:now,mode:"LIVE",cycleMinutes:30},
+   meta:{...(state.meta||{}),lastSync:now,lastFullSync:cycleType==="full"?now:(state.meta?.lastFullSync||state.meta?.lastSync||null),lastCriticalSync:cycleType==="critical"?now:(state.meta?.lastCriticalSync||null),mode:"LIVE",cycleMinutes:30,criticalCycleMinutes:15},
    incidents:merged.items,
    sourceHealth:health,
    climateWatch:state.climateWatch||null,
+   reviewQueue,
+   alertCandidates:[...alertCandidates,...(state.alertCandidates||[])].slice(0,1000),
+   changeEvents:[...merged.changeEvents,...(state.changeEvents||[])].slice(0,1000),
    changes:[
-     {time:now,title:"Surveillance cycle complete",detail:`${merged.added} new · ${merged.changed} changed · ${merged.unchanged} unchanged · ${incoming.length} records processed.`},
+     {time:now,title:`${cycleType==="critical"?"Critical-source":"Surveillance"} cycle complete`,detail:`${merged.added} new · ${merged.changed} changed · ${merged.unchanged} unchanged · ${incoming.length} records processed · ${reviewQueue.length} review items.`},
      ...events,...(state.changes||[])
    ].slice(0,250)
  };

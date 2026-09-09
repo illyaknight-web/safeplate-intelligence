@@ -97,6 +97,12 @@
     Cache-Control = "public, max-age=0, must-revalidate"
 
 [[headers]]
+  for = "/operations*"
+  [headers.values]
+    Cache-Control = "private, no-store"
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
   for = "/booth-upgrades.js"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
