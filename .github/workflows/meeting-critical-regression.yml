@@ -58,7 +58,7 @@ jobs:
           curl -fsSI "$BASE/shell-v2.js" -o meeting-smoke/shell-headers.txt
           curl -fsSI "$BASE/booth-upgrades.js" -o meeting-smoke/booth-headers.txt
 
-          grep -Fq "safeplateRecallFreshnessPatch==='12'" meeting-smoke/shell-v2.js || { echo '::error::Recall freshness controller is not release 12'; exit 1; }
+          grep -Fq "safeplateRecallFreshnessPatch==='13'" meeting-smoke/shell-v2.js || { echo '::error::Recall freshness controller is not release 13'; exit 1; }
           grep -Fq 'sourceRecordTime' meeting-smoke/shell-v2.js || { echo '::error::Authoritative source-date recall logic missing'; exit 1; }
           grep -Fq '45*864e5' meeting-smoke/shell-v2.js || { echo '::error::45-day recent-recall window missing'; exit 1; }
           ! grep -Fq '400*864e5' meeting-smoke/shell-v2.js || { echo '::error::Legacy 400-day recall window returned'; exit 1; }
