@@ -7,6 +7,7 @@ export default async()=>{
     status:latest?.status||'NOT_RUN',mode:latest?.mode||'SHADOW',lastCycleStartedAt:latest?.started_at||null,
     lastCycleCompletedAt:latest?.completed_at||null,recordsEvaluated:latest?.records_evaluated||0,
     checkpoint:latest?.checkpoint||null,contractVersion:latest?.contract_version||'safeplate.veriscope.batch.v1',
+    error:latest?.error||null,deadLetter:latest?.dead_letter||null,
     bridgeVersion:'1.1-reviewed-feedback',cadenceMinutes:15,
     reviewedFeedback:feedback?{state:feedback.state,lastReceivedAt:feedback.lastReceivedAt,acceptedCount:feedback.acceptedCount||0,contractVersion:feedback.contractVersion}:{state:'READY',lastReceivedAt:null,acceptedCount:0,contractVersion:'veriscope.safeplate.finding.v1'},
     policy:'Only human-approved VERISCOPE findings are accepted back into SAFEPLATE.',
