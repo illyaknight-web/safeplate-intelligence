@@ -92,6 +92,11 @@
     Cache-Control = "public, max-age=0, must-revalidate"
 
 [[headers]]
+  for = "/public-zip-recalls.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
   for = "/booth-upgrades.js"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
