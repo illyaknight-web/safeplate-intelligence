@@ -85,7 +85,7 @@ export async function runVeriscopeBridge(){
     await store.setJSON('status/latest',status);await writeEvent(store,'BRIDGE_CONFIGURATION_REJECTED',{cycleId:base.cycle_id});return status;
   }
   const checkpoint=await store.get('checkpoint/latest',{type:'json'}).catch(()=>null),since=checkpoint?.through||'1970-01-01T00:00:00.000Z',state=await getState();
-  const changed=array(state.incidents).filter(record=>{const when=occurredAt(record);return when&&new Date(when)>new Date(since)}).sort((a,b)=>new Date(occurredAt(a))-new Date(occurredAt(b))).slice(0,250);
+  const changed=array(state.incidents).filter(record=>{const when=occurredAt(record);return when&&new Date(when)>new Date(since)}).sort((a,b)=>new Date(occurredAt(a))-new Date(occurredAt(b))).slice(0,25);
   const records=changed.map(contractRecord),through=changed.length?occurredAt(changed.at(-1)):since;
   if(!records.length){
     const status={...base,status:'SHADOW_NO_CHANGES',completed_at:new Date().toISOString(),checkpoint:since,records_evaluated:0};
