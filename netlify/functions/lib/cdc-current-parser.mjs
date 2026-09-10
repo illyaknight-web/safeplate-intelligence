@@ -18,6 +18,13 @@ export function parseCDCOutbreakIndex(html,base){
   return [...new Set(links)];
 }
 
+export function parseCDCSearchResults(payload){
+  const docs=Array.isArray(payload?.response?.docs)?payload.response.docs:[];
+  return [...new Set(docs.map(x=>absolute(x?.permalink,'https://www.cdc.gov/')).filter(url=>
+    /^https:\/\/www\.cdc\.gov\/(?:campylobacter|ecoli|listeria|salmonella)\/outbreaks\/[^/]+\/index\.html$/i.test(url)
+  ))];
+}
+
 export function parseCDCNoticePage(html,url,checked=new Date().toISOString()){
   const source=String(html||''),main=(source.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i)||[])[1]||source;
   const title=clean((main.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i)||[])[1]);

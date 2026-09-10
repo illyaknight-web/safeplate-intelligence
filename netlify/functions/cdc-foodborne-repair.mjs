@@ -1,14 +1,13 @@
 import { getState, saveState } from './lib/store.mjs';
 import * as cheerio from 'cheerio';
 import crypto from 'node:crypto';
-import { parseCDCNoticePage, parseCDCOutbreakIndex } from './lib/cdc-current-parser.mjs';
+import { parseCDCNoticePage, parseCDCSearchResults } from './lib/cdc-current-parser.mjs';
 
 const clean=v=>String(v||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
 const nowISO=()=>new Date().toISOString();
 const fetchWithTimeout=async(url,ms=12000)=>{const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);try{return await fetch(url,{signal:c.signal,redirect:'follow',headers:{accept:'text/html,application/xhtml+xml,*/*;q=0.8','accept-language':'en-US,en;q=0.9','cache-control':'no-cache','user-agent':'Mozilla/5.0 (compatible; SAFEPLATE/1.0; +https://safeplate-intelligence.netlify.app)'}})}finally{clearTimeout(t)}};
 const CURRENT_URL='https://www.cdc.gov/foodborne-outbreaks/outbreaks/index.html';
-const CDC_ORIGIN='https://www.cdc.gov';
-const PATHOGEN_INDEXES=['campylobacter','ecoli','listeria','salmonella'].map(x=>`${CDC_ORIGIN}/${x}/outbreaks/index.html`);
+const CDC_SEARCH_URL='https://search.cdc.gov/srch/internet_wcms/select?wt=json&rows=100&q=*:*&fq=type:cdc_dfe&fq=investigation-status_str:1784&fq=outbreak-status_str:1787&fl=id,title_txt,permalink,cdc_article_date_dt,site_id&sort=cdc_article_date_dt%20desc';
 
 const hash=value=>crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex').slice(0,24);
 
@@ -26,10 +25,9 @@ async function pullCDC(){
   const total=Object.values(counts).reduce((a,b)=>a+b,0),updated=(text.match(/Last updated:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i)||[])[1];
   if(!total)throw new Error('CDC Current Outbreaks page returned no parsable active-investigation counts');
 
-  const indexResults=await Promise.allSettled(PATHOGEN_INDEXES.map(async url=>{const x=await fetchWithTimeout(url);if(!x.ok)throw new Error(`${url} HTTP ${x.status}`);return parseCDCOutbreakIndex(await x.text(),url)}));
-  const successfulIndexes=indexResults.filter(x=>x.status==='fulfilled');
-  if(!successfulIndexes.length)throw new Error('CDC pathogen outbreak indexes were unavailable');
-  const detailUrls=[...new Set(successfulIndexes.flatMap(x=>x.value))].slice(0,48);
+  const search=await fetchWithTimeout(CDC_SEARCH_URL);if(!search.ok)throw new Error(`CDC outbreak search HTTP ${search.status}`);
+  const detailUrls=parseCDCSearchResults(await search.json()).slice(0,48);
+  if(!detailUrls.length)throw new Error('CDC outbreak search returned no open notice URLs');
   const detailResults=await mapLimit(detailUrls,8,async url=>{try{const x=await fetchWithTimeout(url);if(!x.ok)return null;return parseCDCNoticePage(await x.text(),url)}catch{return null}});
   const incidents=detailResults.filter(Boolean);
   return {incidents,note:`CDC Current Outbreaks validated; ${total} active multistate investigations — Campylobacter ${counts.campylobacter}, E. coli ${counts.ecoli}, Listeria ${counts.listeria}, Salmonella ${counts.salmonella} (${updated||'page date unavailable'}). ${incidents.length} open product-level CDC notices ingested.`};

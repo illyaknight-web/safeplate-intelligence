@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseCDCNoticePage, parseCDCOutbreakIndex } from '../netlify/functions/lib/cdc-current-parser.mjs';
+import { parseCDCNoticePage, parseCDCOutbreakIndex, parseCDCSearchResults } from '../netlify/functions/lib/cdc-current-parser.mjs';
 
 test('CDC pathogen index discovers product-level outbreak notices',()=>{
   const links=parseCDCOutbreakIndex(`
@@ -11,6 +11,15 @@ test('CDC pathogen index discovers product-level outbreak notices',()=>{
     </main>`,
     'https://www.cdc.gov/salmonella/outbreaks/index.html'
   );
+  assert.deepEqual(links,['https://www.cdc.gov/salmonella/outbreaks/broccoli-sprouts-09-26/index.html']);
+});
+
+test('CDC search response discovers dynamically rendered open notices',()=>{
+  const links=parseCDCSearchResults({response:{docs:[
+    {permalink:'https://www.cdc.gov/salmonella/outbreaks/broccoli-sprouts-09-26/index.html'},
+    {permalink:'https://www.cdc.gov/salmonella/outbreaks/broccoli-sprouts-09-26/timeline.html'},
+    {permalink:'https://example.com/not-authoritative/index.html'}
+  ]}});
   assert.deepEqual(links,['https://www.cdc.gov/salmonella/outbreaks/broccoli-sprouts-09-26/index.html']);
 });
 
