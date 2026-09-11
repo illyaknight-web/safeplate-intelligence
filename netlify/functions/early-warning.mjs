@@ -94,7 +94,7 @@ export async function runEarlyWarning(){
   const health=[...(state.sourceHealth||[])];
   for(let i=0;i<jobs.length;i++){
     const job=jobs[i],res=results[i];let h=health.find(x=>x.id===job.id);if(!h){h={id:job.id,name:job.name,family:job.id==="cdc_content"?"Federal":"State / Local",status:"PENDING",lastChecked:null,note:"Early-warning connector"};health.push(h)}h.lastChecked=now;
-    if(res.status==="fulfilled"){h.status="ONLINE";h.note=res.value.note;incoming.push(...res.value.rows);events.push({time:now,title:`Early-warning source checked — ${job.name}`,detail:h.note})}else{h.status="DEGRADED";h.note=String(res.reason?.message||res.reason||"Unknown error");events.push({time:now,title:`EARLY-WARNING SOURCE DEGRADED — ${job.name}`,detail:h.note})}
+    if(res.status==="fulfilled"){h.status="ONLINE";h.note=res.value.note;incoming.push(...res.value.rows);events.push({time:now,title:`Early-warning source checked   ${job.name}`,detail:h.note})}else{h.status="DEGRADED";h.note=String(res.reason?.message||res.reason||"Unknown error");events.push({time:now,title:`EARLY-WARNING SOURCE DEGRADED   ${job.name}`,detail:h.note})}
   }
   const merged=mergeSignals(state.incidents||[],incoming,now),corr=correlate(merged.items,now);
   const next={...state,meta:{...(state.meta||{}),earlyWarningLastSync:now,earlyWarningCycleMinutes:30},incidents:corr.items,investigations:corr.clusters,sourceHealth:health,changes:[{time:now,title:"Early-warning correlation cycle complete",detail:`${incoming.length} precursor records processed · ${merged.added} new · ${merged.changed} changed · ${corr.clusters.length} multi-source clusters.`},...events,...(state.changes||[])].slice(0,300)};

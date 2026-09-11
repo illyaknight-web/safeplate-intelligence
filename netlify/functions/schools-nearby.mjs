@@ -40,7 +40,7 @@ export default async request=>{
     if(!response.ok)throw new Error(`School directory HTTP ${response.status}`);
     const payload=await response.json();
     if(payload.error)throw new Error(payload.error.message||'School directory query failed');
-    const raw=(payload.features||[]).map(feature=>feature.attributes||{}),year=text(raw[0]?.SCHOOLYEAR)||'2022–2023';
+    const raw=(payload.features||[]).map(feature=>feature.attributes||{}),year=text(raw[0]?.SCHOOLYEAR)||'2022 2023';
     const rows=raw.map(row=>normalizeSchool(row,year)).filter(Boolean);
     const unique=[...new Map(rows.map(s=>[s.ncesId||`${s.name}|${s.address}`,s])).values()].sort((a,b)=>a.name.localeCompare(b.name));
     return json({zip,dataYear:year,count:unique.length,schools:unique.slice(0,75),notice:'Public-school identity and address data. Food alerts are shown separately and require school-specific evidence before confirmation.',source:{name:'U.S. Department of Education NCES EDGE Public School Locations',url:'https://nces.ed.gov/programs/edge/Geographic/SchoolLocations'}});

@@ -86,7 +86,7 @@ function renderRecalls(){
 }
 function renderSearch(){
   const q=$('#global-search')?.value.trim()||'',rows=q?sorted(data.incidents.filter(x=>match(q,x))):[];
-  if($('#search-results'))$('#search-results').innerHTML=!q?'<div class="empty ux-empty"><strong>Search across SAFEPLATE food-safety evidence.</strong><br>Try a product, company, pathogen, lot or state — for example “chicken”, “Listeria” or “California”.</div>':rows.length?rows.slice(0,100).map(recordCard).join(''):'<div class="empty ux-empty"><strong>No food-safety record matched.</strong><br>Try a broader product, company, pathogen or state.</div>';
+  if($('#search-results'))$('#search-results').innerHTML=!q?'<div class="empty ux-empty"><strong>Search across SAFEPLATE food-safety evidence.</strong><br>Try a product, company, pathogen, lot or state   for example “chicken”, “Listeria” or “California”.</div>':rows.length?rows.slice(0,100).map(recordCard).join(''):'<div class="empty ux-empty"><strong>No food-safety record matched.</strong><br>Try a broader product, company, pathogen or state.</div>';
   bindDetails();
 }
 function trackText(x){return strip([x.product,x.title,x.company,...(x.lots||[]),x.upc,x.ingredient,x.ingredients].flat().filter(Boolean).join(' ')).toLowerCase()}
@@ -103,7 +103,7 @@ function renderCommand(){
   if($('#system-health'))$('#system-health').innerHTML=`<div class="coverage"><strong>U.S. jurisdiction scan: ${esc(stateText())}</strong><span>${s.live?'Current coverage window complete.':st.stateScanDispatched?'Background scan dispatched.':'Coverage is incomplete.'}</span></div><div class="row"><strong>Surveillance: ${st.live?'LIVE':'NOT CURRENT'}</strong><span>Last sync: ${esc(st.lastSync?ago(st.lastSync):'never')} · 30-minute cycle</span></div>`;
   if($('#incident-list'))$('#incident-list').innerHTML=rows.length?rows.map(x=>`<div class="row"><strong>${esc(x.title||x.product)}</strong><span>${esc(x.status||'')} · ${esc(x.source||'')}</span></div>`).join(''):'<div class="empty">No food incidents loaded.</div>';
   const evidence=rows.flatMap(x=>(x.evidence||[]).map(e=>({...e,_incident:x.title||x.product}))).slice(0,200);
-  if($('#evidence-list'))$('#evidence-list').innerHTML=evidence.length?evidence.map(e=>`<div class="row"><strong>${esc(e.source||e.type||'Evidence')}</strong><span>${esc(e._incident)} — ${esc(e.text||e.summary||'')}</span></div>`).join(''):'<div class="empty">No evidence loaded.</div>';
+  if($('#evidence-list'))$('#evidence-list').innerHTML=evidence.length?evidence.map(e=>`<div class="row"><strong>${esc(e.source||e.type||'Evidence')}</strong><span>${esc(e._incident)}   ${esc(e.text||e.summary||'')}</span></div>`).join(''):'<div class="empty">No evidence loaded.</div>';
   const feeds=data.sources.filter(x=>!String(x.id||'').startsWith('state_')&&x.lastChecked&&x.status!=='PENDING');
   if($('#source-list'))$('#source-list').innerHTML=`<div class="coverage"><strong>State/DC coverage ${esc(stateText())}</strong><span>${esc(s.jurisdictionsOnline??data.coverage?.online??0)} online · ${esc(s.jurisdictionIssues??data.coverage?.degraded??0)} issues</span></div>`+(feeds.length?feeds.map(x=>`<div class="source"><strong>${esc(x.name||x.id)}</strong><span>${esc(x.status||'')}</span><span>${esc(ago(x.lastChecked))}</span></div>`).join(''):'<div class="empty">No executed source-health records loaded.</div>');
 }

@@ -17,7 +17,7 @@ export async function runNassContext(){
   const checked=nowISO(),state=await getState();let item;
   try{
     const r=await pullNASS();
-    item={id:'usda_nass_quickstats',name:'USDA NASS Quick Stats',family:'Farms / Growing Regions',status:'ONLINE',lastChecked:checked,note:`Authenticated production connection; ${r.count} bounded blueberry/state production-context records validated across ${r.states.length} states/areas. Agricultural context only — not contamination evidence.`};
+    item={id:'usda_nass_quickstats',name:'USDA NASS Quick Stats',family:'Farms / Growing Regions',status:'ONLINE',lastChecked:checked,note:`Authenticated production connection; ${r.count} bounded blueberry/state production-context records validated across ${r.states.length} states/areas. Agricultural context only   not contamination evidence.`};
     await saveState({...state,meta:{...(state.meta||{}),nassLastSync:checked,nassContextRecordCount:r.count,nassContextStates:r.states},sourceHealth:[...(state.sourceHealth||[]).filter(x=>x?.id!=='usda_nass_quickstats'),item]});
   }catch(e){
     item={id:'usda_nass_quickstats',name:'USDA NASS Quick Stats',family:'Farms / Growing Regions',status:'DEGRADED',lastChecked:checked,note:String(e?.message||e||'NASS validation failed')};

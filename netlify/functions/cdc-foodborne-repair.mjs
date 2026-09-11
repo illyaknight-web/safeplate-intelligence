@@ -30,7 +30,7 @@ async function pullCDC(){
   if(!detailUrls.length)throw new Error('CDC outbreak search returned no open notice URLs');
   const detailResults=await mapLimit(detailUrls,8,async url=>{try{const x=await fetchWithTimeout(url);if(!x.ok)return null;return parseCDCNoticePage(await x.text(),url)}catch{return null}});
   const incidents=detailResults.filter(Boolean);
-  return {incidents,note:`CDC Current Outbreaks validated; ${total} active multistate investigations — Campylobacter ${counts.campylobacter}, E. coli ${counts.ecoli}, Listeria ${counts.listeria}, Salmonella ${counts.salmonella} (${updated||'page date unavailable'}). ${incidents.length} open product-level CDC notices ingested.`};
+  return {incidents,note:`CDC Current Outbreaks validated; ${total} active multistate investigations   Campylobacter ${counts.campylobacter}, E. coli ${counts.ecoli}, Listeria ${counts.listeria}, Salmonella ${counts.salmonella} (${updated||'page date unavailable'}). ${incidents.length} open product-level CDC notices ingested.`};
 }
 
 function mergeCDC(existing,incoming,checked){

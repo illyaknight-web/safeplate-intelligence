@@ -147,8 +147,8 @@ export async function pullFDARecallAnnouncements(){
    const announcement=cleanText($$("#recall-announcement").text())||cleanText($$("main").text()).slice(0,5000);
    const images=[];
    $$("#recall-photos img").each((_,img)=>{const raw=$$(img).attr("src")||$$(img).attr("data-src");if(!raw)return;const url=new URL(raw,item.url).toString();if(!images.some(x=>x.url===url))images.push({url,caption:cleanText($$(img).attr("alt"))||"Official FDA product photograph",source:"U.S. Food and Drug Administration",verified:true})});
-   const normalized=normalizeFDA({recall_number:`ANN-${fingerprint([item.url])}`,recalling_firm:company,product_description:[brand,product].filter(Boolean).join(" — "),reason_for_recall:reason||item.title,distribution_pattern:announcement,status:"Ongoing",report_date:date,recall_initiation_date:date,imageUrl:images[0]?.url||null,images});
-   return {...normalized,title:item.title,product:[brand,product].filter(Boolean).join(" — ")||item.title,company,brand,hazard:normalized.hazard,summary:reason||announcement.slice(0,1200),source:"FDA Recall Announcement",rawSource:"fda_recall_announcements",sourceUrl:item.url,imageUrl:images[0]?.url||null,images,evidence:[...(normalized.evidence||[]).map(e=>e.type==="AGENCY"?{...e,source:"U.S. Food and Drug Administration",url:item.url,text:reason||item.title}:e),...(images.length?[{type:"PRODUCT_IMAGE",status:"VERIFIED",source:"U.S. Food and Drug Administration",text:`${images.length} official product photograph${images.length===1?"":"s"} published with the recall announcement.`,url:item.url}]:[])]};
+   const normalized=normalizeFDA({recall_number:`ANN-${fingerprint([item.url])}`,recalling_firm:company,product_description:[brand,product].filter(Boolean).join("   "),reason_for_recall:reason||item.title,distribution_pattern:announcement,status:"Ongoing",report_date:date,recall_initiation_date:date,imageUrl:images[0]?.url||null,images});
+   return {...normalized,title:item.title,product:[brand,product].filter(Boolean).join("   ")||item.title,company,brand,hazard:normalized.hazard,summary:reason||announcement.slice(0,1200),source:"FDA Recall Announcement",rawSource:"fda_recall_announcements",sourceUrl:item.url,imageUrl:images[0]?.url||null,images,evidence:[...(normalized.evidence||[]).map(e=>e.type==="AGENCY"?{...e,source:"U.S. Food and Drug Administration",url:item.url,text:reason||item.title}:e),...(images.length?[{type:"PRODUCT_IMAGE",status:"VERIFIED",source:"U.S. Food and Drug Administration",text:`${images.length} official product photograph${images.length===1?"":"s"} published with the recall announcement.`,url:item.url}]:[])]};
  }));
  return {rows:records,note:`${records.length} current official FDA food recall announcements retrieved; ${records.reduce((n,x)=>n+(x.images?.length||0),0)} official product photographs indexed`};
 }
@@ -206,10 +206,10 @@ async function pullFDAOutbreaks(){
    const id=`FDA-OUTBREAK-${ref||fingerprint([datePosted,pathogen,product])}`;
    const sourcePostedAt=sourceDateToISO(datePosted);
    const status=/ongoing/i.test(eventStatus||"")?"CORROBORATING":"RESOLVED";
-   const summary=`FDA active outbreak investigation. Product: ${product||"Not yet identified"}. Cases: ${caseCount||"not stated"}. Traceback: ${traceback||"—"}; Inspection: ${inspection||"—"}; Sampling: ${sampling||"—"}.`;
+   const summary=`FDA active outbreak investigation. Product: ${product||"Not yet identified"}. Cases: ${caseCount||"not stated"}. Traceback: ${traceback||" "}; Inspection: ${inspection||" "}; Sampling: ${sampling||" "}.`;
 
    rows.push({
-     id,title:`${pathogen||"Foodborne illness"} — ${product||"Not yet identified"}`,
+     id,title:`${pathogen||"Foodborne illness"}   ${product||"Not yet identified"}`,
      product:product||"Not yet identified",company:"",hazard:pathogen||"Foodborne illness",
      severity:sevForOutbreak(pathogen,cases),status,category:"Outbreak investigation",
      states:[],distribution:"",lat:null,lng:null,source:"FDA Active Outbreak Investigations",
@@ -248,7 +248,7 @@ async function pullNOAAENSO(){
      type:"CLIMATE_CONTEXT",title:"El Niño Advisory",severity:"WATCH",
      confidence:"AUTHORITATIVE_CONTEXT",source:"NOAA Climate Prediction Center",sourceUrl:url,
      text:cleanText(synopsis),
-     rule:"Contextual risk modifier only — not evidence that any food is contaminated."
+     rule:"Contextual risk modifier only   not evidence that any food is contaminated."
    }]:[],
    note:active
      ?"NOAA/CPC El Niño Advisory is active and available to the early-warning layer."
@@ -274,7 +274,7 @@ async function pullFDAFoodEvents(){
    const outcomes=(e.outcomes||[]).filter(Boolean);
    const symptoms=(e.reactions||[]).filter(Boolean);
    const id=`FDA-EVENT-${e.report_number||fingerprint([e.date_created,products.join("|"),symptoms.join("|")])}`;
-   const title=`Food adverse event — ${products[0]||"Product not specified"}`;
+   const title=`Food adverse event   ${products[0]||"Product not specified"}`;
    const summary=`FDA adverse-event report. Products: ${products.join(", ")||"not specified"}. Outcomes: ${outcomes.join(", ")||"not specified"}. Reactions: ${symptoms.slice(0,8).join(", ")||"not specified"}.`;
    rows.push({
      id,title,product:products.join(", ")||"Not specified",company:"",hazard:symptoms[0]||"Adverse event",
@@ -302,7 +302,7 @@ async function pullNWSHazards(){
      const p=f.properties||{},id=`NWS-${f.id||fingerprint([p.event,p.sent,p.areaDesc])}`;
      const summary=cleanText(p.description||p.headline||p.event||"NWS weather hazard");
      rows.push({
-       id,title:`Weather context — ${p.event||events[i]}`,product:"Agriculture / food-system context",company:"",
+       id,title:`Weather context   ${p.event||events[i]}`,product:"Agriculture / food-system context",company:"",
        hazard:p.event||events[i],severity:/Hurricane|Extreme Heat/i.test(p.event||"")?"WATCH":"EMERGING",
        status:"DETECTED",category:"Climate / weather context",states:[],distribution:p.areaDesc||"",
        lat:null,lng:null,source:"National Weather Service",
@@ -414,7 +414,7 @@ export async function runSurveillance({sourceIds=null,cycleType="full"}={}){
    }else{
      h.status="DEGRADED";h.note=String(result.reason?.message||result.reason||"Unknown source error");
      h.consecutiveFailures=(h.consecutiveFailures||0)+1;h.lastFailure=now;
-     events.push({time:now,title:`SOURCE DEGRADED — ${source.name}`,detail:h.note});
+     events.push({time:now,title:`SOURCE DEGRADED   ${source.name}`,detail:h.note});
    }
  }
 

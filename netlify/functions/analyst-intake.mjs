@@ -34,7 +34,7 @@ export default async(req)=>{
  };
  const s=await getState();
  s.incidents=[incident,...(s.incidents||[])].slice(0,1200);
- s.changes=[{time:now,title:"Analyst signal created",detail:`${id} entered as DETECTED — not verified.`},...(s.changes||[])].slice(0,250);
+ s.changes=[{time:now,title:"Analyst signal created",detail:`${id} entered as DETECTED   not verified.`},...(s.changes||[])].slice(0,250);
  await saveState(s);
  return Response.json({ok:true,id,status:"DETECTED"});
 };
