@@ -14,9 +14,6 @@ const INTERNATIONAL_SOURCES=new Set(["cfia_recalls","uk_fsa_alerts"]);
 const foodTerms=/\b(food|foods|salmonella|listeria|e\.?\s*coli|campylobacter|botul|allergen|undeclared|milk|egg|peanut|soy|wheat|sesame|fish|shellfish|meat|beef|pork|chicken|turkey|produce|fruit|vegetable|berry|berries|blueberr|lettuce|cheese|dairy|seafood|shrimp|tuna|rice|flour|bread|snack|cereal|sauce|spice|frozen|ready-to-eat|rte|grocery|ingredient|produce|poultry)\b/i;
 const foodEvents=/\b(recall|recalled|public health alert|food alert|food safety|outbreak|contamination|adulterat|misbrand|undeclared allergen|possible recall|potential recall|investigation)\b/i;
 const reject=/\b(advisory board|committee meeting|hearing screening|interpreters for the deaf|breast cancer|opioid|mental health|behavioral health|medicaid|public meeting|screening program)\b/i;
-// FDA's broad recall surfaces can occasionally leak drug/device notices into
-// the food announcement stream. Keep those out of every public food view even
-// when the upstream record was misclassified as `category: Food`.
 const nonFoodProduct=/\b(injection|injectable|tablet|capsule|syringe|vial|ophthalmic|medical device|catheter|implant|epinephrine|pharmaceutical|sterility assurance)\b/i;
 export const foodRecord=x=>{
  const t=`${x?.title||""} ${x?.product||""} ${x?.summary||""} ${x?.category||""} ${x?.hazard||""} ${x?.pathogen||""} ${x?.company||""} ${x?.source||""}`;
@@ -29,6 +26,21 @@ const isUSRelevant=x=>{
  return ["VERIFIED","CORROBORATED"].includes(String(x?.usRelevanceStatus||"").toUpperCase());
 };
 const clinicalMetadata=x=>{const t=`${x?.title||''} ${x?.hazard||''} ${x?.summary||''} ${x?.pathogen||''}`.toLowerCase(),groups=[];if(/listeria/.test(t))groups.push('pregnant','older_adult','immunocompromised','infant');if(/salmonella|e\.?\s*coli|stec|campylobacter|botul/.test(t))groups.push('older_adult','immunocompromised','infant');if(/formula|infant|baby food/.test(t))groups.push('infant');if(/undeclared|allergen|peanut|tree nut|milk|egg|wheat|soy|sesame|shellfish/.test(t))groups.push('food_allergy');const pathogen=/listeria/.test(t)?'Listeria':/salmonella/.test(t)?'Salmonella':/e\.?\s*coli|stec/.test(t)?'E. coli/STEC':/campylobacter/.test(t)?'Campylobacter':/botul/.test(t)?'Botulism':null;return {vulnerable_population_risk:[...new Set(groups)],clinical_guidance:pathogen?{pathogen,summary:'Symptoms and severity vary. This is safety information, not a diagnosis.',urgentCare:'Seek urgent medical care for severe dehydration, bloody diarrhea, persistent high fever, confusion, breathing difficulty, weakness/paralysis, pregnancy with fever or flu-like symptoms, or symptoms in an infant, older adult, or immunocompromised person.',poisonControl:'United States Poison Control: 1-800-222-1222',emergency:'Call 911 for a life-threatening emergency.'}:null}}
+
+function recallPhotoEnrichment(x){
+ const t=`${x?.id||''} ${x?.title||''} ${x?.product||''} ${x?.company||''} ${x?.summary||''}`;
+ if(/\bA-FNG\b/i.test(t)&&(/H-1278-2026/i.test(t)||/Byron White/i.test(t))){
+   const url='https://safeplate-intelligence.netlify.app/api/product-reference-photo?key=a-fng';
+   const existing=Array.isArray(x.images)?x.images:[];
+   return {
+     imageUrl:x.imageUrl||url,
+     images:existing.length?existing:[{url,caption:'Byron White Formulas A-FNG 1.0 fl. oz./30 mL product reference photograph',source:'Verified exact named-product reference',verified:true,evidenceClass:'EXACT_PRODUCT_REFERENCE'}],
+     imageEvidenceClass:x.imageEvidenceClass||'EXACT_PRODUCT_REFERENCE'
+   };
+ }
+ return {imageUrl:x.imageUrl||x.image_url||x.photoUrl||x.thumbnailUrl||null,images:Array.isArray(x.images)?x.images:[]};
+}
+
 const publicRecord=x=>({
  ...x,
  title:clean(x.title||x.product||"Food safety record"),
@@ -43,6 +55,7 @@ const publicRecord=x=>({
  upc:x.upc||x.identifiers?.find?.(v=>/^\d{8,14}$/.test(String(v)))||null,
  gtin:x.gtin||x.identifiers?.find?.(v=>/^\d{14}$/.test(String(v)))||null,
  last_synced:x.last_synced||x.lastObservedAt||x.updatedAt||null,
+ ...recallPhotoEnrichment(x),
  ...clinicalMetadata(x),
  authority_notice:'SAFEPLATE aggregates official records and is not FDA, USDA, CDC, or a medical provider. Verify consequential decisions at the linked official source.'
 });
