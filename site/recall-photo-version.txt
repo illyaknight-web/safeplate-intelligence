@@ -1,0 +1,3 @@
+SAFEPLATE recall-photo pipeline v1.3
+Purpose: force production rebuild so the latest FDA + USDA/FSIS resolver and verified A-FNG image enrichment are included.
+Updated: 2026-09-11
