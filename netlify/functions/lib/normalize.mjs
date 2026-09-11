@@ -26,6 +26,17 @@ const US_STATES={
 };
 const NAME_TO_CODE=Object.fromEntries(Object.entries(US_STATES).map(([k,v])=>[v.toLowerCase(),k]));
 
+const VERIFIED_PRODUCT_IMAGES=[
+  {
+    recall:/^H-1278-2026$/i,
+    product:/\bA-FNG\b/i,
+    url:"https://store.hwofc.com/cdn/shop/files/A-FNGFront.png?v=1695231759",
+    source:"Health & Wellness of Carmel product listing",
+    caption:"Byron White Formulas A-FNG 1.0 fl. oz./30 mL product reference photograph",
+    evidenceClass:"EXACT_PRODUCT_REFERENCE"
+  }
+];
+
 function parseStates(v=""){
   const t=String(v||"");
   if(!t)return[];
@@ -59,12 +70,35 @@ function channelMetadata(text=""){
   return {distribution_channel:[...new Set(channels)],tefap_commodity_flag:channels.includes("foodbank_tefap")};
 }
 
+function sourceImages(r={}){
+  const raw=[
+    r.imageUrl,r.image_url,r.photoUrl,r.thumbnailUrl,r.field_image_url,r.field_image,r.image,r.photo,
+    ...(Array.isArray(r.images)?r.images:[])
+  ];
+  const out=[];
+  for(const item of raw){
+    const url=typeof item==='string'?item:item?.url||item?.src||item?.imageUrl;
+    if(!/^https:\/\//i.test(String(url||'')))continue;
+    if(out.some(x=>x.url===url))continue;
+    out.push(typeof item==='string'?{url,caption:"Product or label image supplied by source",source:"Authoritative source record",verified:true,evidenceClass:"SOURCE_IMAGE"}:{verified:true,evidenceClass:"SOURCE_IMAGE",...item,url});
+  }
+  return out;
+}
+
+function verifiedProductReference(r={}){
+  const recall=String(r.recall_number||r.field_recall_number||r.id||'');
+  const product=String(r.product_description||r.field_product_items||r.product_items||r.field_title||r.title||'');
+  const match=VERIFIED_PRODUCT_IMAGES.find(x=>x.recall.test(recall)&&x.product.test(product));
+  return match?{url:match.url,caption:match.caption,source:match.source,verified:true,evidenceClass:match.evidenceClass}:null;
+}
+
 export function normalizeFDA(r){
   const id=`FDA-${r.recall_number||fingerprint([r.recalling_firm,r.product_description,r.recall_initiation_date])}`;
   const text=[r.reason_for_recall,r.product_description].filter(Boolean).join(" ");
   const distribution=r.distribution_pattern||"";
   const firmPlace=cleanPlace([r.city,r.state,r.country]);
   const ids=identifiers(r),program=channelMetadata(`${distribution} ${r.product_description||""} ${r.reason_for_recall||""}`);
+  const images=sourceImages(r),reference=images.length?null:verifiedProductReference(r);if(reference)images.push(reference);
   return {
     id,
     title:r.product_description||"FDA food enforcement record",
@@ -88,12 +122,13 @@ export function normalizeFDA(r){
     gtin:ids.find(v=>v.length===14)||null,
     identifiers:ids,
     ...program,
-    imageUrl:r.imageUrl||r.image_url||r.photoUrl||r.thumbnailUrl||null,
-    images:Array.isArray(r.images)?r.images:[],
+    imageUrl:images[0]?.url||null,
+    images,
     summary:r.reason_for_recall||"",
     lots:[],
     evidence:[
       {type:"AGENCY",status:"VERIFIED",source:"FDA openFDA Food Enforcement",text:r.reason_for_recall||"FDA enforcement record",url:"https://open.fda.gov/apis/food/enforcement/"},
+      ...(reference?[{type:"PRODUCT_IMAGE",status:"VERIFIED_REFERENCE",source:reference.source,text:"Exact named product reference image; not represented as the recalled lot/package unless the source record confirms that match.",url:reference.url}]:[]),
       ...(firmPlace?[{type:"LOCATION",status:"VERIFIED",source:"FDA recalling-firm location",text:firmPlace,role:"recalling_firm"}]:[]),
       ...(distribution?[{type:"DISTRIBUTION",status:"VERIFIED",source:"FDA distribution pattern",text:distribution}]:[])
     ],
@@ -116,6 +151,7 @@ export function normalizeFSIS(r){
   const establishment=r.field_establishment||r.establishment||"";
   const id=`FSIS-${String(rid).replace(/\s+/g,"-")}`;
   const ids=identifiers(r),program=channelMetadata(`${distribution} ${r.field_product_items||r.product_items||""} ${reason}`);
+  const images=sourceImages(r),reference=images.length?null:verifiedProductReference(r);if(reference)images.push(reference);
   return {
     id,title,
     product:r.field_product_items||r.product_items||title,
@@ -138,12 +174,13 @@ export function normalizeFSIS(r){
     gtin:ids.find(v=>v.length===14)||null,
     identifiers:ids,
     ...program,
-    imageUrl:r.imageUrl||r.image_url||r.photoUrl||r.thumbnailUrl||null,
-    images:Array.isArray(r.images)?r.images:[],
+    imageUrl:images[0]?.url||null,
+    images,
     summary:reason,
     lots:[],
     evidence:[
       {type:"AGENCY",status:"VERIFIED",source:"USDA FSIS Recall API",text:reason||title,url:r.field_recall_url||"https://www.fsis.usda.gov/recalls"},
+      ...(reference?[{type:"PRODUCT_IMAGE",status:"VERIFIED_REFERENCE",source:reference.source,text:"Exact named product reference image; not represented as the recalled lot/package unless the source record confirms that match.",url:reference.url}]:[]),
       ...(distribution?[{type:"DISTRIBUTION",status:"VERIFIED",source:"USDA FSIS distribution",text:distribution}]:[]),
       ...(establishment?[{type:"ESTABLISHMENT",status:"VERIFIED",source:"USDA FSIS establishment",text:establishment}]:[])
     ],
