@@ -19,5 +19,5 @@
 <rect x="1030" y="210" width="140" height="170" rx="4" fill="none" stroke="#12201D" stroke-width="2.5"/>
 <line x1="1055" y1="240" x2="1145" y2="240" stroke="#C9C2AE" stroke-width="3"/><line x1="1055" y1="268" x2="1145" y2="268" stroke="#C9C2AE" stroke-width="3"/><line x1="1055" y1="296" x2="1145" y2="296" stroke="#C9C2AE" stroke-width="3"/><line x1="1055" y1="324" x2="1145" y2="324" stroke="#C9C2AE" stroke-width="3"/>
 <text x="1100" y="410" font-family="DejaVu Serif, serif" font-size="24" fill="#12201D" text-anchor="middle" font-weight="bold">Retailer</text><text x="1100" y="440" font-family="Liberation Mono, monospace" font-size="16" fill="#6B7C77" text-anchor="middle">POS export</text>
-<text x="700" y="70" font-family="Liberation Sans, sans-serif" font-size="20" fill="#6B7C77" text-anchor="middle" letter-spacing="3">TODAY — FOUR RECORD FORMATS, ZERO SHARED IDENTIFIER</text>
+<text x="700" y="70" font-family="Liberation Sans, sans-serif" font-size="20" fill="#6B7C77" text-anchor="middle" letter-spacing="3">TODAY FOUR RECORD FORMATS, ZERO SHARED IDENTIFIER</text>
 </svg>

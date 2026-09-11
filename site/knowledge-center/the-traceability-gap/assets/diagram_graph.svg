@@ -8,6 +8,6 @@
 <circle cx="1180" cy="180" r="46" fill="#F7F4EE" stroke="#C9C2AE" stroke-width="2"/><text x="1180" y="114" font-family="Liberation Sans, sans-serif" font-size="19" fill="#F7F4EE" text-anchor="middle" letter-spacing="1">PROCESSOR</text>
 <circle cx="220" cy="580" r="46" fill="#F7F4EE" stroke="#C9C2AE" stroke-width="2"/><text x="220" y="656" font-family="Liberation Sans, sans-serif" font-size="19" fill="#F7F4EE" text-anchor="middle" letter-spacing="1">DISTRIBUTOR</text>
 <circle cx="1180" cy="580" r="46" fill="#F7F4EE" stroke="#C9C2AE" stroke-width="2"/><text x="1180" y="656" font-family="Liberation Sans, sans-serif" font-size="19" fill="#F7F4EE" text-anchor="middle" letter-spacing="1">RETAILER</text>
-<circle cx="700" cy="380" r="64" fill="#B8791F"/><text x="700" y="374" font-family="DejaVu Serif, serif" font-size="18" fill="#0B2E2B" text-anchor="middle" font-weight="bold">RESOLVED</text><text x="700" y="398" font-family="Liberation Mono, monospace" font-size="14" fill="#0B2E2B" text-anchor="middle">LOT 04A-2281</text>
+<circle cx="700" cy="380" r="64" fill="#B8791F"/><text x="700" y="374" font-family="DejaVu Serif, serif" font-size="18" fill="#0B2E2B" text-anchor="middle" font-weight="bold">RESOLVED</text><text x="700" y="398" font-family="Liberation Mono, monospace" font-size="14" fill="#0B2E2B" text-anchor="middle">LOT 04A 2281</text>
 <text x="700" y="70" font-family="Liberation Sans, sans-serif" font-size="20" fill="#F7F4EE" text-anchor="middle" letter-spacing="3" opacity="0.9">ONE RESOLVABLE ENTITY, FOUR SOURCE RECORDS</text>
 </svg>
