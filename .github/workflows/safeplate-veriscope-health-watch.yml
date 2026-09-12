@@ -1,0 +1,112 @@
+name: SAFEPLATE + VERISCOPE 10-Minute Health Watch
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/10 * * * *'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/safeplate-veriscope-health-watch.yml'
+      - 'netlify/functions/deployment-info.mjs'
+      - 'netlify/functions/system-status.mjs'
+      - 'netlify/functions/veriscope-bridge-status.mjs'
+      - 'netlify/functions/veriscope-bridge-scheduled.mjs'
+      - 'netlify/functions/lib/veriscope-bridge.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  health-watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check live SAFEPLATE and VERISCOPE health
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://safeplate-intelligence.netlify.app'
+          mkdir -p health
+
+          curl --fail --silent --show-error --location --max-time 20 "$BASE/api/deployment-info?ts=$(date +%s)" -o health/deployment.json
+          curl --fail --silent --show-error --location --max-time 20 "$BASE/api/system-status?ts=$(date +%s)" -o health/system-status.json
+          curl --fail --silent --show-error --location --max-time 20 "$BASE/api/veriscope-bridge-status?ts=$(date +%s)" -o health/veriscope.json
+
+          python - <<'PY'
+          import json
+          from datetime import datetime, timezone
+
+          def load(path):
+              with open(path) as f:
+                  return json.load(f)
+
+          deployment = load('health/deployment.json')
+          system = load('health/system-status.json')
+          veriscope = load('health/veriscope.json')
+          failures = []
+
+          commit = deployment.get('commit')
+          if not commit or len(str(commit)) != 40:
+              failures.append(f"Production deployment identity unavailable: {commit!r}")
+
+          if not system.get('live'):
+              failures.append('SAFEPLATE system-status is not live')
+          age = system.get('ageMinutes')
+          if age is None or age > 60:
+              failures.append(f'SAFEPLATE surveillance stale: ageMinutes={age}')
+
+          critical = system.get('criticalSources') or {}
+          critical_age = critical.get('ageMinutes')
+          if critical_age is None or critical_age > 35:
+              failures.append(f'Critical-source surveillance stale: ageMinutes={critical_age}')
+
+          early = system.get('earlyWarning') or {}
+          if not early.get('live'):
+              failures.append('SAFEPLATE early-warning layer is not live')
+          early_age = early.get('ageMinutes')
+          if early_age is None or early_age > 60:
+              failures.append(f'Early-warning surveillance stale: ageMinutes={early_age}')
+
+          state = system.get('stateSurveillance') or {}
+          if not state.get('live'):
+              failures.append(f"State surveillance not live: checked={state.get('jurisdictionsChecked')}/51 scanner={state.get('scannerVersion')}")
+
+          healthy_bridge_states = {'SHADOW_NO_CHANGES', 'SHADOW_DELIVERED'}
+          bridge_status = veriscope.get('status')
+          if bridge_status not in healthy_bridge_states:
+              failures.append(f'VERISCOPE bridge unhealthy: status={bridge_status}')
+          if veriscope.get('error'):
+              failures.append(f"VERISCOPE bridge error: {veriscope.get('error')}")
+
+          completed = veriscope.get('lastCycleCompletedAt')
+          if not completed:
+              failures.append('VERISCOPE has no completed bridge cycle')
+          else:
+              try:
+                  dt = datetime.fromisoformat(str(completed).replace('Z', '+00:00')).astimezone(timezone.utc)
+                  minutes = (datetime.now(timezone.utc) - dt).total_seconds() / 60
+                  if minutes > 35:
+                      failures.append(f'VERISCOPE bridge stale: last completed {minutes:.1f} minutes ago')
+              except Exception:
+                  failures.append(f'VERISCOPE completion time is invalid: {completed}')
+
+          if failures:
+              print('SAFEPLATE / VERISCOPE HEALTH WATCH FAILED')
+              for item in failures:
+                  print(f' - {item}')
+              raise SystemExit(1)
+
+          print('SAFEPLATE / VERISCOPE HEALTH WATCH PASSED')
+          print(f"Production commit: {commit}")
+          print(f"SAFEPLATE surveillance age: {age} minutes")
+          print(f"VERISCOPE status: {bridge_status}; last cycle: {completed}")
+          PY
+
+      - name: Upload health evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: safeplate-veriscope-health-${{ github.run_id }}
+          path: health/
+          retention-days: 14
