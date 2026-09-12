@@ -30,12 +30,15 @@ const clinicalMetadata=x=>{const t=`${x?.title||''} ${x?.hazard||''} ${x?.summar
 function recallPhotoEnrichment(x){
  const t=`${x?.id||''} ${x?.title||''} ${x?.product||''} ${x?.company||''} ${x?.summary||''}`;
  if(/\bA-FNG\b/i.test(t)&&(/H-1278-2026/i.test(t)||/Byron White/i.test(t))){
-   const url='https://safeplate-intelligence.netlify.app/api/product-reference-photo?key=a-fng';
-   const existing=Array.isArray(x.images)?x.images:[];
+   // Exact named-product reference. Use the public Shopify CDN URL directly: the previous
+   // server-side proxy could return a 502 and Safari then replaced the image with the placeholder.
+   const url='https://store.hwofc.com/cdn/shop/files/A-FNGFront.png?v=1695231759';
    return {
-     imageUrl:x.imageUrl||url,
-     images:existing.length?existing:[{url,caption:'Byron White Formulas A-FNG 1.0 fl. oz./30 mL product reference photograph',source:'Verified exact named-product reference',verified:true,evidenceClass:'EXACT_PRODUCT_REFERENCE'}],
-     imageEvidenceClass:x.imageEvidenceClass||'EXACT_PRODUCT_REFERENCE'
+     imageUrl:url,
+     image_url:url,
+     photoUrl:url,
+     images:[{url,caption:'Byron White Formulas A-FNG 1.0 fl. oz./30 mL product reference photograph',source:'Verified exact named-product reference',verified:true,evidenceClass:'EXACT_PRODUCT_REFERENCE'}],
+     imageEvidenceClass:'EXACT_PRODUCT_REFERENCE'
    };
  }
  return {imageUrl:x.imageUrl||x.image_url||x.photoUrl||x.thumbnailUrl||null,images:Array.isArray(x.images)?x.images:[]};
@@ -63,6 +66,6 @@ const publicRecord=x=>({
 export default async()=>{
  const s=await getState();
  const incidents=(s.incidents||[]).filter(x=>!x?.institutionalOnly&&!spanish(x)&&foodRecord(x)&&isUSRelevant(x)).map(publicRecord);
- return Response.json({meta:{...(s.meta||{}),last_synced:s.meta?.lastSuccessfulRun||s.meta?.surveillanceLastSync||incidents[0]?.last_synced||null},incidents,investigations:s.investigations||[],changes:s.changes||[]},{headers:{"cache-control":"public, max-age=0, must-revalidate","netlify-cdn-cache-control":"public, durable, max-age=60, stale-while-revalidate=120"}})
+ return Response.json({meta:{...(s.meta||{}),last_synced:s.meta?.lastSuccessfulRun||s.meta?.surveillanceLastSync||incidents[0]?.last_synced||null},incidents,investigations:s.investigations||[],changes:s.changes||[]},{headers:{"cache-control":"public, max-age=0, must-revalidate","netlify-cdn-cache-control":"public, durable, max-age=30, stale-while-revalidate=30"}})
 };
 export const config={path:"/api/incidents"};
