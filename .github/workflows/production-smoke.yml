@@ -89,7 +89,7 @@ jobs:
           curl -fsSL "$BASE/" -o smoke/home.html
           curl -fsSL "$BASE/public-view-v1.html" -o smoke/public.html
           curl -fsSL "$BASE/advanced-intelligence-v16.html" -o smoke/advanced.html
-          curl -fsSL "$BASE/booth" -o smoke/booth.html
+          curl -fsSL "$BASE/booth.html" -o smoke/booth.html
           curl -fsSL "$BASE/shell-v2.js" -o smoke/shell-v2.js
 
           assert_contains() { grep -Fq "$2" "$1" || { echo "::error::$3 was not found in $1"; return 1; }; }
