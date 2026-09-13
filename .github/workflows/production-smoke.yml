@@ -1,0 +1,77 @@
+name: SAFEPLATE Production Smoke Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/production-smoke.yml'
+      - 'netlify.toml'
+      - 'netlify/functions/**'
+      - 'site/**'
+      - 'tests/**'
+  schedule:
+    - cron: '12 */6 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify production health and critical UI
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://safeplate-intelligence.netlify.app'
+          mkdir -p smoke
+
+          curl -fsSL --max-time 20 "$BASE/" -o smoke/home.html
+          curl -fsSL --max-time 20 "$BASE/public-view-v1.html" -o smoke/public.html
+          curl -fsSL --max-time 20 "$BASE/api/platform-health?ts=$(date +%s)" -o smoke/platform-health.json
+
+          grep -Fq 'id="pubBtn"' smoke/home.html
+          grep -Fq 'id="advBtn"' smoke/home.html
+          grep -Fq 'Know what’s going on with your food.' smoke/public.html
+
+          python - <<'PY'
+          import json, pathlib
+          p=pathlib.Path('smoke')
+          health=json.loads((p/'platform-health.json').read_text())
+          failures=[]
+          safeplate=health.get('safeplate') or {}
+          veriscope=health.get('veriscope') or {}
+          if not health.get('healthy'):
+              failures.append('platform-health reported unhealthy')
+          if not safeplate.get('live'):
+              failures.append('SAFEPLATE surveillance not live')
+          critical=safeplate.get('criticalSources') or {}
+          if critical.get('ageMinutes') is None or critical.get('ageMinutes') > 35:
+              failures.append(f"critical surveillance stale: {critical.get('ageMinutes')}")
+          state=safeplate.get('stateSurveillance') or {}
+          if not state.get('live'):
+              failures.append('state surveillance not live')
+          if veriscope.get('status') not in {'SHADOW_NO_CHANGES','SHADOW_DELIVERED'}:
+              failures.append(f"VERISCOPE unhealthy: {veriscope.get('status')}")
+          if veriscope.get('ageMinutes') is None or veriscope.get('ageMinutes') > 35:
+              failures.append(f"VERISCOPE stale: {veriscope.get('ageMinutes')}")
+          if veriscope.get('error'):
+              failures.append(f"VERISCOPE error: {veriscope.get('error')}")
+          report={'health':health,'result':'FAIL' if failures else 'PASS','failures':failures}
+          (p/'production-proof.json').write_text(json.dumps(report,indent=2)+'\n')
+          if failures:
+              raise SystemExit('PRODUCTION SMOKE FAILURES:\n- '+'\n- '.join(failures))
+          print('SAFEPLATE cost-controlled production smoke PASSED')
+          PY
+
+      - name: Upload production evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: safeplate-production-smoke-${{ github.run_id }}
+          path: smoke/
+          retention-days: 7
