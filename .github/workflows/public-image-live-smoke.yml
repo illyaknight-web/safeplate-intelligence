@@ -18,7 +18,7 @@ on:
       - 'scripts/verify_public_release_images.py'
       - 'scripts/write-deployment-info.mjs'
   schedule:
-    - cron: '18,48 * * * *'
+    - cron: '18 8 * * *'
 
 jobs:
   image-smoke:
@@ -105,4 +105,4 @@ jobs:
         with:
           name: safeplate-public-image-smoke-${{ github.sha }}
           path: smoke/
-          retention-days: 30
+          retention-days: 14
