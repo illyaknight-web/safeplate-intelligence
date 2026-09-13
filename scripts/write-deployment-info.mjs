@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 
-const gitCommit=()=>{try{return execFileSync("git",["rev-parse","HEAD"],{encoding:"utf8"}).trim()}catch{return null}};
+// Production verification prefers Netlify COMMIT_REF and falls back to the checked-out Git commit.\nconst gitCommit=()=>{try{return execFileSync("git",["rev-parse","HEAD"],{encoding:"utf8"}).trim()}catch{return null}};
 const suppliedCommit=process.env.COMMIT_REF||null;
 const immutableCommit=/^[0-9a-f]{40}$/i.test(suppliedCommit||"")?suppliedCommit:gitCommit();
 
