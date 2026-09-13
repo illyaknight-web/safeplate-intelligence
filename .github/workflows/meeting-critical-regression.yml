@@ -15,7 +15,7 @@ on:
       - 'netlify.toml'
       - '.github/workflows/meeting-critical-regression.yml'
   schedule:
-    - cron: '20,50 * * * *'
+    - cron: '20 1,7,13,19 * * *'
 
 jobs:
   meeting-critical:
