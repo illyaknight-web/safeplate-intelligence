@@ -3,7 +3,9 @@ name: SAFEPLATE + VERISCOPE Health Watch
 on:
   workflow_dispatch:
   schedule:
-    - cron: '*/30 * * * *'
+    # Keep the 30-minute cadence, but offset from GitHub's busiest :00/:30 boundaries.
+    # This also forces GitHub to re-register the schedule after the workflow update.
+    - cron: '7,37 * * * *'
   push:
     branches: [main]
     paths:
