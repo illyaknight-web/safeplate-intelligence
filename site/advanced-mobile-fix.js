@@ -8,7 +8,7 @@
       if(!document.getElementById('safeplate-pulse-nav-style')){
         const style=document.createElement('style');
         style.id='safeplate-pulse-nav-style';
-        style.textContent=`.siteHeader .headerMeta{display:flex;align-items:center;justify-content:flex-end;gap:8px;font-size:0!important}.siteHeader .headerMeta:before{content:'One site · three views · 30-minute live checks';font-size:10px;color:#7b8e83;white-space:nowrap}.safeplate-pulse-nav{display:inline-flex!important;align-items:center;justify-content:center;min-height:42px;padding:10px 14px!important;border:1px solid #72e49a!important;border-radius:999px!important;background:#72e49a!important;color:#06200f!important;text-decoration:none!important;font-size:11px!important;font-weight:950!important;letter-spacing:.035em!important;box-shadow:0 8px 24px rgba(114,228,154,.14)}.safeplate-pulse-nav:hover{filter:brightness(1.04)}@media(max-width:760px){.siteHeader .headerMeta{display:flex!important;position:absolute!important;right:10px!important;top:9px!important;z-index:30!important}.siteHeader .headerMeta:before{display:none!important}.safeplate-pulse-nav{min-height:38px!important;padding:8px 10px!important;font-size:10px!important}.siteHeader .brand{padding-right:132px!important}}`;
+        style.textContent=`.siteHeader .headerMeta{display:flex;align-items:center;justify-content:flex-end;gap:8px;font-size:0!important}.siteHeader .headerMeta:before{content:'One site · three views · 30-minute live checks';font-size:10px;color:#7b8e83;white-space:nowrap}.safeplate-pulse-nav{display:inline-flex!important;align-items:center;justify-content:center;min-height:42px;padding:10px 14px!important;border:1px solid #72e49a!important;border-radius:999px!important;background:#72e49a!important;color:#06200f!important;text-decoration:none!important;font-size:11px!important;font-weight:950!important;letter-spacing:.02em!important;box-shadow:0 8px 24px rgba(114,228,154,.14)}.safeplate-pulse-nav:hover{filter:brightness(1.04)}@media(max-width:760px){.siteHeader .headerMeta{display:flex!important;position:absolute!important;right:10px!important;top:9px!important;z-index:30!important}.siteHeader .headerMeta:before{display:none!important}.safeplate-pulse-nav{min-height:38px!important;padding:8px 9px!important;font-size:9px!important}.siteHeader .brand{padding-right:168px!important}}`;
         document.head.appendChild(style);
       }
       let link=document.getElementById('safeplate-pulse-nav');
@@ -17,11 +17,11 @@
         link.id='safeplate-pulse-nav';
         link.className='safeplate-pulse-nav';
         link.href='/safeplate-pulse.html';
-        link.textContent='FOOD SAFETY PULSE';
-        link.setAttribute('aria-label','Open SAFEPLATE Food Safety Pulse');
+        link.textContent="WHAT'S HAPPENING RIGHT NOW";
+        link.setAttribute('aria-label',"See what's happening with food safety right now");
         meta.appendChild(link);
       }
-    }catch(e){console.warn('SAFEPLATE Pulse navigation install skipped',e)}
+    }catch(e){console.warn('SAFEPLATE current-safety navigation install skipped',e)}
   }
   function install(){
     try{
@@ -44,7 +44,7 @@
         }
         if(!el.dataset.v18Fullscreen){el.dataset.v18Fullscreen='1';const btn=doc.createElement('button');btn.type='button';btn.textContent='FULL SCREEN MAP';btn.setAttribute('aria-label','Expand intelligence map to full screen');btn.style.cssText='position:absolute;left:10px;bottom:10px;z-index:30;border:1px solid #72e49a;background:#07150de8;color:#eaffef;border-radius:999px;padding:9px 11px;font:850 9px Inter,system-ui,sans-serif;letter-spacing:.06em';btn.onclick=()=>{const on=el.classList.toggle('safeplate-map-full');btn.textContent=on?'CLOSE FULL SCREEN':'FULL SCREEN MAP';doc.body.style.overflow=on?'hidden':'';setTimeout(()=>frame.contentWindow?.dispatchEvent(new Event('resize')),80)};el.appendChild(btn)}
       };
-      const addV18Tools=()=>{const host=doc.querySelector('.workspaceTitle')||doc.querySelector('.workspaceInner');if(!host||doc.getElementById('safeplate-v18-tools'))return;const tools=doc.createElement('div');tools.id='safeplate-v18-tools';tools.className='safeplate-v18-tools';tools.innerHTML='<a href="/safeplate-pulse.html" target="_top">FOOD SAFETY PULSE</a><button type="button" id="safeplate-gov-mode">GOVERNMENT / INSTITUTION MODE</button>';host.insertAdjacentElement('afterend',tools);tools.querySelector('#safeplate-gov-mode').onclick=()=>{doc.body.classList.toggle('safeplate-government-mode');const on=doc.body.classList.contains('safeplate-government-mode');tools.querySelector('#safeplate-gov-mode').textContent=on?'PUBLIC LANGUAGE MODE':'GOVERNMENT / INSTITUTION MODE';doc.querySelectorAll('.evidence,.panel,.workspaceInner').forEach(x=>x.dataset.audience=on?'government-institution':'public')};};
+      const addV18Tools=()=>{const host=doc.querySelector('.workspaceTitle')||doc.querySelector('.workspaceInner');if(!host||doc.getElementById('safeplate-v18-tools'))return;const tools=doc.createElement('div');tools.id='safeplate-v18-tools';tools.className='safeplate-v18-tools';tools.innerHTML='<a href="/safeplate-pulse.html" target="_top">WHAT\'S HAPPENING RIGHT NOW</a><button type="button" id="safeplate-gov-mode">GOVERNMENT / INSTITUTION MODE</button>';host.insertAdjacentElement('afterend',tools);tools.querySelector('#safeplate-gov-mode').onclick=()=>{doc.body.classList.toggle('safeplate-government-mode');const on=doc.body.classList.contains('safeplate-government-mode');tools.querySelector('#safeplate-gov-mode').textContent=on?'PUBLIC LANGUAGE MODE':'GOVERNMENT / INSTITUTION MODE';doc.querySelectorAll('.evidence,.panel,.workspaceInner').forEach(x=>x.dataset.audience=on?'government-institution':'public')};};
       const enhance=()=>{['heroMap','journeyMap'].forEach(upgradeFallbackMap);addV18Tools();installHeaderPulse()};
       enhance();
       if(!doc.documentElement.dataset.safeplateRealMapWatcher){doc.documentElement.dataset.safeplateRealMapWatcher='1';new MutationObserver(enhance).observe(doc.body,{childList:true,subtree:true})}
