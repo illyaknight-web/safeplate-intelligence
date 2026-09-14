@@ -1,0 +1,33 @@
+{
+  "name": "SAFEPLATE™ Food Recall Alerts",
+  "short_name": "SAFEPLATE",
+  "description": "Verified food recall, outbreak, and safety alerts from SAFEPLATE™ by Function Media LLC.",
+  "id": "/",
+  "start_url": "/?source=installed-app",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#020705",
+  "theme_color": "#07552f",
+  "orientation": "portrait-primary",
+  "categories": ["health", "food", "utilities"],
+  "icons": [
+    {
+      "src": "/safeplate-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "What's Happening Right Now",
+      "short_name": "Current Alerts",
+      "url": "/safeplate-pulse.html"
+    },
+    {
+      "name": "Check My Food",
+      "short_name": "Check Food",
+      "url": "/search"
+    }
+  ]
+}
