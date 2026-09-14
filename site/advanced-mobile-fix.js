@@ -1,6 +1,14 @@
 (()=>{
   const frame=document.getElementById('advancedFrame');
   const STATIC_MAP='https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/export?bbox=-130,24,-65,50&bboxSR=4326&size=1200,650&imageSR=4326&format=png32&transparent=false&f=image';
+  function installPhoneApp(){
+    try{
+      if(!document.querySelector('link[rel="manifest"][href="/safeplate.webmanifest"]')){const link=document.createElement('link');link.rel='manifest';link.href='/safeplate.webmanifest';document.head.appendChild(link)}
+      if(!document.querySelector('meta[name="apple-mobile-web-app-capable"]')){const meta=document.createElement('meta');meta.name='apple-mobile-web-app-capable';meta.content='yes';document.head.appendChild(meta)}
+      if(!document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')){const meta=document.createElement('meta');meta.name='apple-mobile-web-app-status-bar-style';meta.content='black-translucent';document.head.appendChild(meta)}
+      if(!document.getElementById('safeplate-pwa-controller')){const script=document.createElement('script');script.id='safeplate-pwa-controller';script.src='/safeplate-pwa.js?release=20260914';script.defer=true;document.head.appendChild(script)}
+    }catch(e){console.warn('SAFEPLATE phone app install skipped',e)}
+  }
   function installHeaderPulse(){
     try{
       const header=document.querySelector('.siteHeader'),meta=document.querySelector('.headerMeta');
@@ -25,6 +33,7 @@
   }
   function install(){
     try{
+      installPhoneApp();
       installHeaderPulse();
       const doc=frame?.contentDocument;
       if(!doc?.head)return;
@@ -45,12 +54,13 @@
         if(!el.dataset.v18Fullscreen){el.dataset.v18Fullscreen='1';const btn=doc.createElement('button');btn.type='button';btn.textContent='FULL SCREEN MAP';btn.setAttribute('aria-label','Expand intelligence map to full screen');btn.style.cssText='position:absolute;left:10px;bottom:10px;z-index:30;border:1px solid #72e49a;background:#07150de8;color:#eaffef;border-radius:999px;padding:9px 11px;font:850 9px Inter,system-ui,sans-serif;letter-spacing:.06em';btn.onclick=()=>{const on=el.classList.toggle('safeplate-map-full');btn.textContent=on?'CLOSE FULL SCREEN':'FULL SCREEN MAP';doc.body.style.overflow=on?'hidden':'';setTimeout(()=>frame.contentWindow?.dispatchEvent(new Event('resize')),80)};el.appendChild(btn)}
       };
       const addV18Tools=()=>{const host=doc.querySelector('.workspaceTitle')||doc.querySelector('.workspaceInner');if(!host||doc.getElementById('safeplate-v18-tools'))return;const tools=doc.createElement('div');tools.id='safeplate-v18-tools';tools.className='safeplate-v18-tools';tools.innerHTML='<a href="/safeplate-pulse.html" target="_top">WHAT\'S HAPPENING RIGHT NOW</a><button type="button" id="safeplate-gov-mode">GOVERNMENT / INSTITUTION MODE</button>';host.insertAdjacentElement('afterend',tools);tools.querySelector('#safeplate-gov-mode').onclick=()=>{doc.body.classList.toggle('safeplate-government-mode');const on=doc.body.classList.contains('safeplate-government-mode');tools.querySelector('#safeplate-gov-mode').textContent=on?'PUBLIC LANGUAGE MODE':'GOVERNMENT / INSTITUTION MODE';doc.querySelectorAll('.evidence,.panel,.workspaceInner').forEach(x=>x.dataset.audience=on?'government-institution':'public')};};
-      const enhance=()=>{['heroMap','journeyMap'].forEach(upgradeFallbackMap);addV18Tools();installHeaderPulse()};
+      const enhance=()=>{['heroMap','journeyMap'].forEach(upgradeFallbackMap);addV18Tools();installHeaderPulse();installPhoneApp()};
       enhance();
       if(!doc.documentElement.dataset.safeplateRealMapWatcher){doc.documentElement.dataset.safeplateRealMapWatcher='1';new MutationObserver(enhance).observe(doc.body,{childList:true,subtree:true})}
       [250,700,1600].forEach(delay=>setTimeout(enhance,delay));
     }catch(e){console.warn('SAFEPLATE V18 advanced enhancement skipped',e)}
   }
+  installPhoneApp();
   frame?.addEventListener('load',install);
-  [0,80,200,600,1200].forEach(delay=>setTimeout(()=>{installHeaderPulse();install()},delay));
+  [0,80,200,600,1200].forEach(delay=>setTimeout(()=>{installPhoneApp();installHeaderPulse();install()},delay));
 })();
