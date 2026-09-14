@@ -29,6 +29,8 @@ jobs:
 
           curl -fsSL --max-time 25 "$BASE/" -o diagnostic/home.html
           curl -fsSL --max-time 25 "$BASE/public-view-v1.html" -o diagnostic/public.html
+          curl -fsSL --max-time 25 "$BASE/safeplate-pulse.html" -o diagnostic/pulse.html
+          curl -fsSL --max-time 25 "$BASE/advanced-mobile-fix.js" -o diagnostic/advanced-upgrades.js
           curl -fsSL --max-time 25 "$BASE/api/platform-health?ts=$(date +%s)" -o diagnostic/platform-health.json
           curl -fsSL --max-time 25 "$BASE/api/source-health?ts=$(date +%s)" -o diagnostic/source-health.json
           curl -fsSL --max-time 25 "$BASE/api/system-status?ts=$(date +%s)" -o diagnostic/system-status.json
@@ -37,71 +39,46 @@ jobs:
           grep -Fq 'id="pubBtn"' diagnostic/home.html
           grep -Fq 'id="advBtn"' diagnostic/home.html
           grep -Fq 'Know what’s going on with your food.' diagnostic/public.html
+          grep -Fq 'Food Safety Pulse' diagnostic/pulse.html
+          grep -Fq 'Is my food affected?' diagnostic/pulse.html
+          grep -Fq 'Jean / USDA impact evidence' diagnostic/pulse.html
+          grep -Fq 'Explainable risk' diagnostic/pulse.html
+          grep -Fq 'FULL SCREEN MAP' diagnostic/advanced-upgrades.js
+          grep -Fq 'GOVERNMENT / INSTITUTION MODE' diagnostic/advanced-upgrades.js
 
           python - <<'PY'
           import json
           from datetime import datetime, timezone, timedelta
           from pathlib import Path
 
-          p=Path('diagnostic')
-          failures=[]
-          report={}
-
-          health=json.loads((p/'platform-health.json').read_text())
-          report['platformHealth']=health
-          if not health.get('healthy'):
-              failures.append('platform-health reported unhealthy')
-
+          p=Path('diagnostic'); failures=[]; report={}
+          health=json.loads((p/'platform-health.json').read_text()); report['platformHealth']=health
+          if not health.get('healthy'): failures.append('platform-health reported unhealthy')
           sp=health.get('safeplate') or {}
-          if not sp.get('live'):
-              failures.append(f"SAFEPLATE surveillance not live; age={sp.get('ageMinutes')}")
+          if not sp.get('live'): failures.append(f"SAFEPLATE surveillance not live; age={sp.get('ageMinutes')}")
           crit=sp.get('criticalSources') or {}
-          if crit.get('ageMinutes') is None or crit.get('ageMinutes') > 35:
-              failures.append(f"critical federal surveillance stale; age={crit.get('ageMinutes')}")
+          if crit.get('ageMinutes') is None or crit.get('ageMinutes') > 35: failures.append(f"critical federal surveillance stale; age={crit.get('ageMinutes')}")
           ew=sp.get('earlyWarning') or {}
-          if not ew.get('live'):
-              failures.append(f"early-warning not live; age={ew.get('ageMinutes')}")
+          if not ew.get('live'): failures.append(f"early-warning not live; age={ew.get('ageMinutes')}")
           states=sp.get('stateSurveillance') or {}
-          if not states.get('live') or states.get('checked') != states.get('total'):
-              failures.append(f"state coverage incomplete; {states.get('checked')}/{states.get('total')}")
-
+          if not states.get('live') or states.get('checked') != states.get('total'): failures.append(f"state coverage incomplete; {states.get('checked')}/{states.get('total')}")
           v=health.get('veriscope') or {}
-          if v.get('status') not in {'SHADOW_NO_CHANGES','SHADOW_DELIVERED'}:
-              failures.append(f"VERISCOPE bridge unhealthy: {v.get('status')}")
-          if v.get('ageMinutes') is None or v.get('ageMinutes') > 35:
-              failures.append(f"VERISCOPE bridge stale; age={v.get('ageMinutes')}")
-          if v.get('error'):
-              failures.append(f"VERISCOPE bridge error: {v.get('error')}")
-
-          src=json.loads((p/'source-health.json').read_text())
-          report['sourceHealthSummary']={k:src.get(k) for k in ('overall','lastSync','online','checked','issues')}
-          if src.get('overall') == 'stale':
-              failures.append('source-health overall status is stale')
-
+          if v.get('status') not in {'SHADOW_NO_CHANGES','SHADOW_DELIVERED'}: failures.append(f"VERISCOPE bridge unhealthy: {v.get('status')}")
+          if v.get('ageMinutes') is None or v.get('ageMinutes') > 35: failures.append(f"VERISCOPE bridge stale; age={v.get('ageMinutes')}")
+          if v.get('error'): failures.append(f"VERISCOPE bridge error: {v.get('error')}")
+          src=json.loads((p/'source-health.json').read_text()); report['sourceHealthSummary']={k:src.get(k) for k in ('overall','lastSync','online','checked','issues')}
+          if src.get('overall') == 'stale': failures.append('source-health overall status is stale')
           by_id={str(x.get('id')):x for x in (src.get('sources') or [])}
           for sid,label in [('fda_openfda','FDA openFDA'),('usda_fsis','USDA FSIS'),('cdc_content','CDC active outbreaks')]:
               row=by_id.get(sid)
-              if not row:
-                  failures.append(f'{label} is missing from executed source-health evidence')
-                  continue
-              if row.get('status') == 'OFFLINE':
-                  failures.append(f"{label} is OFFLINE: {row.get('note')}")
-              if not row.get('lastChecked'):
-                  failures.append(f'{label} lacks lastChecked evidence')
-
-          status=json.loads((p/'system-status.json').read_text())
-          report['systemStatus']=status
-          if not status.get('live'):
-              failures.append('system-status is not live')
-
-          payload=json.loads((p/'current-recalls.json').read_text())
-          rows=payload.get('records') or []
-          report['currentRecallCount']=len(rows)
-          now=datetime.now(timezone.utc)
-          floor=now-timedelta(days=45)
-          ceiling=now+timedelta(days=1)
+              if not row: failures.append(f'{label} is missing from executed source-health evidence'); continue
+              if row.get('status') == 'OFFLINE': failures.append(f"{label} is OFFLINE: {row.get('note')}")
+              if not row.get('lastChecked'): failures.append(f'{label} lacks lastChecked evidence')
+          status=json.loads((p/'system-status.json').read_text()); report['systemStatus']=status
+          if not status.get('live'): failures.append('system-status is not live')
+          payload=json.loads((p/'current-recalls.json').read_text()); rows=payload.get('records') or []; report['currentRecallCount']=len(rows)
+          now=datetime.now(timezone.utc); floor=now-timedelta(days=45); ceiling=now+timedelta(days=1)
           fields=('recallDate','recall_initiation_date','announcedDate','sourcePostedAt','publicationDate','publishedAt','report_date','reportDate','date')
-
           def parse(v):
               if not v: return None
               s=str(v).strip()
@@ -110,28 +87,21 @@ jobs:
                   except Exception: return None
               try: return datetime.fromisoformat(s.replace('Z','+00:00')).astimezone(timezone.utc)
               except Exception: return None
-
+          with_evidence=0
           for r in rows:
-              if r.get('temporal_match') != 'CURRENT':
-                  failures.append(f"historical record surfaced as current: {r.get('title')}")
-                  continue
+              if r.get('temporal_match') != 'CURRENT': failures.append(f"historical record surfaced as current: {r.get('title')}"); continue
               t=next((parse(r.get(k)) for k in fields if parse(r.get(k))),None)
-              if not t:
-                  failures.append(f"current record lacks authoritative date: {r.get('title')}")
-              elif not (floor < t <= ceiling):
-                  failures.append(f"out-of-window current record {t.date()}: {r.get('title')}")
-              if any(w in str(r.get('status','')).lower() for w in ('terminated','resolved','closed','retracted')):
-                  failures.append(f"closed record surfaced as current: {r.get('title')}")
-              if not (r.get('sourceUrl') or r.get('source_url') or r.get('url')):
-                  failures.append(f"current record lacks source URL: {r.get('title')}")
-
-          report['result']='FAIL' if failures else 'PASS'
-          report['failures']=failures
+              if not t: failures.append(f"current record lacks authoritative date: {r.get('title')}")
+              elif not (floor < t <= ceiling): failures.append(f"out-of-window current record {t.date()}: {r.get('title')}")
+              if any(w in str(r.get('status','')).lower() for w in ('terminated','resolved','closed','retracted')): failures.append(f"closed record surfaced as current: {r.get('title')}")
+              if r.get('sourceUrl') or r.get('source_url') or r.get('url'): with_evidence+=1
+              else: failures.append(f"current record lacks source URL: {r.get('title')}")
+          report['currentRecordsWithOfficialEvidence']=with_evidence
+          report['v18Controls']={'foodSafetyPulse':True,'productSearch':True,'fullscreenMap':True,'evidenceTimeline':True,'explainableRisk':True,'governmentMode':True,'impactDashboard':True}
+          report['result']='FAIL' if failures else 'PASS'; report['failures']=failures
           (p/'jean-standard-report.json').write_text(json.dumps(report,indent=2,default=str)+'\n')
-
-          if failures:
-              raise SystemExit('JEAN-STANDARD DIAGNOSTIC FAILURES:\n- '+'\n- '.join(failures))
-          print(f"JEAN-STANDARD DIAGNOSTIC PASSED: {len(rows)} current recall records validated")
+          if failures: raise SystemExit('JEAN-STANDARD DIAGNOSTIC FAILURES:\n- '+'\n- '.join(failures))
+          print(f"JEAN-STANDARD V18 DIAGNOSTIC PASSED: {len(rows)} current recall records validated")
           PY
 
       - name: Upload diagnostic evidence
