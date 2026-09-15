@@ -53,7 +53,7 @@ export default async req=>{
     if(!q)return new Response('Missing source',{status:400});
     const source=new URL(q);
     if(source.protocol!=='https:'||!trusted(source.hostname,false))return new Response('Unsupported source',{status:403});
-    if(image){const response=await fetchImage(image,source.toString());return response||new Response('Official package image unavailable',{status:502})}
+    if(image){let asset;try{asset=new URL(image)}catch{return new Response('Unsupported image source',{status:403})}if(asset.protocol!=='https:'||!trusted(asset.hostname,true))return new Response('Unsupported image source',{status:403});const response=await fetchImage(asset.toString(),source.toString());return response||new Response('Official package image unavailable',{status:502})}
     const page=await fetch(source,{headers:{'User-Agent':'Mozilla/5.0 (compatible; SAFEPLATE/1.2; +https://safeplate-intelligence.netlify.app/)','Accept':'text/html,application/xhtml+xml'},redirect:'follow'});
     const finalSource=new URL(page.url||source.toString());if(!trusted(finalSource.hostname,false))return new Response('Unsupported redirect',{status:403});
     if(!page.ok)return new Response('Official source unavailable',{status:502});
