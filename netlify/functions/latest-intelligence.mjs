@@ -23,6 +23,7 @@ function publicItem(x, now){
   const active = String(x.status || "").toUpperCase() !== "RESOLVED";
   const alertEligible = active && !contextOnly && important && (isNew || isMaterialUpdate);
   const evidence = Array.isArray(x.evidence) ? x.evidence[0] : null;
+  const early = x.earlyDetection || null;
   return {
     id: x.id || null,
     title: x.title || x.product || "Food safety intelligence",
@@ -44,7 +45,22 @@ function publicItem(x, now){
     isNew,
     isMaterialUpdate,
     contextOnly,
-    alertEligible
+    alertEligible,
+    earlyDetection: early ? {
+      protocolVersion: early.protocolVersion,
+      stage: early.stage,
+      status: early.earlySignalStatus,
+      score: early.earlySignalScore,
+      scoreExplanation: early.scoreExplanation,
+      evidenceClassification: early.evidenceClassification,
+      earliestCredibleSignalAt: early.earliestCredibleSignalAt,
+      earliestConventionalAlertAt: early.earliestConventionalAlertAt,
+      potentialLeadTimeMinutes: early.potentialLeadTimeMinutes,
+      formalRecallIssued: early.formalRecallIssued,
+      governmentInvestigationActive: early.governmentInvestigationActive,
+      qualifiesAsEarlyDetection: early.qualifiesAsEarlyDetection,
+      languageGuard: early.languageGuard
+    } : null
   };
 }
 
@@ -64,6 +80,8 @@ export default async () => {
   return Response.json({
     generatedAt: new Date().toISOString(),
     lastSync: state.meta?.lastSync || null,
+    earlyDetectionProtocolVersion: state.meta?.earlyDetectionProtocolVersion || null,
+    surveillanceSummary: state.earlyDetectionSummary || null,
     alertCount: items.filter(x => x.alertEligible).length,
     alerts: items.filter(x => x.alertEligible).slice(0, 10),
     latest: items.slice(0, 20)
