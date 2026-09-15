@@ -1,9 +1,10 @@
 const STOP=new Set('a an and any are can check current currently do does find food for have i in is it me my near of on please recall recalled recalls show tell the there this today what whether with'.split(' '));
-const RECALL_SOURCES=new Set(['fda_openfda','fda_recall_announcements','usda_fsis','fda_outbreaks']);
+const RECALL_SOURCES=new Set(['fda_openfda','fda_recall_announcements','fda_reconciliation','usda_fsis','fda_outbreaks']);
 const RECENT_RECALL_DAYS=45;
 const OFFICIAL_SOURCE_HOME={
   fda_openfda:'https://www.accessdata.fda.gov/scripts/ires/index.cfm#/enforcement-reports/',
   fda_recall_announcements:'https://www.fda.gov/safety/recalls-market-withdrawals-safety-alerts',
+  fda_reconciliation:'https://www.fda.gov/food/recalls-outbreaks-emergencies/recalls-foods-dietary-supplements',
   fda_outbreaks:'https://www.fda.gov/food/outbreaks-foodborne-illness/investigations-foodborne-illness-outbreaks',
   usda_fsis:'https://www.fsis.usda.gov/recalls-alerts',
   cdc_content:'https://www.cdc.gov/foodborne-outbreaks/outbreaks/index.html',
@@ -15,8 +16,12 @@ export const searchTerms=s=>String(s||'').toLowerCase().replace(/[^a-z0-9\s-]/g,
 const searchable=x=>[x.product,x.title,x.brand,x.company,x.manufacturer,x.upc,x.gtin,x.lot,x.lotNumber,x.recallNumber,x.hazard,x.pathogen,x.distribution].filter(Boolean).join(' ');
 export const isActionableRecall=x=>!x?.institutionalOnly&&(RECALL_SOURCES.has(x?.rawSource)||/\b(recall|recalled|public health alert|active outbreak|foodborne outbreak)\b/i.test(`${x?.title||''} ${x?.category||''} ${x?.status||''}`));
 const parseTime=v=>{if(v==null||v==='')return 0;const s=String(v).trim();if(/^\d{8}$/.test(s))return Date.UTC(Number(s.slice(0,4)),Number(s.slice(4,6))-1,Number(s.slice(6,8)));const t=new Date(s).getTime();return Number.isFinite(t)?t:0};
+
+// "Current" means recently made authoritative/public, not merely recently initiated.
+// FDA enforcement actions can be initiated weeks before FDA publishes the enforcement report.
+// Prefer official publication/report/announcement timestamps; use initiation only as fallback.
 export const recallRecordTime=x=>{
-  for(const value of [x?.recallDate,x?.recall_initiation_date,x?.announcedDate,x?.sourcePostedAt,x?.publicationDate,x?.publishedAt,x?.report_date,x?.reportDate,x?.date]){
+  for(const value of [x?.announcedDate,x?.sourcePostedAt,x?.publicationDate,x?.publishedAt,x?.report_date,x?.reportDate,x?.updatedAt,x?.recallDate,x?.recall_initiation_date,x?.date]){
     const t=parseTime(value);if(t)return t;
   }
   return 0;
