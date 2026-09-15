@@ -89,7 +89,9 @@ jobs:
 
           payload=json.loads((p/'current-recalls.json').read_text()); rows=payload.get('records') or []; report['currentRecallCount']=len(rows)
           now=datetime.now(timezone.utc); floor=now-timedelta(days=45); ceiling=now+timedelta(days=1)
-          fields=('recallDate','recall_initiation_date','announcedDate','sourcePostedAt','publicationDate','publishedAt','report_date','reportDate','date')
+          # Match production semantics: authoritative publication/report activity first;
+          # recall initiation is only a fallback when no public/report date exists.
+          fields=('announcedDate','sourcePostedAt','publicationDate','publishedAt','report_date','reportDate','updatedAt','recallDate','recall_initiation_date','date')
           def parse(v):
               if not v: return None
               s=str(v).strip()
