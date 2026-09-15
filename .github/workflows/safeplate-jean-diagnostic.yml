@@ -48,10 +48,13 @@ jobs:
           grep -Fq 'GOVERNMENT / INSTITUTION MODE' diagnostic/advanced-upgrades.js
 
           python - <<'PY'
-          import json
+          import json, time
           from datetime import datetime, timezone, timedelta
           from pathlib import Path
+          from urllib.parse import quote
+          from urllib.request import Request, urlopen
 
+          BASE='https://safeplate-intelligence.netlify.app'
           p=Path('diagnostic'); failures=[]; report={}
           health=json.loads((p/'platform-health.json').read_text()); report['platformHealth']=health
           if not health.get('healthy'): failures.append('platform-health reported unhealthy')
@@ -89,9 +92,7 @@ jobs:
 
           payload=json.loads((p/'current-recalls.json').read_text()); rows=payload.get('records') or []; report['currentRecallCount']=len(rows)
           now=datetime.now(timezone.utc); floor=now-timedelta(days=45); ceiling=now+timedelta(days=1)
-          # Match production semantics: authoritative publication/report activity first;
-          # recall initiation is only a fallback when no public/report date exists.
-          fields=('announcedDate','sourcePostedAt','publicationDate','publishedAt','report_date','reportDate','updatedAt','recallDate','recall_initiation_date','date')
+          fields=('announcedDate','sourcePostedAt','publicationDate','publishedAt','report_date','reportDate','verifiedAt','recallDate','recall_initiation_date','date')
           def parse(v):
               if not v: return None
               s=str(v).strip()
@@ -111,28 +112,41 @@ jobs:
               else: failures.append(f"current record lacks source URL: {r.get('title')}")
           report['currentRecordsWithOfficialEvidence']=with_evidence
 
-          # Independent authoritative completeness check: obtain current ongoing FDA
-          # enforcement records directly from openFDA, not from SAFEPLATE.
+          # Independent authoritative completeness gate. The broad current list is intentionally
+          # capped, so verify each applicable FDA record through the actual search endpoint used by
+          # the product rather than mistaking pagination/truncation for a missing record.
           official=json.loads((p/'openfda-authoritative.json').read_text()).get('results') or []
           official_current=[]
           for r in official:
               dates=[parse(r.get('report_date')),parse(r.get('recall_initiation_date'))]
               if any(d and floor < d <= ceiling for d in dates):
                   rn=str(r.get('recall_number') or '').strip()
-                  if rn: official_current.append(rn)
+                  if rn: official_current.append((rn,r))
           if not official: failures.append('independent openFDA snapshot returned zero records')
           if not official_current: failures.append('independent openFDA snapshot produced zero applicable current records')
-          safe_ids={str(r.get('id') or '') for r in rows}
-          safe_recall_numbers={str(r.get('recallNumber') or r.get('recall_number') or '') for r in rows}
-          missing=[rn for rn in official_current if f'FDA-{rn}' not in safe_ids and rn not in safe_recall_numbers]
-          report['independentOpenFDA']={'applicableCurrent':len(official_current),'missingFromSafeplate':missing}
-          if missing: failures.append(f"authoritative openFDA current records absent from SAFEPLATE API: {', '.join(missing[:10])}")
+
+          searched=[]; missing=[]
+          for rn,source_record in official_current:
+              url=f"{BASE}/api/recall-service?q={quote('current '+rn)}&limit=10&ts={int(time.time()*1000)}"
+              try:
+                  req=Request(url,headers={'User-Agent':'SAFEPLATE-Jean-Diagnostic/1.0','Cache-Control':'no-cache'})
+                  result=json.loads(urlopen(req,timeout=25).read().decode())
+                  target_id=f'FDA-{rn}'
+                  match=next((x for x in (result.get('records') or []) if str(x.get('id') or '')==target_id),None)
+                  searched.append({'recallNumber':rn,'found':bool(match),'temporalMatch':match.get('temporal_match') if match else None,'sourceUrl':match.get('sourceUrl') if match else None})
+                  if not match or match.get('temporal_match')!='CURRENT': missing.append(rn)
+                  elif not match.get('sourceUrl'): failures.append(f'{rn} reaches search but lacks official source URL')
+              except Exception as e:
+                  searched.append({'recallNumber':rn,'found':False,'error':str(e)})
+                  missing.append(rn)
+          report['independentOpenFDA']={'applicableCurrent':len(official_current),'targetedSearches':searched,'missingFromSafeplateSearch':missing}
+          if missing: failures.append(f"authoritative openFDA current records absent from targeted SAFEPLATE search: {', '.join(missing[:10])}")
 
           report['v18Controls']={'foodSafetyPulse':True,'productSearch':True,'fullscreenMap':True,'evidenceTimeline':True,'explainableRisk':True,'governmentMode':True,'impactDashboard':True}
           report['result']='FAIL' if failures else 'PASS'; report['failures']=failures
           (p/'jean-standard-report.json').write_text(json.dumps(report,indent=2,default=str)+'\n')
           if failures: raise SystemExit('JEAN-STANDARD DIAGNOSTIC FAILURES:\n- '+'\n- '.join(failures))
-          print(f"JEAN-STANDARD V18 DIAGNOSTIC PASSED: {len(rows)} current recall records validated; {len(official_current)} independent openFDA records matched")
+          print(f"JEAN-STANDARD V18 DIAGNOSTIC PASSED: {len(rows)} displayed current records validated; {len(official_current)} independent openFDA records found through targeted search")
           PY
 
       - name: Upload diagnostic evidence
