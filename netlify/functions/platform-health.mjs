@@ -15,9 +15,13 @@ export default async()=>{
   const earlyWarningLastSync=state.meta?.earlyWarningLastSync||null;
   const stateScanLastSync=state.meta?.stateScanLastSync||null;
   const sources=Array.isArray(state.sourceHealth)?state.sourceHealth:[];
-  const checked=sources.filter(x=>x.lastChecked).length;
+  const checked=sources.filter(x=>x.lastChecked&&x.id!=='fda_reconciliation').length;
   const coverage=state.stateCoverage||{};
   const bridgeCompleted=bridge?.completed_at||null;
+  const reconciliationLastAttempt=state.meta?.fdaReconciliationLastAttempt||state.meta?.fdaReconciliationLastSync||null;
+  const reconciliationAge=ageMinutes(reconciliationLastAttempt);
+  const reconciliationState=state.meta?.fdaReconciliationStatus||'PENDING';
+  const reconciliationHealthy=reconciliationState==='RECONCILED'&&reconciliationAge!==null&&reconciliationAge<=75&&Number(state.meta?.fdaReconciliationMissingAfter||0)===0;
 
   const health={
     checkedAt:new Date().toISOString(),
@@ -34,6 +38,7 @@ export default async()=>{
       criticalSources:{lastSync:criticalLastSync,ageMinutes:ageMinutes(criticalLastSync),cycleMinutes:15},
       earlyWarning:{lastSync:earlyWarningLastSync,ageMinutes:ageMinutes(earlyWarningLastSync),live:Boolean(earlyWarningLastSync)&&ageMinutes(earlyWarningLastSync)<=75},
       stateSurveillance:{lastSync:stateScanLastSync,ageMinutes:ageMinutes(stateScanLastSync),checked:coverage.checked||0,total:coverage.total||51,scannerVersion:coverage.scannerVersion||state.meta?.stateScanVersion||null,live:Boolean(stateScanLastSync)&&ageMinutes(stateScanLastSync)<=75&&(coverage.checked||0)===51},
+      completeness:{source:'FDA',state:reconciliationHealthy?'RECONCILED':reconciliationState,lastAttempt:reconciliationLastAttempt,lastSuccessfulReconciliation:state.meta?.fdaReconciliationLastSync||null,ageMinutes:reconciliationAge,officialRecordCount:state.meta?.fdaReconciliationOfficialCount??null,announcementRecordCount:state.meta?.fdaReconciliationAnnouncementCount??null,openFDARecordCount:state.meta?.fdaReconciliationOpenFDACount??null,missingBefore:state.meta?.fdaReconciliationMissingBefore??null,backfilled:state.meta?.fdaReconciliationAdded??null,missingAfter:state.meta?.fdaReconciliationMissingAfter??null,error:state.meta?.fdaReconciliationError||null,healthy:reconciliationHealthy},
       sourcesChecked:checked
     },
     veriscope:{
@@ -50,7 +55,8 @@ export default async()=>{
   };
 
   const bridgeHealthy=['SHADOW_NO_CHANGES','SHADOW_DELIVERED'].includes(health.veriscope.status)&&health.veriscope.ageMinutes!==null&&health.veriscope.ageMinutes<=35&&!health.veriscope.error;
-  health.healthy=health.safeplate.live&&health.safeplate.criticalSources.ageMinutes!==null&&health.safeplate.criticalSources.ageMinutes<=35&&health.safeplate.earlyWarning.live&&health.safeplate.stateSurveillance.live&&bridgeHealthy;
+  health.healthy=health.safeplate.live&&health.safeplate.criticalSources.ageMinutes!==null&&health.safeplate.criticalSources.ageMinutes<=35&&health.safeplate.earlyWarning.live&&health.safeplate.stateSurveillance.live&&reconciliationHealthy&&bridgeHealthy;
+  health.state=health.healthy?'LIVE_RECONCILED':(!health.safeplate.live?'STALE':!reconciliationHealthy?'DEGRADED_COMPLETENESS':'DEGRADED');
 
   return Response.json(health,{status:health.healthy?200:503,headers:{'cache-control':'no-store','x-content-type-options':'nosniff'}});
 };
