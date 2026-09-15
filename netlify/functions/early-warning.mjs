@@ -1,6 +1,7 @@
 import { getState, saveState } from "./lib/store.mjs";
 import * as cheerio from "cheerio";
 import crypto from "node:crypto";
+import { assessEarlySignal, surveillanceSummary } from "./lib/early-detection-protocol.mjs";
 
 const STOP=new Set("food foods outbreak outbreaks recall recalled investigation investigations active warning alert alerts product products linked possible public health illness illnesses case cases current update updated brand brands company official state states multistate detected verified signal signals department agriculture health release releases news consumers people person reported reports reporting affected advisory advice".split(" "));
 const HAZARD_STOP=new Set("salmonella listeria coli stec cyclospora botulism ebola hepatitis shigella vibrio".split(" "));
@@ -96,8 +97,10 @@ export async function runEarlyWarning(){
     const job=jobs[i],res=results[i];let h=health.find(x=>x.id===job.id);if(!h){h={id:job.id,name:job.name,family:job.id==="cdc_content"?"Federal":"State / Local",status:"PENDING",lastChecked:null,note:"Early-warning connector"};health.push(h)}h.lastChecked=now;
     if(res.status==="fulfilled"){h.status="ONLINE";h.note=res.value.note;incoming.push(...res.value.rows);events.push({time:now,title:`Early-warning source checked   ${job.name}`,detail:h.note})}else{h.status="DEGRADED";h.note=String(res.reason?.message||res.reason||"Unknown error");events.push({time:now,title:`EARLY-WARNING SOURCE DEGRADED   ${job.name}`,detail:h.note})}
   }
-  const merged=mergeSignals(state.incidents||[],incoming,now),corr=correlate(merged.items,now);
-  const next={...state,meta:{...(state.meta||{}),earlyWarningLastSync:now,earlyWarningCycleMinutes:30},incidents:corr.items,investigations:corr.clusters,sourceHealth:health,changes:[{time:now,title:"Early-warning correlation cycle complete",detail:`${incoming.length} precursor records processed · ${merged.added} new · ${merged.changed} changed · ${corr.clusters.length} multi-source clusters.`},...events,...(state.changes||[])].slice(0,300)};
+  const prior=state.incidents||[],merged=mergeSignals(prior,incoming,now),corr=correlate(merged.items,now);
+  const assessed=corr.items.map(x=>({...x,earlyDetection:assessEarlySignal(x,now)}));
+  const cycleSummary=surveillanceSummary(prior,assessed);
+  const next={...state,meta:{...(state.meta||{}),earlyWarningLastSync:now,earlyWarningCycleMinutes:30,earlyDetectionProtocolVersion:"1.0"},incidents:assessed,investigations:corr.clusters,earlyDetectionSummary:{generatedAt:now,...cycleSummary,systemPerformance:{sourcesChecked:jobs.length,recordsProcessed:incoming.length,newSignals:cycleSummary.newEarlySignals.length,escalations:cycleSummary.escalatedSignals.length,confirmations:cycleSummary.confirmedEvents.length,rejectedSignals:cycleSummary.rejectedSignals.length}},sourceHealth:health,changes:[{time:now,title:"Early-warning correlation cycle complete",detail:`${incoming.length} precursor records processed · ${merged.added} new · ${merged.changed} changed · ${corr.clusters.length} multi-source clusters.`},...events,...(state.changes||[])].slice(0,300)};
   await saveState(next);return next;
 }
 
