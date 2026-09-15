@@ -31,13 +31,14 @@ function linksFrom(html){
   $('article a[href], .lcds-card a[href]').each((_,a)=>add(a,$(a).closest('article,.lcds-card').find('time').first().text()));
   $('table tbody tr').each((_,tr)=>{const cells=$(tr).find('td');if(!cells.length)return;const date=clean(cells.first().text());$(tr).find('a[href]').each((__,a)=>add(a,date))});
   $('h2 a[href],h3 a[href],h4 a[href]').each((_,a)=>add(a,$(a).closest('div,section').find('time').first().text()));
-  return out.slice(0,30);
+  return out.slice(0,20);
 }
 
 async function detail(item){
   const html=await fetchText(item.url),$=cheerio.load(html);
   const dt=label=>{let value='';$('dt').each((_,el)=>{if(!value&&clean($(el).text()).toLowerCase().startsWith(label.toLowerCase()))value=clean($(el).next('dd').text())});return value};
   const date=dt('Company Announcement Date')||clean($('time').first().attr('datetime'))||item.date;
+  if(!date)throw new Error(`FDA recall detail lacks an authoritative date: ${item.url}`);
   const company=dt('Company Name'),brand=dt('Brand Name'),product=dt('Product Description')||item.title,reason=dt('Reason for Announcement')||item.title;
   const body=clean($('#recall-announcement').text())||clean($('main').text()).slice(0,5000);
   const officialId=`FDA-WEB-${fingerprint([item.url])}`;
@@ -48,13 +49,9 @@ async function detail(item){
 async function officialAnnouncementRecords(){
   const links=linksFrom(await fetchText(LIST));
   if(!links.length)throw new Error('FDA reconciliation found zero recall links; refusing false healthy state');
-  const recent=[];
-  for(const item of links){
-    try{
-      const r=await detail(item),d=new Date(r.sourcePostedAt||r.updatedAt);
-      if(!Number.isNaN(d)&&Date.now()-d.getTime()<=WINDOW_MS)recent.push(r);
-    }catch(e){console.error('FDA detail reconciliation failed',item.url,e.message)}
-  }
+  // Fail closed: if an authoritative recall detail cannot be parsed, completeness is unknown.
+  const details=await Promise.all(links.map(detail));
+  const recent=details.filter(r=>{const d=new Date(r.sourcePostedAt||r.updatedAt);return !Number.isNaN(d)&&Date.now()-d.getTime()<=WINDOW_MS});
   if(!recent.length)throw new Error('FDA reconciliation produced zero current announcement records');
   return {links,records:recent};
 }
