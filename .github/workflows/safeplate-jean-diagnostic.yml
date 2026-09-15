@@ -35,6 +35,7 @@ jobs:
           curl -fsSL --max-time 25 "$BASE/api/source-health?ts=$(date +%s)" -o diagnostic/source-health.json
           curl -fsSL --max-time 25 "$BASE/api/system-status?ts=$(date +%s)" -o diagnostic/system-status.json
           curl -fsSL --max-time 25 "$BASE/api/recall-service?q=current%20recall&limit=100&ts=$(date +%s)" -o diagnostic/current-recalls.json
+          curl -fsSL --max-time 25 'https://api.fda.gov/food/enforcement.json?limit=100&search=status:%22Ongoing%22' -o diagnostic/openfda-authoritative.json
 
           grep -Fq 'id="pubBtn"' diagnostic/home.html
           grep -Fq 'id="advBtn"' diagnostic/home.html
@@ -56,6 +57,11 @@ jobs:
           if not health.get('healthy'): failures.append('platform-health reported unhealthy')
           sp=health.get('safeplate') or {}
           if not sp.get('live'): failures.append(f"SAFEPLATE surveillance not live; age={sp.get('ageMinutes')}")
+          completeness=sp.get('completeness') or {}; report['fdaCompleteness']=completeness
+          if completeness.get('state') != 'RECONCILED': failures.append(f"FDA completeness is not RECONCILED: {completeness.get('state')}")
+          if not completeness.get('healthy'): failures.append('FDA completeness health is false')
+          if completeness.get('ageMinutes') is None or completeness.get('ageMinutes') > 75: failures.append(f"FDA reconciliation stale; age={completeness.get('ageMinutes')}")
+          if completeness.get('missingAfter') != 0: failures.append(f"FDA reconciliation still missing authoritative records: {completeness.get('missingAfter')}")
           crit=sp.get('criticalSources') or {}
           if crit.get('ageMinutes') is None or crit.get('ageMinutes') > 35: failures.append(f"critical federal surveillance stale; age={crit.get('ageMinutes')}")
           ew=sp.get('earlyWarning') or {}
@@ -66,16 +72,21 @@ jobs:
           if v.get('status') not in {'SHADOW_NO_CHANGES','SHADOW_DELIVERED'}: failures.append(f"VERISCOPE bridge unhealthy: {v.get('status')}")
           if v.get('ageMinutes') is None or v.get('ageMinutes') > 35: failures.append(f"VERISCOPE bridge stale; age={v.get('ageMinutes')}")
           if v.get('error'): failures.append(f"VERISCOPE bridge error: {v.get('error')}")
-          src=json.loads((p/'source-health.json').read_text()); report['sourceHealthSummary']={k:src.get(k) for k in ('overall','lastSync','online','checked','issues')}
-          if src.get('overall') == 'stale': failures.append('source-health overall status is stale')
+
+          src=json.loads((p/'source-health.json').read_text()); report['sourceHealthSummary']={k:src.get(k) for k in ('overall','lastSync','online','checked','issues','completeness')}
+          if src.get('overall') in {'stale','degraded'}: failures.append(f"source-health overall status is {src.get('overall')}")
           by_id={str(x.get('id')):x for x in (src.get('sources') or [])}
-          for sid,label in [('fda_openfda','FDA openFDA'),('usda_fsis','USDA FSIS'),('cdc_content','CDC active outbreaks')]:
+          for sid,label in [('fda_openfda','FDA openFDA'),('fda_reconciliation','FDA reconciliation'),('usda_fsis','USDA FSIS'),('cdc_content','CDC active outbreaks')]:
               row=by_id.get(sid)
               if not row: failures.append(f'{label} is missing from executed source-health evidence'); continue
-              if row.get('status') == 'OFFLINE': failures.append(f"{label} is OFFLINE: {row.get('note')}")
+              if row.get('status') != 'ONLINE': failures.append(f"{label} is not ONLINE: {row.get('status')} {row.get('note')}")
               if not row.get('lastChecked'): failures.append(f'{label} lacks lastChecked evidence')
+
           status=json.loads((p/'system-status.json').read_text()); report['systemStatus']=status
-          if not status.get('live'): failures.append('system-status is not live')
+          if not status.get('live'): failures.append('system-status surveillance is not live')
+          if not status.get('reconciled'): failures.append(f"system-status is not reconciled: {(status.get('completeness') or {}).get('state')}")
+          if status.get('state') != 'LIVE': failures.append(f"system-status state is {status.get('state')}")
+
           payload=json.loads((p/'current-recalls.json').read_text()); rows=payload.get('records') or []; report['currentRecallCount']=len(rows)
           now=datetime.now(timezone.utc); floor=now-timedelta(days=45); ceiling=now+timedelta(days=1)
           fields=('recallDate','recall_initiation_date','announcedDate','sourcePostedAt','publicationDate','publishedAt','report_date','reportDate','date')
@@ -97,11 +108,29 @@ jobs:
               if r.get('sourceUrl') or r.get('source_url') or r.get('url'): with_evidence+=1
               else: failures.append(f"current record lacks source URL: {r.get('title')}")
           report['currentRecordsWithOfficialEvidence']=with_evidence
+
+          # Independent authoritative completeness check: obtain current ongoing FDA
+          # enforcement records directly from openFDA, not from SAFEPLATE.
+          official=json.loads((p/'openfda-authoritative.json').read_text()).get('results') or []
+          official_current=[]
+          for r in official:
+              dates=[parse(r.get('report_date')),parse(r.get('recall_initiation_date'))]
+              if any(d and floor < d <= ceiling for d in dates):
+                  rn=str(r.get('recall_number') or '').strip()
+                  if rn: official_current.append(rn)
+          if not official: failures.append('independent openFDA snapshot returned zero records')
+          if not official_current: failures.append('independent openFDA snapshot produced zero applicable current records')
+          safe_ids={str(r.get('id') or '') for r in rows}
+          safe_recall_numbers={str(r.get('recallNumber') or r.get('recall_number') or '') for r in rows}
+          missing=[rn for rn in official_current if f'FDA-{rn}' not in safe_ids and rn not in safe_recall_numbers]
+          report['independentOpenFDA']={'applicableCurrent':len(official_current),'missingFromSafeplate':missing}
+          if missing: failures.append(f"authoritative openFDA current records absent from SAFEPLATE API: {', '.join(missing[:10])}")
+
           report['v18Controls']={'foodSafetyPulse':True,'productSearch':True,'fullscreenMap':True,'evidenceTimeline':True,'explainableRisk':True,'governmentMode':True,'impactDashboard':True}
           report['result']='FAIL' if failures else 'PASS'; report['failures']=failures
           (p/'jean-standard-report.json').write_text(json.dumps(report,indent=2,default=str)+'\n')
           if failures: raise SystemExit('JEAN-STANDARD DIAGNOSTIC FAILURES:\n- '+'\n- '.join(failures))
-          print(f"JEAN-STANDARD V18 DIAGNOSTIC PASSED: {len(rows)} current recall records validated")
+          print(f"JEAN-STANDARD V18 DIAGNOSTIC PASSED: {len(rows)} current recall records validated; {len(official_current)} independent openFDA records matched")
           PY
 
       - name: Upload diagnostic evidence
