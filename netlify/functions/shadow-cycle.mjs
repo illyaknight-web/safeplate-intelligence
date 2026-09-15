@@ -1,5 +1,6 @@
 import {requireAdmin} from './lib/auth.mjs';
 import {runEarlyWarning} from './early-warning.mjs';
+import {stateStoreName} from './lib/store.mjs';
 
 export default async req=>{
   const auth=requireAdmin(req);
@@ -7,6 +8,7 @@ export default async req=>{
   if(req.method!=='POST')return Response.json({error:'Method not allowed'},{status:405,headers:{allow:'POST'}});
   const state=await runEarlyWarning();
   return Response.json({
+    storageNamespace:stateStoreName(),
     completedAt:state.meta?.earlyWarningLastSync||new Date().toISOString(),
     protocolVersion:state.shadowValidation?.protocolVersion||'SAFEPLATE-SHADOW-1.0',
     releaseGate:state.shadowValidation?.releaseGate||'HOLD_PROSPECTIVE_VALIDATION',
