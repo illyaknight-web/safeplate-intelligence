@@ -2,6 +2,7 @@ import { getState, saveState } from "./lib/store.mjs";
 import * as cheerio from "cheerio";
 import crypto from "node:crypto";
 import { assessEarlySignal, surveillanceSummary } from "./lib/early-detection-protocol.mjs";
+import { updateShadowLedger } from "./lib/shadow-validation.mjs";
 
 const STOP=new Set("food foods outbreak outbreaks recall recalled investigation investigations active warning alert alerts product products linked possible public health illness illnesses case cases current update updated brand brands company official state states multistate detected verified signal signals department agriculture health release releases news consumers people person reported reports reporting affected advisory advice".split(" "));
 const HAZARD_STOP=new Set("salmonella listeria coli stec cyclospora botulism ebola hepatitis shigella vibrio".split(" "));
@@ -100,7 +101,8 @@ export async function runEarlyWarning(){
   const prior=state.incidents||[],merged=mergeSignals(prior,incoming,now),corr=correlate(merged.items,now);
   const assessed=corr.items.map(x=>({...x,earlyDetection:assessEarlySignal(x,now)}));
   const cycleSummary=surveillanceSummary(prior,assessed);
-  const next={...state,meta:{...(state.meta||{}),earlyWarningLastSync:now,earlyWarningCycleMinutes:30,earlyDetectionProtocolVersion:"1.0"},incidents:assessed,investigations:corr.clusters,earlyDetectionSummary:{generatedAt:now,...cycleSummary,systemPerformance:{sourcesChecked:jobs.length,recordsProcessed:incoming.length,newSignals:cycleSummary.newEarlySignals.length,escalations:cycleSummary.escalatedSignals.length,confirmations:cycleSummary.confirmedEvents.length,rejectedSignals:cycleSummary.rejectedSignals.length}},sourceHealth:health,changes:[{time:now,title:"Early-warning correlation cycle complete",detail:`${incoming.length} precursor records processed · ${merged.added} new · ${merged.changed} changed · ${corr.clusters.length} multi-source clusters.`},...events,...(state.changes||[])].slice(0,300)};
+  const shadowValidation=updateShadowLedger(state.shadowValidation,assessed,now);
+  const next={...state,meta:{...(state.meta||{}),earlyWarningLastSync:now,earlyWarningCycleMinutes:30,earlyDetectionProtocolVersion:"1.0"},incidents:assessed,investigations:corr.clusters,earlyDetectionSummary:{generatedAt:now,...cycleSummary,systemPerformance:{sourcesChecked:jobs.length,recordsProcessed:incoming.length,newSignals:cycleSummary.newEarlySignals.length,escalations:cycleSummary.escalatedSignals.length,confirmations:cycleSummary.confirmedEvents.length,rejectedSignals:cycleSummary.rejectedSignals.length}},shadowValidation,sourceHealth:health,changes:[{time:now,title:"Early-warning correlation cycle complete",detail:`${incoming.length} precursor records processed · ${merged.added} new · ${merged.changed} changed · ${corr.clusters.length} multi-source clusters.`},...events,...(state.changes||[])].slice(0,300)};
   await saveState(next);return next;
 }
 
