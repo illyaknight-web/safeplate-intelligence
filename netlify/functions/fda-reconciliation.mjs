@@ -73,7 +73,7 @@ async function officialOpenFDARecords(){
 }
 
 function key(x){
-  return clean(x.sourceUrl).toLowerCase()||clean(x.officialRecordId).toLowerCase()||clean(x.id).toLowerCase()||clean(`${x.company}|${x.product}|${x.sourcePostedAt||x.recallDate||''}`).toLowerCase();
+  return clean(x.sourceUrl).toLowerCase()||clean(x.id).toLowerCase()||clean(x.officialRecordId).toLowerCase()||clean(`${x.company}|${x.product}|${x.sourcePostedAt||x.recallDate||''}`).toLowerCase();
 }
 
 async function markFailure(error,started){
