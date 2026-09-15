@@ -51,6 +51,6 @@ export default async()=>{
  const lastSync=s.meta?.lastSync||null;
  const age=lastSync?(Date.now()-new Date(lastSync).getTime())/60000:null;
  const overall=!checked?"pending":age>75?"stale":(!reconHealthy||bad)?"degraded":"online";
- return Response.json({overall,lastSync,online,checked,issues:bad+(reconHealthy?0:1),completeness:{source:'FDA',state:reconciliation.completenessState,lastAttempt:reconLastAttempt,lastSuccessfulReconciliation:reconLastSuccess,ageMinutes:reconAge,officialRecordCount:reconciliation.officialRecordCount,missingBefore:reconciliation.missingBefore,backfilled:reconciliation.backfilled,missingAfter:reconciliation.missingAfter,error:reconciliation.error},sources:src,stateCoverage:s.stateCoverage||null},{headers:{"cache-control":"no-store"}});
+ return Response.json({overall,lastSync,online,checked,issues:bad,completeness:{source:'FDA',state:reconciliation.completenessState,lastAttempt:reconLastAttempt,lastSuccessfulReconciliation:reconLastSuccess,ageMinutes:reconAge,officialRecordCount:reconciliation.officialRecordCount,missingBefore:reconciliation.missingBefore,backfilled:reconciliation.backfilled,missingAfter:reconciliation.missingAfter,error:reconciliation.error},sources:src,stateCoverage:s.stateCoverage||null},{headers:{"cache-control":"no-store"}});
 };
 export const config={path:"/api/source-health"};
