@@ -1,9 +1,18 @@
 {
-  "capturedAt": "2026-09-16T17:01:36Z",
+  "capturedAt": "2026-09-16T20:10:51Z",
   "authority": "USDA Food Safety and Inspection Service",
   "sourceType": "Official USDA/FSIS GovDelivery RSS (USFSIS_1: News Releases - Recent Updates)",
   "sourceUrl": "https://public.govdelivery.com/topics/USFSIS_1/feed.rss",
   "records": [
+    {
+      "field_recall_number": "usda-launches-initiative-to-bring-more-states-into-meat-inspection",
+      "field_title": "USDA Launches Initiative to Bring More States into Meat Inspection",
+      "field_reason_for_recall": "USDA Launches Initiative to Bring More States into Meat Inspection Today, U.S. Secretary of Agriculture Brooke L. Rollins announced the Stand-Up Program to provide up to $50 million in new funding to help states start or expand their own meat inspection programs in partnership with the U.S. Department of Agriculture\u2019s (USDA) Food Safety and Inspection Service (FSIS). The program carries out President Trump\u2019s September 4 Executive Order to expand market access for American meat producers and strengthen the domestic supply chain.",
+      "field_recall_classification": "",
+      "field_states": "",
+      "field_recall_url": "https://content.govdelivery.com/accounts/USFSIS/bulletins/42b0f93",
+      "field_recall_date": "Wed, 16 Sep 2026 14:45:11 -0500"
+    },
     {
       "field_recall_number": "fsis-issues-public-health-alert-for-a-ready-to-eat-beef-jerky-product-due-to-mis",
       "field_title": "FSIS Issues Public Health Alert for A Ready-To-Eat Beef Jerky Product Due to Misbranding and Undeclared Allergen",
@@ -219,15 +228,6 @@
       "field_states": "",
       "field_recall_url": "https://content.govdelivery.com/accounts/USFSIS/bulletins/40aaee4",
       "field_recall_date": "Thu, 19 Feb 2026 16:55:59 -0600"
-    },
-    {
-      "field_recall_number": "cs-beef-packers-llc-recalls-ground-beef-products-that-may-be-contaminated-with-e",
-      "field_title": "CS BEEF PACKERS, LLC RECALLS GROUND BEEF PRODUCTS THAT MAY BE CONTAMINATED WITH E. COLI O145",
-      "field_reason_for_recall": "CS BEEF PACKERS, LLC RECALLS GROUND BEEF PRODUCTS THAT MAY BE CONTAMINATED WITH E. COLI O145 CS Beef Packers, LLC, a Kuna, Idaho establishment, is recalling approximately 22,912 pounds of raw ground beef products that may be contaminated with E. coli O145, the U.S. Department of Agriculture\u2019s Food Safety and Inspection Service (FSIS) announced today.",
-      "field_recall_classification": "",
-      "field_states": "",
-      "field_recall_url": "https://content.govdelivery.com/accounts/USFSIS/bulletins/4097940",
-      "field_recall_date": "Wed, 11 Feb 2026 19:08:07 -0600"
     }
   ],
   "attempts": [
