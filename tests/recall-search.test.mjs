@@ -38,3 +38,23 @@ test('a general product search labels old records as historical',()=>{
   assert.equal(result.records.length,1);
   assert.equal(result.records[0].temporal_match,'HISTORICAL');
 });
+
+test('a recent FDA report or verification timestamp cannot resurrect an old recall as current',()=>{
+  const oldWithRecentUpdate={
+    id:'old-fda-updated',rawSource:'fda_openfda',title:'Old FDA recall',product:'Old recalled food',status:'VERIFIED',
+    recallDate:'2026-06-01T00:00:00Z',recall_initiation_date:'20260601',
+    report_date:'20260915',verifiedAt:'2026-09-15T00:00:00Z',updatedAt:'2026-09-15T00:00:00Z'
+  };
+  const result=searchRecallRecords([oldWithRecentUpdate],{query:'current recalled food',now:new Date('2026-09-16T12:00:00Z').getTime()});
+  assert.equal(result.records.length,0);
+});
+
+test('general search keeps a recently re-reported old FDA recall historical',()=>{
+  const oldWithRecentUpdate={
+    id:'old-fda-updated',rawSource:'fda_openfda',title:'Old FDA recall',product:'Old recalled food',status:'VERIFIED',
+    recallDate:'2026-07-13T00:00:00Z',report_date:'20260915',verifiedAt:'2026-09-15T00:00:00Z'
+  };
+  const result=searchRecallRecords([oldWithRecentUpdate],{query:'recalled food',now:new Date('2026-09-16T12:00:00Z').getTime()});
+  assert.equal(result.records.length,1);
+  assert.equal(result.records[0].temporal_match,'HISTORICAL');
+});
