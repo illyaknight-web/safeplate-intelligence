@@ -23,11 +23,11 @@ const searchable=x=>[x.product,x.title,x.brand,x.company,x.manufacturer,x.upc,x.
 export const isActionableRecall=x=>!x?.institutionalOnly&&(RECALL_SOURCES.has(x?.rawSource)||/\b(recall|recalled|public health alert|active outbreak|foodborne outbreak)\b/i.test(`${x?.title||''} ${x?.category||''} ${x?.status||''}`));
 const parseTime=v=>{if(v==null||v==='')return 0;const s=String(v).trim();if(/^\d{8}$/.test(s))return Date.UTC(Number(s.slice(0,4)),Number(s.slice(4,6))-1,Number(s.slice(6,8)));const t=new Date(s).getTime();return Number.isFinite(t)?t:0};
 
-// "Current" means recently made authoritative/public, not merely recently initiated.
-// verifiedAt is authoritative for normalized FDA/openFDA records; never use internal
-// observation/update timestamps such as updatedAt/lastObservedAt to make old recalls current.
+// Current recall age is anchored to the authoritative recall/announcement date.
+// Internal observation, sync, verification and FDA report-update timestamps MUST NOT
+// refresh an old recall back into the CURRENT window. This ordering is a safety invariant.
 export const recallRecordTime=x=>{
-  for(const value of [x?.announcedDate,x?.sourcePostedAt,x?.publicationDate,x?.publishedAt,x?.report_date,x?.reportDate,x?.verifiedAt,x?.recallDate,x?.recall_initiation_date,x?.date]){
+  for(const value of [x?.announcedDate,x?.sourcePostedAt,x?.publicationDate,x?.publishedAt,x?.recallDate,x?.recall_initiation_date,x?.date,x?.report_date,x?.reportDate,x?.verifiedAt]){
     const t=parseTime(value);if(t)return t;
   }
   return 0;
