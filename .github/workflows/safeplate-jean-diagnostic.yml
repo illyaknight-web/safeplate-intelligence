@@ -92,7 +92,10 @@ jobs:
 
           payload=json.loads((p/'current-recalls.json').read_text()); rows=payload.get('records') or []; report['currentRecallCount']=len(rows)
           now=datetime.now(timezone.utc); floor=now-timedelta(days=45); ceiling=now+timedelta(days=1)
-          fields=('announcedDate','sourcePostedAt','publicationDate','publishedAt','report_date','reportDate','verifiedAt','recallDate','recall_initiation_date','date')
+          # Safety invariant: current age is anchored to recall/announcement date. Later FDA
+          # report/update/verification timestamps must never resurrect an old recall as current.
+          primary_fields=('announcedDate','sourcePostedAt','publicationDate','publishedAt','recallDate','recall_initiation_date','date')
+          fallback_fields=('report_date','reportDate','verifiedAt')
           def parse(v):
               if not v: return None
               s=str(v).strip()
@@ -101,10 +104,13 @@ jobs:
                   except Exception: return None
               try: return datetime.fromisoformat(s.replace('Z','+00:00')).astimezone(timezone.utc)
               except Exception: return None
+          def authoritative_time(r):
+              t=next((parse(r.get(k)) for k in primary_fields if parse(r.get(k))),None)
+              return t or next((parse(r.get(k)) for k in fallback_fields if parse(r.get(k))),None)
           with_evidence=0
           for r in rows:
               if r.get('temporal_match') != 'CURRENT': failures.append(f"historical record surfaced as current: {r.get('title')}"); continue
-              t=next((parse(r.get(k)) for k in fields if parse(r.get(k))),None)
+              t=authoritative_time(r)
               if not t: failures.append(f"current record lacks authoritative date: {r.get('title')}")
               elif not (floor < t <= ceiling): failures.append(f"out-of-window current record {t.date()}: {r.get('title')}")
               if any(w in str(r.get('status','')).lower() for w in ('terminated','resolved','closed','retracted')): failures.append(f"closed record surfaced as current: {r.get('title')}")
@@ -112,14 +118,13 @@ jobs:
               else: failures.append(f"current record lacks source URL: {r.get('title')}")
           report['currentRecordsWithOfficialEvidence']=with_evidence
 
-          # Independent authoritative completeness gate. The broad current list is intentionally
-          # capped, so verify each applicable FDA record through the actual search endpoint used by
-          # the product rather than mistaking pagination/truncation for a missing record.
+          # Independent authoritative completeness gate. Use the SAME authoritative-date
+          # invariant as production: recall initiation controls age; report_date is fallback only.
           official=json.loads((p/'openfda-authoritative.json').read_text()).get('results') or []
           official_current=[]
           for r in official:
-              dates=[parse(r.get('report_date')),parse(r.get('recall_initiation_date'))]
-              if any(d and floor < d <= ceiling for d in dates):
+              t=parse(r.get('recall_initiation_date')) or parse(r.get('report_date'))
+              if t and floor < t <= ceiling:
                   rn=str(r.get('recall_number') or '').strip()
                   if rn: official_current.append((rn,r))
           if not official: failures.append('independent openFDA snapshot returned zero records')
