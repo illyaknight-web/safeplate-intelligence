@@ -49,9 +49,8 @@ async function detail(item){
 async function officialAnnouncementRecords(){
   const links=linksFrom(await fetchText(LIST));
   if(!links.length)throw new Error('FDA reconciliation found zero recall links; refusing false healthy state');
-  // Fail closed: if an authoritative recall detail cannot be parsed, completeness is unknown.
   const details=await Promise.all(links.map(detail));
-  const recent=details.filter(r=>{const d=new Date(r.sourcePostedAt||r.updatedAt);return !Number.isNaN(d)&&Date.now()-d.getTime()<=WINDOW_MS});
+  const recent=details.filter(r=>{const d=new Date(r.sourcePostedAt||r.recallDate||0);return !Number.isNaN(d)&&Date.now()-d.getTime()<=WINDOW_MS});
   if(!recent.length)throw new Error('FDA reconciliation produced zero current announcement records');
   return {links,records:recent};
 }
@@ -61,10 +60,16 @@ async function officialOpenFDARecords(){
   const url=`${OPENFDA}?limit=100&search=status:%22Ongoing%22${key?`&api_key=${encodeURIComponent(key)}`:''}`;
   const payload=await fetchJSON(url),rows=Array.isArray(payload?.results)?payload.results:[];
   if(!rows.length)throw new Error('openFDA reconciliation returned zero ongoing food enforcement records');
-  const records=rows.map(r=>({...normalizeFDA(r),officialRecordId:r.recall_number||null,rawSource:'fda_openfda'})).filter(r=>{
-    const d=new Date(r.updatedAt||r.recallDate||0);
-    return !Number.isNaN(d)&&Date.now()-d.getTime()<=WINDOW_MS;
-  });
+  // Safety invariant: recall initiation date controls the 45-day CURRENT window.
+  // FDA report_date may be newer because an old enforcement record was updated; it is
+  // fallback only when initiation date is genuinely unavailable.
+  const records=rows.filter(r=>{
+    const rawDate=r.recall_initiation_date||r.report_date;
+    const d=rawDate&&/^\d{8}$/.test(String(rawDate))
+      ? new Date(Date.UTC(+String(rawDate).slice(0,4),+String(rawDate).slice(4,6)-1,+String(rawDate).slice(6,8)))
+      : new Date(rawDate||0);
+    return !Number.isNaN(d.getTime())&&Date.now()-d.getTime()<=WINDOW_MS&&d.getTime()<=Date.now()+86400000;
+  }).map(r=>({...normalizeFDA(r),officialRecordId:r.recall_number||null,rawSource:'fda_openfda'}));
   if(!records.length)throw new Error('openFDA reconciliation produced zero applicable current enforcement records');
   return records;
 }
@@ -96,7 +101,7 @@ export async function reconcileFDA(){
       else{byKey.set(k,{...r,firstSeenAt:started,lastObservedAt:started,observationCount:1});added++}
     }
     const missingAfter=official.filter(r=>!byKey.has(key(r)));
-    const incidents=[...byKey.values()].sort((a,b)=>new Date(b.sourcePostedAt||b.updatedAt||0)-new Date(a.sourcePostedAt||a.updatedAt||0)).slice(0,1200);
+    const incidents=[...byKey.values()].sort((a,b)=>new Date(b.sourcePostedAt||b.recallDate||b.updatedAt||0)-new Date(a.sourcePostedAt||a.recallDate||a.updatedAt||0)).slice(0,1200);
     const status=missingAfter.length?'DEGRADED':'RECONCILED';
     const row={id:'fda_reconciliation',name:'FDA authoritative reconciliation',family:'Federal',status:missingAfter.length?'DEGRADED':'ONLINE',lastChecked:started,note:`${official.length} authoritative FDA records checked; ${missingBefore.length} missing before backfill; ${added} backfilled; ${missingAfter.length} missing after verification`};
     const next={...state,meta:{...(state.meta||{}),fdaReconciliationLastAttempt:started,fdaReconciliationLastSync:missingAfter.length?(state.meta?.fdaReconciliationLastSync||null):started,fdaReconciliationStatus:status,fdaReconciliationOfficialCount:official.length,fdaReconciliationAnnouncementCount:announcements.records.length,fdaReconciliationOpenFDACount:openfda.length,fdaReconciliationMissingBefore:missingBefore.length,fdaReconciliationMissingAfter:missingAfter.length,fdaReconciliationAdded:added,fdaReconciliationError:null},incidents,sourceHealth:[...(state.sourceHealth||[]).filter(x=>x?.id!=='fda_reconciliation'),row]};
