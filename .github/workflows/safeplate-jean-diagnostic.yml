@@ -36,6 +36,7 @@ jobs:
           curl -fsSL --max-time 25 "$BASE/api/system-status?ts=$(date +%s)" -o diagnostic/system-status.json
           curl -fsSL --max-time 25 "$BASE/api/recall-service?q=current%20recall&limit=100&ts=$(date +%s)" -o diagnostic/current-recalls.json
           curl -fsSL --max-time 25 'https://api.fda.gov/food/enforcement.json?limit=100&search=status:%22Ongoing%22' -o diagnostic/openfda-authoritative.json
+          curl -fsSL --max-time 25 'https://www.fda.gov/safety/recalls-market-withdrawals-safety-alerts' -o diagnostic/fda-master.html
 
           grep -Fq 'id="pubBtn"' diagnostic/home.html
           grep -Fq 'id="advBtn"' diagnostic/home.html
@@ -53,6 +54,7 @@ jobs:
           from pathlib import Path
           from urllib.parse import quote
           from urllib.request import Request, urlopen
+          from html.parser import HTMLParser
 
           BASE='https://safeplate-intelligence.netlify.app'
           p=Path('diagnostic'); failures=[]; report={}
@@ -146,6 +148,37 @@ jobs:
                   missing.append(rn)
           report['independentOpenFDA']={'applicableCurrent':len(official_current),'targetedSearches':searched,'missingFromSafeplateSearch':missing}
           if missing: failures.append(f"authoritative openFDA current records absent from targeted SAFEPLATE search: {', '.join(missing[:10])}")
+
+          # Second independent gate: FDA's public master recall table. This catches fresh
+          # company announcements that can appear before openFDA enforcement catches up.
+          class FDAHTML(HTMLParser):
+              def __init__(self):
+                  super().__init__(); self.in_tr=False; self.in_td=False; self.cell=''; self.cells=[]; self.rows=[]
+              def handle_starttag(self,tag,attrs):
+                  if tag=='tr': self.in_tr=True; self.cells=[]
+                  elif tag=='td' and self.in_tr: self.in_td=True; self.cell=''
+              def handle_data(self,data):
+                  if self.in_td: self.cell+=data
+              def handle_endtag(self,tag):
+                  if tag=='td' and self.in_td: self.cells.append(' '.join(self.cell.split())); self.in_td=False
+                  elif tag=='tr' and self.in_tr:
+                      if len(self.cells)>=6: self.rows.append(self.cells[:7])
+                      self.in_tr=False
+          hp=FDAHTML(); hp.feed((p/'fda-master.html').read_text(errors='ignore'))
+          master=[]
+          for cells in hp.rows:
+              d=parse(cells[0])
+              if d and floor < d <= ceiling and ('food' in cells[3].lower() or 'dietary supplement' in cells[3].lower()):
+                  master.append({'date':cells[0],'brand':cells[1],'product':cells[2],'type':cells[3],'reason':cells[4],'company':cells[5]})
+          if not master: failures.append('FDA master recall table produced zero current food rows')
+          hay=' '.join(json.dumps(r,sort_keys=True).lower() for r in rows)
+          master_missing=[]
+          for m in master[:25]:
+              probes=[m['product'],m['brand'],m['company']]
+              probes=[x.lower().strip() for x in probes if len(x.strip())>=4 and x.lower() not in {'no brand name','n/a'}]
+              if probes and not any(x in hay for x in probes): master_missing.append(m)
+          report['independentFDAMaster']={'applicableCurrent':len(master),'missingFromCurrentFeed':master_missing}
+          if master_missing: failures.append('FDA master current food rows absent from SAFEPLATE feed: '+', '.join(x['product'] for x in master_missing[:10]))
 
           report['v18Controls']={'foodSafetyPulse':True,'productSearch':True,'fullscreenMap':True,'evidenceTimeline':True,'explainableRisk':True,'governmentMode':True,'impactDashboard':True}
           report['result']='FAIL' if failures else 'PASS'; report['failures']=failures
