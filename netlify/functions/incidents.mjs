@@ -1,4 +1,5 @@
 import { getState } from "./lib/store.mjs";
+import { reconcileFDA } from "./fda-reconciliation.mjs";
 
 const decode=s=>String(s||"")
  .replace(/&amp;/gi,"&").replace(/&quot;/gi,'"').replace(/&#39;|&#039;/gi,"'")
@@ -64,7 +65,12 @@ const publicRecord=x=>({
 });
 
 export default async()=>{
- const s=await getState();
+ let s=await getState();
+ const last=Date.parse(s.meta?.fdaReconciliationLastSync||0),stale=!last||Date.now()-last>20*60*1000;
+ if(stale){
+   try{await reconcileFDA();s=await getState()}
+   catch(e){console.warn('On-read FDA completeness reconciliation failed',e?.message||e)}
+ }
  const incidents=(s.incidents||[]).filter(x=>!x?.institutionalOnly&&!spanish(x)&&foodRecord(x)&&isUSRelevant(x)).map(publicRecord);
  return Response.json({meta:{...(s.meta||{}),last_synced:s.meta?.lastSuccessfulRun||s.meta?.surveillanceLastSync||incidents[0]?.last_synced||null},incidents,investigations:s.investigations||[],changes:s.changes||[]},{headers:{"cache-control":"public, max-age=0, must-revalidate","netlify-cdn-cache-control":"public, durable, max-age=30, stale-while-revalidate=30"}})
 };
