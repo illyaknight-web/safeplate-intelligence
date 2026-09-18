@@ -58,7 +58,7 @@ function eligibleTextNodes(){
     return NodeFilter.FILTER_ACCEPT;
   }});
   const arr=[];let n;
-  while((n=walker.nextNode())&&arr.length<140)arr.push(n);
+  while((n=walker.nextNode()))arr.push(n);
   return arr;
 }
 
@@ -92,11 +92,17 @@ async function applyLanguage(target){
     }
     const live=originals.filter(x=>x.node?.isConnected);
     const texts=live.map(x=>x.text.trim());
+    if(!texts.length)return;
     if(status){status.classList.remove('error');status.textContent='Translating SAFEPLATE…'}
-    const r=await fetch(API,{method:'POST',headers:{'content-type':'application/json','accept':'application/json'},body:JSON.stringify({texts,target})});
-    if(!r.ok)throw new Error('Translation service unavailable');
-    const data=await r.json();
-    if(!Array.isArray(data.translations)||data.translations.length!==live.length)throw new Error('Translation response incomplete');
+    const BATCH=60, translations=[], partials=[];
+    for(let i=0;i<texts.length;i+=BATCH){
+      const chunk=texts.slice(i,i+BATCH), cacheKey='sp-tr:'+target+':'+JSON.stringify(chunk);
+      let data=null;try{data=JSON.parse(sessionStorage.getItem(cacheKey)||'null')}catch{}
+      if(!data){const r=await fetch(API,{method:'POST',headers:{'content-type':'application/json','accept':'application/json'},body:JSON.stringify({texts:chunk,target})});if(!r.ok)throw new Error('Translation service unavailable');data=await r.json();try{sessionStorage.setItem(cacheKey,JSON.stringify(data))}catch{}}
+      if(!Array.isArray(data.translations)||data.translations.length!==chunk.length)throw new Error('Translation response incomplete');
+      translations.push(...data.translations);partials.push(!!data.partial);
+    }
+    const data={translations,partial:partials.some(Boolean)};
     live.forEach((x,i)=>{
       const original=x.text;
       const translated=String(data.translations[i]??original);
@@ -106,7 +112,7 @@ async function applyLanguage(target){
     document.documentElement.lang=target;
     document.documentElement.dir=['ar','fa','he'].includes(target)?'rtl':'ltr';
     try{localStorage.setItem(STORAGE_KEY,target)}catch{}
-    if(status){status.classList.toggle('error',!!data.partial);status.textContent=data.partial?'Translation loaded with a few items left in English.':'Translation ready.'}
+    if(status){status.classList.toggle('error',!!data.partial);status.textContent=data.partial?'Translation incomplete — retrying untranslated interface text.':'Translation ready.'}
   }catch(err){
     restoreEnglish();
     if(select)select.value='en';
