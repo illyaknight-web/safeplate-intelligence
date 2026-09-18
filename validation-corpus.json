@@ -13,6 +13,10 @@
       "illnesses": 12,
       "hospitalizations": 4,
       "deaths": 0,
+      "ground_truth_positive": true,
+      "earliest_credible_signal_at": "2026-07-01T00:00:00Z",
+      "recall_published_at": "2026-07-03T00:00:00Z",
+      "limitations": ["Public timeline uses calendar-day precision; exact publication times were unavailable."],
       "case_states": [
         "FL",
         "GA"

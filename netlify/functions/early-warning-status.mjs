@@ -17,6 +17,8 @@ export default async()=>{
     sourceIssues:issues,
     sourcesChecked:health.filter(x=>x.lastChecked).length,
     investigations:(s.investigations||[]).length,
+    protocolVersion:s.meta?.earlyDetectionProtocolVersion||null,
+    surveillanceSummary:s.earlyDetectionSummary||null,
     sources:health
   },{headers:{"cache-control":"no-store"}});
 };
