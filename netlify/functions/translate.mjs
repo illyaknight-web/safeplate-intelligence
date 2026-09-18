@@ -1,5 +1,5 @@
 const UPSTREAM='https://translate.argosopentech.com/translate';
-const ALLOWED=new Set(['es','fr','pt','zh','ko','vi','ru','ar']);
+const ALLOWED=new Set(['es','fr','pt','zh','zt','ko','vi','ru','ar','bn','hi','tl','ja','de','it','pl','uk','tr','fa','he','th','id','sw','nl','el','ro','sv','cs','fi']);
 
 async function translateOne(text,target){
   const r=await fetch(UPSTREAM,{
