@@ -10,11 +10,15 @@ const PANEL_ID='safeplate-language-panel';
 const SELECT_ID='safeplate-language-select';
 const API='/api/translate';
 const LANGS=[
-  ['en','English'],['es','Español'],['fr','Français'],['pt','Português'],
-  ['zh','中文'],['ko','한국어'],['vi','Tiếng Việt'],['ru','Русский'],['ar','العربية']
+  ['en','English'],['es','Español'],['fr','Français'],['pt','Português'],['zh','中文（简体）'],['zt','中文（繁體）'],
+  ['ko','한국어'],['vi','Tiếng Việt'],['ru','Русский'],['ar','العربية'],['bn','বাংলা'],['hi','हिन्दी'],
+  ['tl','Filipino / Tagalog'],['ja','日本語'],['de','Deutsch'],['it','Italiano'],['pl','Polski'],['uk','Українська'],
+  ['tr','Türkçe'],['fa','فارسی'],['he','עברית'],['th','ไทย'],['id','Bahasa Indonesia'],['sw','Kiswahili'],
+  ['nl','Nederlands'],['el','Ελληνικά'],['ro','Română'],['sv','Svenska'],['cs','Čeština'],['fi','Suomi']
 ];
 const originals=[];
-let applying=false;
+const knownNodes=new WeakSet();
+let applying=false,currentLanguage='en',observer=null,refreshTimer=null;
 
 function installStyles(){
   if(document.getElementById('safeplate-language-style'))return;
@@ -59,18 +63,22 @@ function eligibleTextNodes(){
 }
 
 function captureOriginals(){
-  if(originals.length)return;
-  eligibleTextNodes().forEach(node=>originals.push({node,text:node.nodeValue}));
+  eligibleTextNodes().forEach(node=>{
+    if(knownNodes.has(node))return;
+    knownNodes.add(node); originals.push({node,text:node.nodeValue});
+  });
 }
 
 function restoreEnglish(){
   captureOriginals();
   originals.forEach(x=>{if(x.node?.isConnected)x.node.nodeValue=x.text});
   document.documentElement.lang='en';
+  document.documentElement.dir='ltr';
 }
 
 async function applyLanguage(target){
   if(applying)return;
+  currentLanguage=target;
   applying=true;
   const status=document.querySelector('#'+PANEL_ID+' .sp-lang-status');
   const select=document.getElementById(SELECT_ID);
@@ -96,6 +104,7 @@ async function applyLanguage(target){
       x.node.nodeValue=lead+translated.trim()+trail;
     });
     document.documentElement.lang=target;
+    document.documentElement.dir=['ar','fa','he'].includes(target)?'rtl':'ltr';
     try{localStorage.setItem(STORAGE_KEY,target)}catch{}
     if(status){status.classList.toggle('error',!!data.partial);status.textContent=data.partial?'Translation loaded with a few items left in English.':'Translation ready.'}
   }catch(err){
@@ -123,6 +132,12 @@ function installControl(){
   button.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();const open=!panel.classList.contains('open');if(open){panel.classList.add('open');button.setAttribute('aria-expanded','true');setTimeout(()=>select.focus({preventScroll:true}),0)}else closePanel()});
   panel.addEventListener('click',e=>e.stopPropagation());document.addEventListener('click',closePanel);document.addEventListener('keydown',e=>{if(e.key==='Escape')closePanel()});
   select.addEventListener('change',()=>applyLanguage(select.value));
+  observer=new MutationObserver(mutations=>{
+    if(applying||currentLanguage==='en')return;
+    if(!mutations.some(m=>m.addedNodes?.length||m.type==='characterData'))return;
+    clearTimeout(refreshTimer); refreshTimer=setTimeout(async()=>{captureOriginals();await applyLanguage(currentLanguage)},180);
+  });
+  observer.observe(document.body,{subtree:true,childList:true,characterData:true});
   let saved='en';try{saved=localStorage.getItem(STORAGE_KEY)||'en'}catch{}
   if(LANGS.some(([c])=>c===saved)){select.value=saved;if(saved!=='en')setTimeout(()=>applyLanguage(saved),350)}
 }
