@@ -3,6 +3,7 @@ import { normalizeFDA, fingerprint } from './lib/normalize.mjs';
 import * as cheerio from 'cheerio';
 
 const LIST='https://www.fda.gov/food/recalls-outbreaks-emergencies/recalls-foods-dietary-supplements';
+const MASTER_LIST='https://www.fda.gov/safety/recalls-market-withdrawals-safety-alerts';
 const OPENFDA='https://api.fda.gov/food/enforcement.json';
 const WINDOW_MS=45*86400000;
 const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
@@ -31,7 +32,23 @@ function linksFrom(html){
   $('article a[href], .lcds-card a[href]').each((_,a)=>add(a,$(a).closest('article,.lcds-card').find('time').first().text()));
   $('table tbody tr').each((_,tr)=>{const cells=$(tr).find('td');if(!cells.length)return;const date=clean(cells.first().text());$(tr).find('a[href]').each((__,a)=>add(a,date))});
   $('h2 a[href],h3 a[href],h4 a[href]').each((_,a)=>add(a,$(a).closest('div,section').find('time').first().text()));
-  return out.slice(0,20);
+  return out.slice(0,40);
+}
+
+function masterRowsFrom(html){
+  const $=cheerio.load(html),out=[];
+  $('table tbody tr').each((_,tr)=>{
+    const cells=$(tr).find('td'); if(cells.length<6)return;
+    const date=clean(cells.eq(0).text()), brand=clean(cells.eq(1).text()), product=clean(cells.eq(2).text());
+    const productType=clean(cells.eq(3).text()), reason=clean(cells.eq(4).text()), company=clean(cells.eq(5).text());
+    if(!/food|dietary supplement/i.test(productType))return;
+    const a=$(tr).find('a[href]').first(),href=a.attr('href');
+    if(!href||!date||!product)return;
+    const url=new URL(href,MASTER_LIST).toString();
+    const d=new Date(date); if(Number.isNaN(d.getTime())||Date.now()-d.getTime()>WINDOW_MS||d.getTime()>Date.now()+86400000)return;
+    out.push({url,title:[brand,product].filter(Boolean).join(' — '),date,brand,product,company,reason,productType});
+  });
+  return out;
 }
 
 async function detail(item){
@@ -39,7 +56,7 @@ async function detail(item){
   const dt=label=>{let value='';$('dt').each((_,el)=>{if(!value&&clean($(el).text()).toLowerCase().startsWith(label.toLowerCase()))value=clean($(el).next('dd').text())});return value};
   const date=dt('Company Announcement Date')||clean($('time').first().attr('datetime'))||item.date;
   if(!date)throw new Error(`FDA recall detail lacks an authoritative date: ${item.url}`);
-  const company=dt('Company Name'),brand=dt('Brand Name'),product=dt('Product Description')||item.title,reason=dt('Reason for Announcement')||item.title;
+  const company=dt('Company Name')||item.company,brand=dt('Brand Name')||item.brand,product=dt('Product Description')||item.product||item.title,reason=dt('Reason for Announcement')||item.reason||item.title;
   const body=clean($('#recall-announcement').text())||clean($('main').text()).slice(0,5000);
   const officialId=`FDA-WEB-${fingerprint([item.url])}`;
   const normalized=normalizeFDA({recall_number:officialId,recalling_firm:company,product_description:[brand,product].filter(Boolean).join(' — '),reason_for_recall:reason,distribution_pattern:body,status:'Ongoing',report_date:date,recall_initiation_date:date});
@@ -47,12 +64,14 @@ async function detail(item){
 }
 
 async function officialAnnouncementRecords(){
-  const links=linksFrom(await fetchText(LIST));
-  if(!links.length)throw new Error('FDA reconciliation found zero recall links; refusing false healthy state');
-  const details=await Promise.all(links.map(detail));
+  const [foodHtml,masterHtml]=await Promise.all([fetchText(LIST),fetchText(MASTER_LIST)]);
+  const links=linksFrom(foodHtml),master=masterRowsFrom(masterHtml);
+  const merged=[...master,...links].filter((x,i,a)=>a.findIndex(y=>y.url===x.url)===i);
+  if(!merged.length)throw new Error('FDA reconciliation found zero recall links; refusing false healthy state');
+  const details=await Promise.all(merged.map(detail));
   const recent=details.filter(r=>{const d=new Date(r.sourcePostedAt||r.recallDate||0);return !Number.isNaN(d)&&Date.now()-d.getTime()<=WINDOW_MS});
   if(!recent.length)throw new Error('FDA reconciliation produced zero current announcement records');
-  return {links,records:recent};
+  return {links:merged,records:recent,masterCount:master.length};
 }
 
 async function officialOpenFDARecords(){
@@ -104,7 +123,7 @@ export async function reconcileFDA(){
     const incidents=[...byKey.values()].sort((a,b)=>new Date(b.sourcePostedAt||b.recallDate||b.updatedAt||0)-new Date(a.sourcePostedAt||a.recallDate||a.updatedAt||0)).slice(0,1200);
     const status=missingAfter.length?'DEGRADED':'RECONCILED';
     const row={id:'fda_reconciliation',name:'FDA authoritative reconciliation',family:'Federal',status:missingAfter.length?'DEGRADED':'ONLINE',lastChecked:started,note:`${official.length} authoritative FDA records checked; ${missingBefore.length} missing before backfill; ${added} backfilled; ${missingAfter.length} missing after verification`};
-    const next={...state,meta:{...(state.meta||{}),fdaReconciliationLastAttempt:started,fdaReconciliationLastSync:missingAfter.length?(state.meta?.fdaReconciliationLastSync||null):started,fdaReconciliationStatus:status,fdaReconciliationOfficialCount:official.length,fdaReconciliationAnnouncementCount:announcements.records.length,fdaReconciliationOpenFDACount:openfda.length,fdaReconciliationMissingBefore:missingBefore.length,fdaReconciliationMissingAfter:missingAfter.length,fdaReconciliationAdded:added,fdaReconciliationError:null},incidents,sourceHealth:[...(state.sourceHealth||[]).filter(x=>x?.id!=='fda_reconciliation'),row]};
+    const next={...state,meta:{...(state.meta||{}),fdaReconciliationLastAttempt:started,fdaReconciliationLastSync:missingAfter.length?(state.meta?.fdaReconciliationLastSync||null):started,fdaReconciliationStatus:status,fdaReconciliationOfficialCount:official.length,fdaReconciliationAnnouncementCount:announcements.records.length,fdaReconciliationMasterListCount:announcements.masterCount||0,fdaReconciliationOpenFDACount:openfda.length,fdaReconciliationMissingBefore:missingBefore.length,fdaReconciliationMissingAfter:missingAfter.length,fdaReconciliationAdded:added,fdaReconciliationError:null},incidents,sourceHealth:[...(state.sourceHealth||[]).filter(x=>x?.id!=='fda_reconciliation'),row]};
     await saveState(next);
     if(missingAfter.length)throw new Error(`FDA reconciliation incomplete after backfill: ${missingAfter.length} authoritative records remain missing`);
     return {ok:true,status:'RECONCILED',checkedAt:started,officialLinks:announcements.links.length,officialRecords:official.length,announcementRecords:announcements.records.length,openFDARecords:openfda.length,missingBefore:missingBefore.length,backfilled:added,refreshed,missingAfter:0};
